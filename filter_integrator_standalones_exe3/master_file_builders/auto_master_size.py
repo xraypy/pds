@@ -1,3 +1,8 @@
+'''
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last Modified: 1/31/2025
+'''
 import errno
 import os
 import subprocess
@@ -7,7 +12,7 @@ import time
 def auto_master(spec_dir):
     spec_sizes = {}
     while True: #spec_sizes == {}:
-        print 'Updating...'
+        print("Updating...")
         spec_files = os.listdir(spec_dir)
         spec_files = [item for item in spec_files if (item.endswith('.spc') or item.endswith('.spec'))]
         for item in spec_files:
@@ -16,13 +21,13 @@ def auto_master(spec_dir):
             if item not in spec_sizes:
                 spec_sizes[item] = edit_size
                 subprocess.call([sys.executable,
-                                 'C:\\apps\\tdl\\scripts\\spectohdf.py',
+                                 'C:\\Users\\guntaka\\Documents\\PDSv1\\master_file_builders\\spectohdf_v6p3p3.py',
                                  full_item, '', '-a'])
             else:
                 if spec_sizes[item] < edit_size:
                     spec_sizes[item] = edit_size
                     subprocess.call([sys.executable,
-                                    'C:\\apps\\tdl\\scripts\\spectohdf.py',
+                                    'C:\\Users\\guntaka\\Documents\\PDSv1\\master_file_builders\\spectohdf_v6p3p3.py',
                                      full_item, '', '-a'])
         time.sleep(20)
     

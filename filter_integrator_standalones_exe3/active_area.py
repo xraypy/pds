@@ -97,7 +97,7 @@ def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
     if type(beam) == types.ListType:
         beam_poly = []
         if len(beam) < 3:
-            print "Error in beam description"
+            print("Error in beam description")
             return None
         for v in beam:
             vs  = num.dot(M,v)
@@ -109,7 +109,7 @@ def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
     if type(det) == types.ListType:
         det_poly  = []
         if len(det) < 3:
-            print "Error in det description"
+            print("Error in det description")
             return None
         for v in det:
             vs  = num.dot(M,v)
@@ -121,12 +121,12 @@ def active_area(nm,ki=num.array([0.,1.,0.]),kr=num.array([0.,1.,0.]),
     if type(sample) == types.ListType:
         sam_poly  = []
         if len(sample) < 3:
-            print "Error in sample description"
+            print("Error in sample description")
             return None
         for v in sample:
             vs  = num.dot(M,v)
             if num.fabs(vs[2]) > 0.01:
-                print "Warning sample hieght problem"
+                print("Warning sample hieght problem")
             sam_poly.append(vs[:2])
         sample_shape=True
     else:
@@ -363,7 +363,7 @@ def test1():
     v = [.2, 0.,  1.]
     v1 = surface_intercept(k,v)
     v2 = surface_intercept_bounds(k,v,2.*r)
-    print v1,v2
+    print(v1,v2)
     plot_circle(r)
     plot_points([v1,v2])
     pyplot.grid()
@@ -384,8 +384,8 @@ def test2():
     sample = gonio_psic.sample_vectors(sample,angles=angles,gonio=psic)
     #sample = 1.5
     # compute active_area
-    print active_area(psic.nm,ki=psic.ki,kr=psic.kr,beam=beam,
-                      det=det,sample=sample,plot=True)
+    print(active_area(psic.nm,ki=psic.ki,kr=psic.kr,beam=beam,
+                      det=det,sample=sample,plot=True))
 
 ##########################################################################
 if __name__ == "__main__":

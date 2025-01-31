@@ -377,13 +377,13 @@ def poly_area_num(polygon,diameter=None,num_int=100,plot=False):
             for p1,p2 in lines:
                 (inter,flag) = line_intercept(p1,p2,p3,p4)
                 if flag == 0:
-                    print "Error, should always get intercepts here"
+                    print("Error, should always get intercepts here")
                     return 0.
                 else:
                     y.append(inter[1])
             numy = len(y)
             if num.mod(numy,2.) != 0 or numy == 1:
-                print "Error, wrong number of intercepts!"
+                print("Error, wrong number of intercepts!")
                 return 0.
             y = num.array(y)
             y = y[num.argsort(y)]
@@ -549,13 +549,9 @@ def test():
     #
     n = 100
     diameter=1.3
-    print 'poly1 area = %6.3f, num=%6.3f' % (poly_area(poly1),
-                                             poly_area_num(poly1,num_int=n))
-    print 'poly2 area = %6.3f, num=%6.3f' % (poly_area(poly2),
-                                             poly_area_num(poly2,num_int=n))
-    print 'inner area = %6.3f, num=%6.3f' % (poly_area(inner),
-                                             poly_area_num(inner,num_int=n,
-                                             diameter=diameter,plot=True))
+    print('poly1 area = %6.3f, num=%6.3f' % (poly_area(poly1), poly_area_num(poly1,num_int=n)))
+    print('poly2 area = %6.3f, num=%6.3f' % (poly_area(poly2), poly_area_num(poly2,num_int=n)))
+    print('inner area = %6.3f, num=%6.3f' % (poly_area(inner), poly_area_num(inner,num_int=n, diameter=diameter,plot=True)))
     #
     plot_polygon(poly1,fmt='ro-')
     plot_polygon(poly2,fmt='ko-')

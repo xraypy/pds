@@ -2,6 +2,10 @@
 Master to Project Parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
 7/12/2012
+
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last modified: 1/31/2025
 '''
 
 import h5py
@@ -69,7 +73,7 @@ def read_pixel_map(fname):
             good_pixels.append(map(int,pp))
         return bad_pixels, good_pixels
     except:
-        print "Error reading file: %s" % fname
+        print("Error reading file: %s" % fname)
         return []
 
 def master_to_project(master_file, desired_scans, project_file, append=True, 
@@ -91,7 +95,7 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
     
     read_this = h5py.File(master_file, 'r')
     # Define a data type for an array of variable-length strings
-    var_len_strs = h5py.new_vlen(str)
+    var_len_strs = h5py.vlen_dtype(str)
     
     if append:
         # Open the project in append mode, get the last point
@@ -150,7 +154,12 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                 num_points = len(read_head['point_data'])
                 specified_attrs = desired_scans[spec_name][scan_number]
                 file_epoch = read_head.attrs.get('init_epoch', 0)
-                epoch_loc = list(read_head['point_labs']).index('Epoch')
+                
+                point_labs_list = [x.decode('utf-8') if isinstance(x, bytes) else x for x in read_head['point_labs']]
+                epoch_loc = point_labs_list.index('Epoch')
+                
+                param_labs_list = [x.decode() if isinstance(x, bytes) else x for x in read_head['param_labs']]
+
                 #add_time = 0
                 for i in range(num_points):
                     # The epoch offset of the point
@@ -168,15 +177,13 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     if matches:
                         all_names[matches[0]].attrs['name'] = uniq_name
                         if gui:
-                            print matches[0], ' already in ', project_file
+                            print(matches[0], ' already in ', project_file)
                             if matches[0] != uniq_name:
-                                print 'Renamed to ' + uniq_name
+                                print("Renamed to " + uniq_name)
                             project_progress += 1
                             progress_continue, holding = \
                                         progress_box.Update(project_progress)
-                            while wx.GetApp().Pending():
-                                wx.GetApp().Dispatch()
-                                wx.GetApp().Yield(True)
+                            wx.GetApp().Yield(True)
                         continue
                     
                     point_name = '%6.6i' % point_counter
@@ -209,31 +216,32 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     # The angles
                     ang_labels = ['chi', 'del', 'eta', 'mu', 'nu', 'phi']
                     point_group.create_dataset('angle_labels', data=ang_labels)
+                    
                     pang_labels = ['chi', 'TwoTheta', 'theta',
                                    'Psi', 'Nu', 'phi']
                     ang_values = []
                     for j in range(6):
                         ang_lbl = ang_labels[j]
                         pang_lbl = pang_labels[j]
-                        if ang_lbl in read_head['point_labs']:
+                        if ang_lbl in point_labs_list:
                             ang_pos = list(\
-                                        read_head['point_labs']).index(ang_lbl)
+                                        point_labs_list).index(ang_lbl)
                             ang_val = read_head['point_data'][i][ang_pos]
-                        elif pang_lbl in read_head['point_labs']:
+                        elif pang_lbl in point_labs_list:
                             ang_pos = list(\
-                                        read_head['point_labs']).index(pang_lbl)
+                                        point_labs_list).index(pang_lbl)
                             ang_val = read_head['point_data'][i][ang_pos]
                         else:
                             ang_pos = list(\
-                                        read_head['param_labs']).index(pang_lbl)
+                                        param_labs_list).index(pang_lbl)
                             ang_val = read_head['param_data'][ang_pos]
                         ang_values.append(ang_val)
                     point_group.create_dataset('angle_values', data=ang_values)
                     
                     # The real-space lattice followed by the recip-space lattice
-                    lattice_start = list(read_head['param_labs']).index('g_aa')
+                    lattice_start = list(param_labs_list).index('g_aa')
                     #lattice_stop = list(\
-                    #                   read_head['param_labs']).index('g_ga_s')
+                    #                   param_labs_list).index('g_ga_s')
                     ltc_lbls = ['real_a', 'real_b', 'real_c', 'real_alpha',
                                 'real_beta', 'real_gamma', 'recip_a', 'recip_b',
                                 'recip_c', 'recip_alpha', 'recip_beta',
@@ -242,15 +250,15 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     lattice_data = list(read_head['param_data']\
                                              [lattice_start:lattice_start+12])
                     lattice_start = list(\
-                                      read_head['param_labs']).index('g_LAMBDA')
+                                      param_labs_list).index('g_LAMBDA')
                     lattice_data.append(read_head['param_data'][lattice_start])
                     point_group.create_dataset('lattice_values',
                                                data=lattice_data)
                     
                     # Q
-                    h_loc = list(read_head['point_labs']).index('H')
-                    k_loc = list(read_head['point_labs']).index('K')
-                    L_loc = list(read_head['point_labs']).index('L')
+                    h_loc = list(point_labs_list).index('H')
+                    k_loc = list(point_labs_list).index('K')
+                    L_loc = list(point_labs_list).index('L')
                     h_val = read_head['point_data'][i][h_loc]
                     k_val = read_head['point_data'][i][k_loc]
                     L_val = read_head['point_data'][i][L_loc]
@@ -258,7 +266,7 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     
                     # The or's (all of or0 followed by all of or1)
                     # HKLs
-                    or_start = list(read_head['param_labs']).index('g_h0')
+                    or_start = list(param_labs_list).index('g_h0')
                     or_zero = list(read_head['param_data'][or_start:or_start+3])
                     or_one = list(\
                                 read_head['param_data'][or_start+3:or_start+6])
@@ -282,20 +290,20 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     point_group.create_dataset('or_values', data=or_zero)
                     
                     # Azimuth vector
-                    haz_start = list(read_head['param_labs']).index('g_haz')
+                    haz_start = list(param_labs_list).index('g_haz')
                     haz_data = read_head['param_data'][haz_start:haz_start+3]
                     point_group.create_dataset('haz', data=haz_data)
                     
                     # The position values
-                    split_index = list(read_head['point_labs']).index('Epoch')
-                    pos_lbls = read_head['point_labs'][:split_index]
+                    split_index = point_labs_list.index('Epoch')
+                    pos_lbls = point_labs_list[:split_index]
                     point_group.create_dataset('position_labels', data=pos_lbls)
                     pos_values = read_head['point_data'][i][:split_index]
                     point_group.create_dataset('position_values',
                                                data=pos_values)
                     
                     # The scaler values
-                    sclr_lbls = read_head['point_labs'][split_index:]
+                    sclr_lbls = point_labs_list[split_index:]
                     point_group.create_dataset('scaler_labels', data=sclr_lbls)
                     sclr_values = read_head['point_data'][i][split_index:]
                     point_group.create_dataset('scaler_values',
@@ -368,17 +376,15 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                                   0, 0, 0, 0, 0, 0, 0, 0]
                     det_group.create_dataset('result_labels', data=res_labels)
                     det_group.create_dataset('result_values.1',
-                                             data=res_values, dtype=numpy.float)
+                                             data=res_values, dtype=numpy.float64)
                     
                     if gui:
                         project_progress += 1
                         progress_continue, holding = \
                                     progress_box.Update(project_progress)
-                        while wx.GetApp().Pending():
-                            wx.GetApp().Dispatch()
-                            wx.GetApp().Yield(True)
-    except:
-        print 'Error generating file'
+                        wx.GetApp().Yield(True)
+    except Exception as e:
+        print("Error generating file:", e)
         if gui:
             progress_continue = False
             progress_box.Destroy()
@@ -398,7 +404,8 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
         try:
             point_group.create_dataset('image_data', data=read_head['image_data'][i], compression='szip')
         except:
-            pass'''
+            pass
+        '''
     
     read_this.close()
     write_this.close()

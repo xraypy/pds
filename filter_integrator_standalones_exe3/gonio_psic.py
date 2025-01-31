@@ -995,7 +995,7 @@ def sample_vectors(sample,angles={},gonio=None):
     """
     if sample == None: return None
     if len(sample) < 3:
-        print "Sample polygon must be 3 or more points"
+        print("Sample polygon must be 3 or more points")
         return None
     # If angles are provided then we need to compute the phi
     # frame vectors first. i.e. assume p's are defined in lab
@@ -1044,31 +1044,31 @@ def test1():
     psic.set_angles(phi=65.78,chi=37.1005,eta=6.6400,
                     mu=0.0,nu=0.0,delta=46.9587)
     #calc tth, d and magnitude of Q
-    print "\nh=",  psic.h
-    print "tth =", psic.pangles['tth']
-    print "tth =", psic.lattice.tth(psic.h)
+    print("\nh=", psic.h)
+    print("tth =", psic.pangles['tth'])
+    print("tth =", psic.lattice.tth(psic.h))
 
     # reference vector/surface normal in [h,k,l]
     # n = [0, 0, 1]
     n = [-0.0348357, -0.00243595, 1]
     psic.set_n(n)
     #calc miscut
-    print "\nmiscut=",psic.lattice.angle([0,0,1],n,recip=True)
+    print("\nmiscut= ", psic.lattice.angle([0,0,1], n, recip=True))
 
     # test surf norm
     n_phi = num.dot(psic.UB,n)
     n_phi = n_phi/ num.fabs(cartesian_mag(n_phi))
-    print "\nnphi: ", n_phi
+    print("\nnphi: ", n_phi)
 
-    print "\nsigma_az=",psic.pangles['sigma_az']
+    print("\nsigma_az= ", psic.pangles['sigma_az'])
 
-    print "\ntau_az=",psic.pangles['tau_az']
+    print("\ntau_az= ", psic.pangles['tau_az'])
 
     psic.calc_n(-psic.pangles['sigma_az'],-psic.pangles['tau_az'])
-    print "calc n from sigma and tau az: ",psic.n 
+    print("calc n from sigma and tau az: ", psic.n) 
     
     #calc miscut
-    print "\nmiscut=",psic.lattice.angle([0,0,1],psic.n,recip=True)
+    print("\nmiscut= ", psic.lattice.angle([0,0,1], psic.n, recip=True))
     
     return psic
 
@@ -1112,44 +1112,45 @@ def test2(show=True):
                     mu=24.4195,nu=48.2695,delta=-0.0003)
 
     if show:
-        print "#########################################"
-        print "h calc is:", psic.h
-        print "should be: [-0.000113467 0.000280176 5.94001]"
-        print "----"
-        print "alpha calc is:", psic.pangles['alpha']
-        print "should be:", G[67]
-        print "----"
-        print "beta calc is:", psic.pangles['beta']
-        print "should be:", G[68]
-        print "----"
-        print "omega calc is:", psic.pangles['omega']
-        print "should be:", G[69]
-        print "----"
-        print "tth calc is:", psic.pangles['tth']
-        print "should be:", G[70]
-        print "----"
-        print "psi calc is:", psic.pangles['psi']
-        print "should be:", G[71]
-        print "----"
-        print "tau calc is:", psic.pangles['tau']
-        print "should be:", G[72]
-        print "----"
-        print "qaz calc is:", psic.pangles['qaz']
-        print "should be:", G[73]
-        print "----"
-        print "naz calc is:", psic.pangles['naz']
-        print "should be:", G[74]
-        print "----"
-        print "sigma_az calc is:", psic.pangles['sigma_az']
-        print "should be:", G[75]
-        print "----"
-        print "tau_az calc is:", psic.pangles['tau_az']
-        print "should be:", G[76]
-        print "#########################################"
+        print("#########################################")
+        print("h calc is:", psic.h)
+        print("should be: [-0.000113467 0.000280176 5.94001]")
+        print("----")
+        print("alpha calc is:", psic.pangles['alpha'])
+        print("should be:", G[67])
+        print("----")
+        print("beta calc is:", psic.pangles['beta'])
+        print("should be:", G[68])
+        print("----")
+        print("omega calc is:", psic.pangles['omega'])
+        print("should be:", G[69])
+        print("----")
+        print("tth calc is:", psic.pangles['tth'])
+        print("should be:", G[70])
+        print("----")
+        print("psi calc is:", psic.pangles['psi'])
+        print("should be:", G[71])
+        print("----")
+        print("tau calc is:", psic.pangles['tau'])
+        print("should be:", G[72])
+        print("----")
+        print("qaz calc is:", psic.pangles['qaz'])
+        print("should be:", G[73])
+        print("----")
+        print("naz calc is:", psic.pangles['naz'])
+        print("should be:", G[74])
+        print("----")
+        print("sigma_az calc is:", psic.pangles['sigma_az'])
+        print("should be:", G[75])
+        print("----")
+        print("tau_az calc is:", psic.pangles['tau_az'])
+        print("should be:", G[76])
+        print("#########################################")
 
     return psic
     
 ##########################################################################
+
 if __name__ == "__main__":
     """
     test 

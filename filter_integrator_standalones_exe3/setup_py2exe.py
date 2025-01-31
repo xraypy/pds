@@ -16,50 +16,50 @@ Seeing errors about vcvarsall.bat?
 """
 ##
 
-from distutils.core import setup
+from setuptools import setup
 
 # from setuptools import setup
-import py2exe
+# import py2exe
 import sys
 import os
 import shutil
-import numpy
-import numpy.oldnumeric
-import scipy
-from scipy import ndimage
+# import numpy
+# import numpy.oldnumeric
+# import scipy
+# from scipy import ndimage
 
 import matplotlib
 matplotlib.use('WXAgg')
 
 
-from matplotlib.widgets import Cursor
-from matplotlib import pyplot
-from matplotlib import pylab
-import h5py
-import Image
+# from matplotlib.widgets import Cursor
+# from matplotlib import pyplot
+# from matplotlib import pylab
+# import h5py
+# import Image
 #import sqlalchemy
-import wx
-from wx.lib.splitter import MultiSplitterWindow
-from wx.tools.Editra.src.eclib import pstatbar
+# import wx
+#from wx.lib.splitter import MultiSplitterWindow
+# from wx.tools.Editra.src.eclib import pstatbar
 
 import ctypes
 import ctypes.util
-from numpy import sort
+# from numpy import sort
 
 #import scipy.lib.six
-import scipy.io.netcdf
-from scipy.io.netcdf import netcdf_file
+# import scipy.io.netcdf
+# from scipy.io.netcdf import netcdf_file
 
 #from scipy.sparse.csgraph import _validation
 #from scipy.special import _ufuncs, _ufuncs_cxx
 
-import scipy.constants
+# import scipy.constants
 
-from background import background
+# from background import background
 
 loadlib =  ctypes.windll.LoadLibrary
 
-x = xrange(10)
+x = range(10)
 
 # larch library bits...
 #import larch
@@ -211,7 +211,7 @@ setup(name = "GSE_CTR",
  
 for fname in extra_files:
     path, name = os.path.split(fname)
-    print fname, name
+    print(fname, name)
     try:
         shutil.copy(fname, os.path.join('dist', name))
     except:
@@ -219,5 +219,5 @@ for fname in extra_files:
 
 
 if __name__ == '__main__':
-    print 'usage:  python py2exe_build.py py2exe'
+    print("usage:  python py2exe_build.py py2exe")
 

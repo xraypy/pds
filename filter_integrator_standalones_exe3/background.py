@@ -3,14 +3,13 @@ Methods to handle generic background determination
 
 Authors/Modifications:
 ----------------------
+*  Jaswitha (jaswithareddy@uchicago.edu), 1/30/2025
 *  Tom Trainor (tptrainor@alaska.edu)
-*  The polynomial background model follows closley 
+*  The polynomial background model follows closely 
    the XRF background code by Mark Rivers
 """
 #######################################################################
 
-import types
-import copy
 import numpy as num
 from matplotlib import pyplot
 
@@ -45,7 +44,8 @@ def linear_background(data,nbgr=0):
     xlin = num.append(xlin,num.arange(ndat-nbgr,ndat,1))
     ylin = num.array(data[0:nbgr],dtype=float)
     ylin = num.append(ylin,data[ndat-nbgr:])
-    m, b, rval, pval, stderr = linregress(xlin, ylin)
+    # m, b, rval, pval, stderr = linregress(xlin, ylin) - variables not defined anywhere (modified - Jas)
+    m, b= linregress(xlin, ylin)
     return m * num.arange(ndat) + b
 
 #######################################################################
@@ -109,7 +109,7 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     # make sure pow is positive
     # and create some debug stuff
     if pow < 0.:
-        print "Warning power is less than 0, changing it to positive"
+        print("Warning power is less than 0, changing it to positive")
         pow = -1.*pow
     if debug:
         p = []
@@ -225,7 +225,8 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
         bgr[j] = min(0, delta.min())
         # debug arrays
         if debug:
-            p.append((y[j] + poly[plidx:pridx] + line))
+            # p.append((y[j] + poly[plidx:pridx] + line)) - line is not defined anywhere (modified - Jas)
+            p.append((y[j] + poly[plidx:pridx]))
             d.append(delta)
 
     # do another linbgr to get residual
@@ -260,7 +261,7 @@ def show_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1):
     t0 = time.time()
     bgr = background(data,nbgr=nbgr,width=width,pow=pow,
                      tangent=tangent,compress=compress,debug=False)
-    print 'time to calc background = %.5f sec' % (time.time() - t0)
+    print("time to calc background = %.5f sec" % (time.time() - t0))
     pyplot.plot(data)
     pyplot.plot(data-bgr, 'r')
     pyplot.plot(bgr, 'k-')

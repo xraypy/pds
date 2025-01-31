@@ -169,7 +169,7 @@ def minimize(f,x,y,params,*args,**kws):
     args   = args + (kws,)
     test   = _residual(params,*args)
     if len(test) != len(x):
-        print 'cannot minimize function '
+        print("cannot minimize function ")
     
     result = leastsq(_residual,params,args=args)
     return  result[0]

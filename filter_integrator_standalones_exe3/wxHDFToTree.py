@@ -39,10 +39,10 @@ class hdfToTree():
             elif pointNum not in hdfDict[specName][scanNum]:
                 hdfDict[specName][scanNum][pointNum] = item0
             else:
-                print 'Error: Duplicate point'
-                print 'Specfile: ' + specName
-                print 'Scan number: ' + scanNum
-                print 'Point number: ' + pointNum
+                print('Error: Duplicate point')
+                print('Specfile: ' + specName)
+                print('Scan number: ' + scanNum)
+                print('Point number: ' + pointNum)
                 continue
         self.dictToTree(hdfDict, thisTree, treeRoot)
         self.populateReverse(thisTree, treeRoot)

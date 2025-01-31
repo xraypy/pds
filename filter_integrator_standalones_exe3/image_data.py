@@ -61,7 +61,7 @@ def read(file,pixel_map=None):
         from PIL import Image
         imopen  = Image.open
     except:
-        print "Error importing Image.open"
+        print("Error importing Image.open")
         return None
     # see if there is a pixel map
     if pixel_map != None:
@@ -80,7 +80,7 @@ def read(file,pixel_map=None):
                 arr = pixel_mask(arr,bad_pixels,good_pixels)
             return arr
         except:
-            print "Error reading file: %s" % file
+            print("Error reading file: %s" % file)
             return None
     if type(file) == types.StringType:
         image = rd(file,bad_pixels=bad_pixels,good_pixels=good_pixels)
@@ -211,7 +211,7 @@ def read_pixel_map(fname):
             good_pixels.append(map(int,pp))
         return bad_pixels, good_pixels
     except:
-        print "Error reading file: %s" % fname
+        print("Error reading file: %s" % fname)
         return []
     
 ############################################################################
@@ -318,12 +318,12 @@ def image_plot(img,fig=None,figtitle='',cmap=None,verbose=False,
     >>image_plot(im,fig=1,figtitle='Image',cmap=pyplot.cm.Spectral)
     """
     if verbose:
-        print '-----'
-        print 'Some statistics for plotted image'
-        print 'Image total= ', img.sum()
-        print 'Max value = ',  img.max()
-        print 'Min value = ',  img.min()
-        print '-----'
+        print("-----")
+        print("Some statistics for plotted image")
+        print("Image total= ", img.sum())
+        print("Max value = ",  img.max())
+        print("Min value = ",  img.min())
+        print("-----")
     if fig != None:
         pyplot.figure(fig)
         pyplot.clf()
@@ -1270,8 +1270,8 @@ class _ImageList:
                 self._write_image_tables(images,setname,descr)
             except:
                 self._cleanup()
-                print "Unable to write images:"
-                print "   Setname %s, hdf file %s" % (file,setname) 
+                print("Unable to write images:")
+                print("   Setname %s, hdf file %s" % (file,setname)) 
     
     ################################################################
     def _cleanup(self):
@@ -1299,7 +1299,7 @@ class _ImageList:
         """
         Set item.  
         """
-        print "Cannot set item"
+        print("Cannot set item")
         return
 
     ################################################################
@@ -1331,8 +1331,8 @@ class _ImageList:
         # find the highest one and
         # auto generate set name as next in the sequence 
         if hasattr(h.root.image_data,setname):
-            print "Warning: Image Archive File '%s'" % fname
-            print "-->Setname '%s' already exists, data is not overwritten\n" % setname
+            print("Warning: Image Archive File '%s'" % fname)
+            print("-->Setname '%s' already exists, data is not overwritten\n" % setname)
         else:
             h.createGroup('/image_data',setname,"Image Data")
             grp = '/image_data/' + setname
@@ -1344,7 +1344,7 @@ class _ImageList:
         import tables
         fname = self._make_fname()
         if not os.path.exists(fname):
-            print "Archive file not found:", fname
+            print("Archive file not found:", fname)
             return None
         grp = '/image_data/' + self.setname
         try:
@@ -1356,7 +1356,7 @@ class _ImageList:
             return im
         except:
             self._cleanup()
-            print "Error reading image tables: %s" % grp
+            print("Error reading image tables: %s" % grp)
             return None
 
 ################################################################################
@@ -1366,7 +1366,7 @@ if __name__ == '__main__':
     try:
         fname = sys.argv[1]
     except:
-        print 'read_pilatus  tiff file'
+        print("read_pilatus  tiff file")
         sys.exit()
     a = read(fname)
     image_show(a)

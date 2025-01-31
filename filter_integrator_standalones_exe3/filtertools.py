@@ -1,7 +1,11 @@
 '''
 Filter Tools
 Author: Craig Biwer (cbiwer@uchicago.edu)
-2/13/2012
+Last Modified: 2/13/2012
+
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last modified: 1/30/2025
 '''
 
 import h5py
@@ -51,10 +55,15 @@ def list_intersect(*args):
         intersect = intersect.intersection(entry)
     return list(intersect)
 
+
+####################################################################################
 # The heart of the filtering process
 # Given an opened h5 file, filters on the given criteria
 # and returns a list of the matched scans / points
 # NOTE: No longer used in the wxFilter window
+####################################################################################
+
+"""
 def cases(in_here, of_this, such_that, this_level='scan'):
     '''
     Filters the given file or list of scans and returns those that pass the
@@ -78,7 +87,7 @@ def cases(in_here, of_this, such_that, this_level='scan'):
             for number, scan in group.items():
                 all_possible.append(scan.name)
     else:
-        print 'Error: input file not recognized'
+        print("Error: input file not recognized")
         return None
     
     return_this = []
@@ -105,8 +114,8 @@ def cases(in_here, of_this, such_that, this_level='scan'):
                 if eval(str(this_value) + " " + such_that):
                     return_this.append(scan)
             else:
-                print 'Error: Unrecognized type'
-                print this_value
+                print("Error: Unrecognized type")
+                print(this_value)
                 return None
         return return_this
                 
@@ -125,8 +134,8 @@ def cases(in_here, of_this, such_that, this_level='scan'):
                         for i in range(len(in_here[scan]['point_data'])):
                             return_this.append((scan, i))
                 else:
-                    print 'Error: Unrecognized type'
-                    print this_value
+                    print("Error: Unrecognized type")
+                    print(this_value)
                     return None
             elif of_this in in_here[scan]['point_labs']:
                 this_ind = list(in_here[scan]['point_labs']).index(of_this)
@@ -140,8 +149,8 @@ def cases(in_here, of_this, such_that, this_level='scan'):
                         if eval(str(this_value) + " " + such_that):
                             return_this.append((scan, i))
                     else:
-                        print 'Error: Unrecognized type'
-                        print this_value
+                        print("Error: Unrecognized type")
+                        print(this_value)
                         return None
             elif of_this in in_here[scan]['param_labs']:
                 this_ind = list(in_here[scan]['param_labs']).index(of_this)
@@ -155,10 +164,12 @@ def cases(in_here, of_this, such_that, this_level='scan'):
                         for i in range(len(in_here[scan]['point_data'])):
                             return_this.append((scan, i))
                 else:
-                    print 'Error: Unrecognized type'
-                    print this_value
+                    print("Error: Unrecognized type")
+                    print(this_value)
                     return None
         return return_this
     else:
-        print 'Error: unrecognized filter level'
+        print("Error: unrecognized filter level")
         return None
+
+"""

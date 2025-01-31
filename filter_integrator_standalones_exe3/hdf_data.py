@@ -195,17 +195,18 @@ class HdfDataFile:
         self.all_items = None
         
         self.lock_file = file_locker.FileLock(self.fname)
-        print 'Attempting to lock file...'
+        print("Attempting to lock file...")
         self.lock_file.acquire()
-        print 'Lock acquired'
+        print("Lock acquired")
         try:
             self.file = h5py.File(self.fname,'r+')
         except:
-            print 'Error: unable to open file'
+            print("Error: unable to open file")
             raise
         self.all_items = self.file.items()
         
-    '''def __del__(self):
+    '''
+    def __del__(self):
         """
         If the object is going to be destroyed, make sure
         the current point is written back to the file first.
@@ -230,7 +231,8 @@ class HdfDataFile:
             pass
         del self.file
         del self.all_items
-        del self'''
+        del self
+    '''
     
     def __getitem__(self,arg):
         """
@@ -271,7 +273,7 @@ class HdfDataFile:
             if self.point != 0 and self.point_dict != {}:
                 self.write_point(self.point_dict, self.point)
         except ValueError:
-            print 'Error writing point; file may already be closed'
+            print("Error writing point; file may already be closed")
         
         try:
             self.point = 0
@@ -279,11 +281,11 @@ class HdfDataFile:
             self.file.flush()
             self.file.close()
             self.lock_file.release()
-            print 'Lock released'
+            print("Lock released")
             
         except:
-            print 'Error: file may not have closed cleanly,'
-            print 'though it may have already been closed'
+            print("Error: file may not have closed cleanly,")
+            print("though it may have already been closed.")
         # Try releasing the lock again, in the event
         # that closing the file threw an error
         try:
@@ -369,7 +371,7 @@ class HdfDataFile:
                         all_results[point] = \
                                 self.file[point]['scaler_values'][key_loc]
                     else:
-                        print 'Unrecognized Key Error: ' , key
+                        print("Unrecognized Key Error: ", key)
                 if self.point in points and key in self.point_dict.keys():
                     all_results[self.point] = self.point_dict[key]
         elif isinstance(key, tuple):
@@ -415,9 +417,9 @@ class HdfDataFile:
                 if self.point in points:
                     all_results[self.point] = self.point_dict[det_name][key]
             else:
-                print 'Error: unrecognized key'
+                print("Error: unrecognized key")
         else:
-            print 'Error: unknown key type'
+            print("Error: unknown key type")
         return all_results
         
     def read_point(self,num):
@@ -542,7 +544,7 @@ class HdfDataFile:
                 for point in points:
                     self.file[point][key] = value
             else:
-                print 'Error: unrecognized key'
+                print("Error: unrecognized key")
         elif isinstance(key, tuple):
             det_name = key[0]
             key = key[1]
@@ -564,9 +566,9 @@ class HdfDataFile:
                 for point in points:
                     self.file[point][det_name].attrs[key] = value
             elif key.startswith('image_data'):
-                print 'Are you sure you want to overwrite the image data?'
-                print 'If so, go into the hdf_data.py file and uncomment ' + \
-                        'the lines following this message.'
+                print("Are you sure you want to overwrite the image data?")
+                print("If so, go into the hdf_data.py file and uncomment " + \
+                        "the lines following this message.")
                 '''
                 if self.point in points:
                     self.point_dict[det_name][key] = value
@@ -579,9 +581,9 @@ class HdfDataFile:
             elif key.startswith('corrected_image'):
                 pass
             else:
-                print 'Error: unrecognized key'
+                print("Error: unrecognized key")
         else:
-            print 'Error: unknown key type'
+            print("Error: unknown key type")
         
     def version_point(self,data={}):
         """

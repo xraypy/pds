@@ -1,10 +1,13 @@
 '''
 Spec to HDF5 converter / parser
 Author: Craig Biwer (cbiwer@uchicago.edu)
-Last modified: 7/16/2012
+Last Modified: 7/16/2012
+
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last Modified: 1/31/2025
 '''
 
-import array
 import errno
 import math
 import os
@@ -22,16 +25,18 @@ def summarize(lines):
         # written by spec to lines beginning #G. If that changes,
         # at least this list will need to be modified, if not more
         # code below.
+        # JES modified 6/10/2015 to add 'g_new1', 'g_new2', 'g_new3' 
+        # after upgrade to SPEC version 6.03.03
         g_labs = ['g_prefer', 'g_sect', 'g_frz', 'g_haz', 'g_kaz', 'g_laz',
                     'g_zh0', 'g_zk0', 'g_z10', 'g_zh1', 'g_zk1', 'g_zl1',
                     'g_kappa', 'g_13', 'g_14', 'g_sigtau', 'g_mode1',
-                    'g_mode2', 'g_mode3', 'g_mode4', 'g_mode5', 'g_21',
+                    'g_mode2', 'g_mode3', 'g_mode4', 'g_mode5', 'g_21', 'g_new1',
                     'g_aa', 'g_bb', 'g_cc', 'g_al', 'g_be', 'g_ga', 'g_aa_s',
                     'g_bb_s', 'g_cc_s', 'g_al_s', 'g_be_s', 'g_ga_s', 'g_h0',
                     'g_k0', 'g_l0', 'g_h1', 'g_k1', 'g_l1', 'g_u00', 'g_u01',
                     'g_u02', 'g_u03', 'g_u04', 'g_u05', 'g_u10', 'g_u11',
                     'g_u12', 'g_u13', 'g_u14', 'g_u15', 'g_lambda0',
-                    'g_lambda1', 'g_54', 'g_55', 'g_56', 'g_57', 'g_58',
+                    'g_lambda1', 'g_new2', 'g_new3','g_54', 'g_55', 'g_56', 'g_57', 'g_58',
                     'g_59', 'g_60', 'g_61', 'g_62', 'g_H', 'g_K', 'g_L',
                     'g_LAMBDA', 'g_ALPHA', 'g_BETA', 'g_OMEGA', 'g_TTH',
                     'g_PSI', 'g_TAU', 'g_QAZ', 'g_NAZ', 'g_SIGMA_AZ',
@@ -123,7 +128,7 @@ def summarize(lines):
                     elif (len(ii) > 3):
                         nl_dat = nl_dat + 1
                         try:
-                            point_data.append(map(float, ii.split()))
+                            point_data.append(list(map(float, ii.split())))
                         except:
                             aborted = True
                             pass
@@ -184,14 +189,15 @@ def read_image(file):
         #arr = array.array('L', im.tostring())
         # So we'll still have to use numpy for this
         if im.mode == "I": 
-            arr = num.fromstring(im.tostring(), dtype='int32')
+            arr = num.frombuffer(im.tobytes(), dtype='int32')
         elif im.mode == "I;16": 
-            arr = num.fromstring(im.tostring(), dtype='int16')
-        else: print "image mode not supported"
+            arr = num.frombuffer(im.tobytes(), dtype='int16')
+        else: 
+            print(f"Image mode not supported for {file}")
         arr.shape = (im.size[1], im.size[0])
         return arr
-    except:
-        print "Error reading file: %s" % file
+    except Exception as e:
+        print(f"Error reading {file}: {e}")
         return None
 
 # Main conversion function, takes user input and converts
@@ -199,52 +205,52 @@ def read_image(file):
 def spec_to_hdf(args):
     choice = 'a'
     if len(args) == 0:
-        print 'Current directory: ', os.getcwd()
-        print 'Please enter the path to the specfile:'
-        input = raw_input('> ')
-        if not os.path.isfile(input):
-            print 'Error: file not found'
+        print("Current directory: ", os.getcwd())
+        print("Please enter the path to the specfile:")
+        user_input = input('> ')
+        if not os.path.isfile(user_input):
+            print('Error: file not found')
             return
-        print 'Please enter the name of the master file:'
-        output = raw_input('> ')
+        print("Please enter the name of the master file:")
+        output = input('> ')
         if output == '':
-            output = input
+            output = user_input
         if not output.endswith('.mh5'):
             output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+            choice = input('File already exists: (A)ppend, over(W)rite, '+\
                                'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
             elif choice == '':
                 choice = 'a'
     elif len(args) == 1:
-        input = args[0]
-        print 'Please enter the name of the master file:'
-        output = raw_input('> ')
+        user_input = args[0]
+        print("Please enter the name of the master file:")
+        output = input('> ')
         if output == '':
-            output = input
+            output = user_input
         if not output.endswith('.mh5'):
             output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+            choice = input('File already exists: (A)ppend, over(W)rite, '+\
                                'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
             elif choice == '':
                 choice = 'a'
     elif len(args) == 2:
-        input = args[0]
-        if not os.path.isfile(input):
-            print 'Error: file not found'
+        user_input = args[0]
+        if not os.path.isfile(user_input):
+            print("Error: file not found")
             return
         output = args[1]
         if output == '':
-            output = input
+            output = user_input
         if not output.endswith('.mh5'):
             output = output + '.mh5'
         if os.path.isfile(output):
-            choice = raw_input('File already exists: (A)ppend, over(W)rite, '+\
+            choice = input('File already exists: (A)ppend, over(W)rite, '+\
                                'or (C)ancel (A/W/C)? ').lower()
             if choice == 'c':
                 return
@@ -256,13 +262,13 @@ def spec_to_hdf(args):
             choice = 'a'
         elif '-w' in options:
             choice = 'w'
-        input = args[0]
-        if not os.path.isfile(input):
-            print 'Error: file not found'
+        user_input = args[0]
+        if not os.path.isfile(user_input):
+            print("Error: file not found")
             return
         output = args[1]
         if output == '':
-            output = input
+            output = user_input
         if not output.endswith('.mh5'):
             output = output + '.mh5'
         if os.path.isfile(output):
@@ -271,12 +277,12 @@ def spec_to_hdf(args):
     
     time1 = time.time()
     
-    spec_dir = os.path.split(input)[0]
+    spec_dir = os.path.split(user_input)[0]
     if spec_dir == '':
         spec_dir = '.'
-    spec_name = os.path.split(input)[-1]
+    spec_name = os.path.split(user_input)[-1]
     image_dir = spec_dir + '\\images\\%s\\' % spec_name[:-4]
-    this_file = open(input)
+    this_file = open(user_input)
     lines = this_file.readlines()
     this_file.close()
     summary = summarize(lines)
@@ -285,11 +291,11 @@ def spec_to_hdf(args):
     # locked, retry for 10 seconds before returning.
     lockFile = FileLock(output, timeout=1)
     try:
-        print 'Attempting to lock file...'
+        print("Attempting to lock file...")
         lockFile.acquire()
-        print 'Lock acquired'
+        print("Lock acquired")
     except FileLockException as e:
-        print 'Error: ' + str(e)
+        print("Error: " + str(e))
         return
     
     master_file = h5py.File(output, choice)
@@ -299,7 +305,7 @@ def spec_to_hdf(args):
         scan_group = spec_group.require_group(str(scan['index']))
         try:
             if len(scan_group['point_data']) == scan['nl_dat']:
-                print 'Skipping scan' + str(scan['index'])
+                print("Skipping scan " + str(scan['index']))
                 continue
             del scan_group['point_data']
         except KeyError:
@@ -314,13 +320,13 @@ def spec_to_hdf(args):
             del scan_group['param_labs']
         except KeyError:
             pass
-        scan_group.create_dataset('param_labs',
-                                 data=scan['g_labs'] + scan['mnames'])
+        scan_group.create_dataset('param_labs', data=list(scan['g_labs'] + scan['mnames']))
         try:
             del scan_group['param_data']
         except KeyError:
             pass
-        scan_group.create_dataset('param_data', data=scan['G'] + scan['P'])
+        scan_group.create_dataset('param_data', data=list(scan['G']) + list(scan['P']))
+        
         # Scan types: ['a2scan', 'a4scan', 'ascan', 'Escan', 'hkcircle',
         #              'hklmesh', 'hklrock', 'hklscan', 'loopscan', 'mesh',
         #              'powder_scan', 'rodscan', 'rodscan_interp',
@@ -493,9 +499,13 @@ def spec_to_hdf(args):
             # Calculate the HK distance
             h_val = scan_group.attrs['h_val']
             k_val = scan_group.attrs['k_val']
-            h_val_d = list(scan_group['param_labs']).index('g_aa_s')
-            k_val_d = list(scan_group['param_labs']).index('g_bb_s')
-            t_val_d = list(scan_group['param_labs']).index('g_ga_s')
+            
+            # param_labs is in bytes, eg. b'g_aa_s'
+            param_labs_list = [x.decode() if isinstance(x, bytes) else x for x in list(scan_group['param_labs'])]
+
+            h_val_d = param_labs_list.index('g_aa_s')
+            k_val_d = param_labs_list.index('g_bb_s')
+            t_val_d = param_labs_list.index('g_ga_s')
             h_val_d = float(list(scan_group['param_data'])[h_val_d])
             k_val_d = float(list(scan_group['param_data'])[k_val_d])
             t_val_d = float(list(scan_group['param_data'])[t_val_d])
@@ -542,7 +552,7 @@ def spec_to_hdf(args):
         # Set the image directory for the scan
         this_dir = image_dir + 'S%03d\\' % scan['index']
         # Print the directory (to give users a sense of progress made)
-        print this_dir
+        print(this_dir)
         if os.path.isdir(this_dir):
             image_data = []
             for image_file in os.listdir(this_dir):
@@ -551,14 +561,14 @@ def spec_to_hdf(args):
                     image_path = os.path.join(this_dir, image_file)
                     if image_path.endswith('.tif'):
                         image_value = read_image(image_path)
-                        if image_value != None:
+                        if image_value is not None:
                             image_data.append(image_value)
                         else:
                             holding = image_data[-1].copy()
                             holding.fill(-1)
                             image_data.append(holding)
-                except:
-                    print 'Error reading image ' + image_path
+                except Exception as e:
+                    print(f"Error reading image {image_path}: {e}")
                     raise
             if image_data != []:
                 try:
@@ -571,10 +581,10 @@ def spec_to_hdf(args):
     master_file.close()
     
     lockFile.release()
-    print 'Lock released'
+    print("Lock released")
     
     time2 = time.time()
-    print 'Total time:', (time2-time1)/60, 'minutes.'
+    print("Total time:", (time2-time1)/60, "minutes")
 
 """
 File Locker
@@ -614,9 +624,10 @@ class FileLock(object):
         while True:
             try:
                 self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
-                os.write(self.fd, os.environ['USERNAME'] + '\n')
-                os.write(self.fd, os.environ['COMPUTERNAME'] + '\n')
-                os.write(self.fd, time.ctime(time.time()))
+                os.write(self.fd, (os.environ['USERNAME'] + '\n').encode('utf-8'))
+                os.write(self.fd, (os.environ['COMPUTERNAME'] + '\n').encode('utf-8'))
+                os.write(self.fd, (time.ctime(time.time()) + '\n').encode('utf-8'))
+
                 break;
             except OSError as e:
                 if e.errno != errno.EEXIST and e.errno != errno.EACCES:

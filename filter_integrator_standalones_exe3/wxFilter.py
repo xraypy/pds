@@ -2,10 +2,14 @@
 Filter GUI
 Author: Craig Biwer (cbiwer@uchicago.edu)
 7/17/2012
+
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last modified: 1/31/2025
 '''
 
 import h5py
-import math
+# import math
 import os
 import time
 import wx
@@ -31,12 +35,10 @@ class filterGUI(wx.Frame):
         wx.Frame.__init__(self, args[0], -1, title='HDF Project File Builder',
                           size=(1440, 890))
         
-          
         # Set up shell
         #self.shell = None
         #self.init_shell()
 
-        
         # The file being filtered
         self.filterFile = None
         # The associated lock file
@@ -246,10 +248,10 @@ class filterGUI(wx.Frame):
         self.leftAll = wx.Button(self.middlePanel, label='<<')
         
         # Tooltips for the move buttons
-        self.rightOne.SetToolTipString('Move selected to project')
-        self.leftOne.SetToolTipString('Remove selected from project')
-        self.rightAll.SetToolTipString('Move all to project')
-        self.leftAll.SetToolTipString('Remove all from project')
+        self.rightOne.SetToolTip('Move selected to project')
+        self.leftOne.SetToolTip('Remove selected from project')
+        self.rightAll.SetToolTip('Move all to project')
+        self.leftAll.SetToolTip('Remove all from project')
         
         # The new attribute adder line
         self.newAttributeSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -362,9 +364,7 @@ class filterGUI(wx.Frame):
         
         # The new project tree box
         self.newProjectTree = myTreeCtrl(self.rightPanel,
-                                         style=wx.TR_MULTIPLE |
-                                               wx.TR_EXTENDED | 
-                                               wx.TR_DEFAULT_STYLE)
+                                         style=wx.TR_MULTIPLE | wx.TR_DEFAULT_STYLE)
         
         # The integrator buttons
         self.nextStepSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -501,10 +501,10 @@ class filterGUI(wx.Frame):
                                    defaultDir=os.getcwd(), defaultFile='',
                                    wildcard='Master files (*.mh5)|*.mh5|'+\
                                              'All files (*.*)|*',
-                                   style=wx.OPEN)
+                                   style=wx.FD_OPEN)
         if loadDialog.ShowModal() == wx.ID_OK:
             if not os.path.isfile(loadDialog.GetPath()):
-                print 'Error: File does not exist'
+                print("Error: File does not exist")
                 return
 
             # Clear all variables and update the table to
@@ -526,7 +526,7 @@ class filterGUI(wx.Frame):
             self.updateTable()
             self.projectDict = {}
             
-            print 'Loading ' + loadDialog.GetPath()
+            print("Loading " + loadDialog.GetPath())
             self.filterFile = loadDialog.GetPath()
             self.filterFileName = loadDialog.GetPath()
             self.filterLock = file_locker.FileLock(self.filterFileName)
@@ -550,7 +550,7 @@ class filterGUI(wx.Frame):
         '''
         
         if self.filterFile is None:
-            print 'Error: no file selected'
+            print("Error: no file selected")
             return
 
         # If a file is being reread, make sure it tries
@@ -558,25 +558,20 @@ class filterGUI(wx.Frame):
         self.filterFile = self.filterFileName
         
         try:
-            print 'Attempting to lock file...'
-            while wx.GetApp().Pending():
-                wx.GetApp().Dispatch()
-                wx.GetApp().Yield(True)
+            print("Attempting to lock file...")
             self.filterLock.acquire()
-            print 'Lock acquired'
-            while wx.GetApp().Pending():
-                wx.GetApp().Dispatch()
-                wx.GetApp().Yield(True)
+            print("Lock acquired")
+            wx.GetApp().Yield(True)
         except file_locker.FileLockException as e:
-            print 'Error: ' + str(e)
+            print("Error: " + str(e))
             return
         try:
             self.filterFile = h5py.File(self.filterFile, 'r')
             #self.set_data('filter_file', self.filterFile)
         except IOError:
-            print 'Error opening file'
+            print("Error opening file")
             self.filterLock.release()
-            print 'Lock released'
+            print("Lock released")
             return
         
         # Reset all the hdf-related variables
@@ -592,7 +587,7 @@ class filterGUI(wx.Frame):
         
         # Iterate over the items in the HDF file, building the
         # list that will be used to populate the filter table
-        filterItems = self.filterFile.items()
+        filterItems = list(self.filterFile.items())
         filterItems.sort()
         for spec, group in filterItems:
             for number, scan in group.items():
@@ -689,9 +684,9 @@ class filterGUI(wx.Frame):
         try:
             self.filterFile.close()
             self.filterLock.release()
-            print 'Lock released'
+            print("Lock released")
         except:
-            print 'Error closing file'
+            print("Error closing file")
     
     # Delete everything in the table, then add the appropriate scans
     def updateTable(self):
@@ -711,27 +706,30 @@ class filterGUI(wx.Frame):
             self.activeFilters = ft.list_intersect(*self.activeFilters)
             for entry in self.scanItems:
                 if entry[10] in self.activeFilters:
-                    self.dataTable.Append(entry)
+                    # Slices the entry to only show the first 9 columns of the entry
+                    self.dataTable.Append(entry[:9])
                     try:
                         if self.projectDict[entry[0]][entry[1]] is not None:
                             item = self.dataTable.GetItemCount()-1
                             self.dataTable.SetItemTextColour(item,
-                                                             wx.Color(128,
+                                                             wx.Colour(128,
                                                                       128,
                                                                       128))
-                    except:
+                    except Exception as e:
                         pass
         else:
             for entry in self.scanItems:
-                self.dataTable.Append(entry)
+                # print("Entry:", entry)
+                # Slices the entry to only show the first 9 columns of the entry
+                self.dataTable.Append(entry[:9])
                 try:
                     if self.projectDict[entry[0]][entry[1]] is not None:
                         item = self.dataTable.GetItemCount()-1
                         self.dataTable.SetItemTextColour(item,
-                                                         wx.Color(128,
+                                                         wx.Colour(128,
                                                                   128,
                                                                   128))
-                except:
+                except Exception as e:
                     pass
         return
     
@@ -743,10 +741,25 @@ class filterGUI(wx.Frame):
         '''
         
         tableSelection = event.GetItem()
-        specName = self.dataTable.GetItem(tableSelection.m_itemId, 0).Text
-        scanNumber = self.dataTable.GetItem(tableSelection.m_itemId, 1).Text
+        itemId = event.GetIndex()
+        
+        specName = self.dataTable.GetItem(itemId, 0).Text
+        scanNumber = self.dataTable.GetItem(itemId, 1).Text
         toShow = self.allInfo.get((specName, scanNumber), '')
         self.moreBox.SetValue(toShow)
+    '''
+    # Helper function for cmp() which was discontinued in Python 3.x
+    def compare_items(self, item1, item2):
+        val1 = self.GetItemText(item1)  
+        val2 = self.GetItemText(item2)
+        
+        if val1 < val2:
+            return -1
+        elif val1 > val2:
+            return 1
+        else:
+            return 0
+    '''
     
     # Add an attribute both to the attribute dictionary and the on-screen list
     def addAttribute(self, event):
@@ -770,7 +783,7 @@ class filterGUI(wx.Frame):
         thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
         self.attrList.SetItemWindow(self.attrList.GetItemCount()-1, col=2,
                                     wnd=thisButton)
-        self.attrList.SortItems(cmp)
+        #self.attrList.SortItems(compare_items)
     
     # Delete an attribute both from the dictionary and the on-screen list
     def deleteMe(self, event):
@@ -789,13 +802,13 @@ class filterGUI(wx.Frame):
                                    defaultDir=os.getcwd(), defaultFile='',
                                    wildcard='txt files (*.txt)|*.txt|'+\
                                             'All files (*.*)|*',
-                                   style=wx.OPEN)
+                                   style=wx.FD_OPEN)
         if loadDialog.ShowModal() == wx.ID_OK:
-            print 'Loading attribute file ' + loadDialog.GetPath()
+            print("Loading attribute file " + loadDialog.GetPath())
             try:
                 attributeFile = open(loadDialog.GetPath())
             except:
-                print 'Error opening attribute file'
+                print("Error opening attribute file")
                 loadDialog.Destroy()
                 raise
             try:
@@ -804,7 +817,7 @@ class filterGUI(wx.Frame):
                     if len(line) != 2 or \
                             line[0] not in POSSIBLE_ATTRIBUTES or \
                             line[0] in self.attrDict.keys() or \
-                            line[1] is '':
+                            line[1] == '':
                         continue
                     self.attrDict[line[0]] = line[1]
                     self.attrList.Append([line[0], line[1], ''])
@@ -816,9 +829,9 @@ class filterGUI(wx.Frame):
                     self.attrList.SetItemWindow(self.attrList.GetItemCount()-1,
                                                 col=2, wnd=thisButton)
                 attributeFile.close()
-                self.attrList.SortItems(cmp)
+                #self.attrList.SortItems(compare_items)
             except:
-                print 'Error reading attribute file'
+                print("Error reading attribute file")
                 loadDialog.Destroy()
                 raise
         loadDialog.Destroy()
@@ -834,20 +847,20 @@ class filterGUI(wx.Frame):
                                    defaultDir=os.getcwd(), defaultFile='',
                                    wildcard='txt files (*.txt)|*.txt|'+\
                                             'All files (*.*)|*',
-                                   style=wx.SAVE)
+                                   style=wx.FD_SAVE)
         if saveDialog.ShowModal() == wx.ID_OK:
-            print 'Saving attribute file ' + saveDialog.GetPath()
+            print("Saving attribute file " + saveDialog.GetPath())
             try:
                 attributeFile = open(saveDialog.GetPath(), 'w')
             except:
-                print 'Error opening attribute file'
+                print("Error opening attribute file")
                 saveDialog.Destroy()
                 raise
             try:
                 for key, value in self.attrDict.iteritems():
                     attributeFile.write(key + '\t' + value + '\n')
             except:
-                print 'Error writing to file'
+                print("Error writing to file")
                 attributeFile.close()
                 saveDialog.Destroy()
                 raise
@@ -887,12 +900,12 @@ class filterGUI(wx.Frame):
                     self.projectDict[specName][scanNumber] = \
                                                             self.attrDict.copy()
                 else:
-                    print 'Specfile ' + specName + ', scan ' + \
-                          scanNumber + ' is already in the tree.'
+                    print("Specfile " + specName + ", scan " + \
+                          scanNumber + " is already in the tree.")
             else:
                 self.projectDict[specName] = {}
                 self.projectDict[specName][scanNumber] = self.attrDict.copy()
-            self.dataTable.SetItemTextColour(item, wx.Color(128, 128, 128))
+            self.dataTable.SetItemTextColour(item, wx.Colour(128, 128, 128))
             item = self.dataTable.GetNextSelected(item)
         self.newProjectTree.DeleteAllItems()
         projectRoot = \
@@ -913,12 +926,12 @@ class filterGUI(wx.Frame):
                     self.projectDict[specName][scanNumber] = \
                                                             self.attrDict.copy()
                 else:
-                    print 'Specfile ' + specName + ', scan ' + \
-                          scanNumber + ' is already in the tree.'
+                    print("Specfile " + specName + ", scan " + \
+                          scanNumber + " is already in the tree.")
             else:
                 self.projectDict[specName] = {}
                 self.projectDict[specName][scanNumber] = self.attrDict.copy()
-            self.dataTable.SetItemTextColour(item, wx.Color(128, 128, 128))
+            self.dataTable.SetItemTextColour(item, wx.Colour(128, 128, 128))
             item = self.dataTable.GetNextItem(item)
         self.newProjectTree.DeleteAllItems()
         projectRoot = \
@@ -997,7 +1010,7 @@ class filterGUI(wx.Frame):
     def newProject(self, event):
         #print self.projectDict
         if self.projectDict == {}:
-            print 'No scans selected'
+            print("No scans selected")
             return
         self.fileDirectory, holding = os.path.split(self.filterFileName)
         file_types = 'Project files (*.ph5)|*.ph5|All files (*.*)|*'
@@ -1005,42 +1018,40 @@ class filterGUI(wx.Frame):
                                     defaultDir=self.fileDirectory,
                                     defaultFile=self.projectNameBox.GetValue(),
                                     wildcard=file_types,
-                                    style=wx.SAVE | wx.OVERWRITE_PROMPT)
+                                    style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         if save_dialog.ShowModal() == wx.ID_OK:
             mlockFile = file_locker.FileLock(self.filterFileName)
             plockFile = file_locker.FileLock(save_dialog.GetPath())
             try:
-                print 'Attempting to lock files...'
-                while wx.GetApp().Pending():
-                    wx.GetApp().Dispatch()
-                    wx.GetApp().Yield(True)
+                print("Attempting to lock files...") 
                 mlockFile.acquire()
                 plockFile.acquire()
-                print 'Locks acquired'
+                print("Locks acquired")
+                wx.GetApp().Yield(True)
             except file_locker.FileLockException as e:
-                print 'Error: ' + str(e)
+                print("Error: " + str(e))
                 return
-            print 'Start: ', time.ctime(time.time())
+            print("Start: ", time.ctime(time.time()))
             out_file = save_dialog.GetPath()
             try:
                 mtp.master_to_project(self.filterFileName,
                                       self.projectDict,
                                       out_file, append=False, gui=True)
-            except:
-                print 'Error generating project file'
+            except Exception as e:
+                print(f"Error generating project file: {e}")
                 mlockFile.release()
                 plockFile.release()
-                print 'Locks released'
-            print 'Finish: ', time.ctime(time.time())
+                print("Locks released")
+            print("Finish: ", time.ctime(time.time()))
             mlockFile.release()
             plockFile.release()
-            print 'Locks released'
+            print("Locks released")
         save_dialog.Destroy()
     
     # Append scans to an existing HDF project file, then open it
     def appendTo(self, event):
         if self.projectDict == {}:
-            print 'No scans selected'
+            print("No scans selected")
             return
         self.fileDirectory, holding = os.path.split(self.filterFileName)
         file_types = 'Project files (*.ph5)|*.ph5|All files (*.*)|*'
@@ -1048,36 +1059,34 @@ class filterGUI(wx.Frame):
                                     defaultDir=self.fileDirectory,
                                     defaultFile=self.projectNameBox.GetValue(),
                                     wildcard=file_types,
-                                    style=wx.SAVE)
+                                    style=wx.FD_SAVE)
         if save_dialog.ShowModal() == wx.ID_OK:
             mlockFile = file_locker.FileLock(self.filterFileName)
             plockFile = file_locker.FileLock(save_dialog.GetPath())
             try:
-                print 'Attempting to lock files...'
-                while wx.GetApp().Pending():
-                    wx.GetApp().Dispatch()
-                    wx.GetApp().Yield(True)
+                print("Attempting to lock files...")  
                 mlockFile.acquire()
                 plockFile.acquire()
-                print 'Locks acquired'
+                print("Locks acquired")
+                wx.GetApp().Yield(True)
             except file_locker.FileLockException as e:
-                print 'Error: ' + str(e)
+                print("Error: " + str(e))
                 return
-            print 'Start: ', time.ctime(time.time())
+            print("Start: ", time.ctime(time.time()))
             out_file = save_dialog.GetPath()
             try:
                 mtp.master_to_project(self.filterFileName,
                                       self.projectDict,
                                       out_file, append=True, gui=True)
             except:
-                print 'Error saving to project file'
+                print("Error saving to project file")
                 mlockFile.release()
                 plockFile.release()
-                print 'Locks released'
-            print 'Finish: ', time.ctime(time.time())
+                print("Locks released")
+            print("Finish: ", time.ctime(time.time()))
             mlockFile.release()
             plockFile.release()
-            print 'Locks released'
+            print("Locks released")
         save_dialog.Destroy()
     
     # Keep only the selected scans by faking a filtered result
@@ -1167,7 +1176,7 @@ class filterGUI(wx.Frame):
         try:
             self.filterFile.close()
             self.filterLock.release()
-            print 'Lock released'
+            print("Lock released")
         except:
             pass
         self.Destroy()
@@ -1487,12 +1496,12 @@ class LWindow(wx.Dialog):
         try:
             fromL = float(self.fromValue.GetValue())
         except:
-            print 'Error: Invalid minimum L; setting to -100'
+            print("Error: Invalid minimum L; setting to -100")
             fromL = -100.0
         try:
             toL = float(self.toValue.GetValue())
         except:
-            print 'Error: Invalid maximum L; setting to 100'
+            print("Error: Invalid maximum L; setting to 100")
             toL = 100.0
         self.GetParent().LCases = None
         if fromL <= self.LMin and toL >= self.LMax:
@@ -1870,7 +1879,7 @@ class DateWindow(wx.Dialog):
                     self.toYear.GetStringSelection()
         toDate = time.mktime(time.strptime(toDate))
         if fromDate > toDate:
-            print "Error: 'To' date precedes 'From' date"
+            print("Error: 'To' date precedes 'From' date")
             self.Destroy()
             del self
             return
@@ -1949,10 +1958,13 @@ class myTreeCtrl(wx.TreeCtrl):
     
     def OnCompareItems(self, item1, item2):
         try:
-            return cmp(int(self.GetItemText(item1)),
-                       int(self.GetItemText(item2)))
+            return (int(self.GetItemText(item1)) > int(self.GetItemText(item2))) \
+                    - \
+                    (int(self.GetItemText(item1)) < int(self.GetItemText(item2)))
         except:
-            return cmp(self.GetItemText(item1), self.GetItemText(item2))
+            return self.GetItemText(item1) > self.GetItemText(item2) \
+                    - \
+                    self.GetItemText(item1) < self.GetItemText(item2)
 
 
 if __name__ == '__main__':

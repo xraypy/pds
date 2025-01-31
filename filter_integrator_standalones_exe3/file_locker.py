@@ -3,6 +3,10 @@ File Locker
 Author: Evan Fosmark
 http://www.evanfosmark.com/2009/01/cross-platform-file-locking-support-in-python
 Last modified: 7.16.2012 by Craig Biwer (cbiwer@uchicago.edu)
+
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last Modified: 1/31/2025
 """
 
 
@@ -41,11 +45,12 @@ class FileLock(object):
         while True:
             try:
                 self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
-                os.write(self.fd, os.environ['USERNAME'] + '\n')
-                os.write(self.fd, os.environ['COMPUTERNAME'] + '\n')
-                os.write(self.fd, time.ctime(time.time()))
+                os.write(self.fd, (os.environ['USERNAME'] + '\n').encode('utf-8'))
+                os.write(self.fd, (os.environ['COMPUTERNAME'] + '\n').encode('utf-8'))
+                os.write(self.fd, (time.ctime(time.time()) + '\n').encode('utf-8'))
                 break;
             except OSError as e:
+                print(f"Error code: {e.errno}, Error message: {e.strerror}")
                 if e.errno != errno.EEXIST and e.errno != errno.EACCES:
                     raise 
                 if (time.time() - start_time) >= self.timeout:

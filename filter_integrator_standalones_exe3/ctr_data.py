@@ -13,9 +13,8 @@ corrections are applied include:
 """
 ##############################################################################
 
-import types, copy
+import types
 import numpy as num
-import time
 
 from mathutil import cosd, sind
 
@@ -87,7 +86,7 @@ def _get_corr(scan,point,corr_params,preparsed=False):
         corr  = CtrCorrectionPsic(gonio=gonio,beam_slits=beam,
                                   det_slits=det,sample=sample)
     else:
-        print "Geometry %s not implemented" % geom
+        print("Geometry %s not implemented" % geom)
         corr = None
     return corr
 
@@ -114,7 +113,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         phi=None
     if phi == None and verbose==True:
-        print "Warning no phi angle:", scan_name
+        print("Warning no phi angle:", scan_name)
     #
     try:
         if type(scan['chi']) == types.FloatType:
@@ -124,7 +123,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         chi = None
     if chi == None and verbose==True:
-        print "Warning no chi angle", scan_name
+        print("Warning no chi angle", scan_name)
     #
     try:
         if type(scan['eta']) == types.FloatType:
@@ -134,7 +133,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         eta = None
     if eta == None and verbose==True:
-        print "Warning no eta angle", scan_name
+        print("Warning no eta angle", scan_name)
     #
     try:
         if type(scan['mu']) == types.FloatType:
@@ -144,7 +143,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         mu = None
     if mu == None and verbose==True:
-        print "Warning no mu angle", scan_name
+        print("Warning no mu angle", scan_name)
     #
     try:
         if type(scan['nu']) == types.FloatType:
@@ -154,7 +153,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         nu = None
     if nu == None and verbose==True:
-        print "Warning no nu angle", scan_name
+        print("Warning no nu angle", scan_name)
     #
     try:
         if type(scan['del']) == types.FloatType:
@@ -164,7 +163,7 @@ def _update_psic_angles(gonio,scan,point,verbose=True):
     except:
         delta = None
     if delta == None and verbose==True:
-        print "Warning no del angle", scan_name
+        print("Warning no del angle", scan_name)
     #
     gonio.set_angles(phi=phi,chi=chi,eta=eta,
                      mu=mu,nu=nu,delta=delta)
@@ -286,11 +285,11 @@ class CtrCorrectionPsic:
         ca = self.active_area(plot=plot,fig=fig)
         ct = (cp)*(cl)*(ca)
         if plot == True:
-            print "Correction factors (mult by I)" 
-            print "   Polarization=%f" % cp
-            print "   Lorentz=%f" % cl
-            print "   Area=%f" % ca
-            print "   Total=%f" % ct
+            print("Correction factors (mult by I)" )
+            print("   Polarization=%f" % cp)
+            print("   Lorentz=%f" % cl)
+            print("   Area=%f" % ca)
+            print("   Total=%f" % ct)
         return ct
 
     ##########################################################################
@@ -327,6 +326,7 @@ class CtrCorrectionPsic:
         nu    = self.gonio.angles['nu']
         p = 1. - ( cosd(delta) * sind(nu) )**2.
         if fh != 1.0:
+            # Need clarification: Is it c_p or cp? (Jas)
             p = fh * c_p + (1.-fh)*(1.0 - (sind(delta))**2.)
         if p == 0.:
             cp = 0.
@@ -351,17 +351,17 @@ class CtrCorrectionPsic:
             A_beam = total beam area
         """
         if self.beam_slits == {} or self.beam_slits == None:
-            print "Warning beam slits not specified"
+            print("Warning beam slits not specified")
             return 1.0
         alpha = self.gonio.pangles['alpha']
         beta  = self.gonio.pangles['beta']
         if plot == True:
-            print 'Alpha = ', alpha, ', Beta = ', beta
+            print("Alpha = ", alpha, ", Beta = ", beta)
         if alpha < 0.0:
-            print 'alpha is less than 0.0'
+            print("alpha is less than 0.0")
             return 0.0
         elif beta < 0.0:
-            print 'beta is less than 0.0'
+            print("beta is less than 0.0")
             return 0.0
 
         # get beam vectors

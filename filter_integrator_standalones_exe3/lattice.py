@@ -333,7 +333,7 @@ class Lattice:
         Calculate d space for given [h,k,l]
         """
         if len(hkl)!=3:
-            print "Error need an array of [h,k,l]"
+            print("Error need an array of [h,k,l]")
             return 0.
         h = self.mag(hkl,recip=True)
         if h == 0.:
@@ -542,44 +542,44 @@ def test_lattice():
 
     # show lattice parameters and real
     # recip lattice cell volumes
-    print cell
-    print cell.vol()
-    print cell.vol(recip=True)
+    print(cell)
+    print(cell.vol())
+    print(cell.vol(recip=True))
 
     # what the hkl = [0,0,1] dspace
     # and 2 theta value for lambda = 1 ang.
-    print cell.d([0,0,1])
-    print cell.tth([0,0,1],lam=1.)
+    print(cell.d([0,0,1]))
+    print(cell.tth([0,0,1],lam=1.))
     
     # create a real space vector perpendicular
     # to hkl = [0,0,1], with magnitude = dspace(001)
     dv = cell.dvec([0,0,1])
-    print dv
-    print cell.mag(dv)
+    print(dv)
+    print(cell.mag(dv))
 
     # compute the angle between some vectors
     # recip lattice [1,0,0] and [0,1,0]
-    print cell.angle([1,0,0],[0,1,0],recip=True)
+    print(cell.angle([1,0,0],[0,1,0],recip=True))
     # recip lattice [1,0,0] and [0,0,1]
-    print cell.angle([1,0,0],[0,0,1],recip=True)
+    print(cell.angle([1,0,0],[0,0,1],recip=True))
     # recip lattice [0,0,1] and [1,1,1]
-    print cell.angle([0,0,1],[1,1,1],recip=True)
+    print(cell.angle([0,0,1],[1,1,1],recip=True))
 
     # real lattice [1,0,0] and [0,1,0]
-    print cell.angle([1,0,0],[0,1,0])
+    print(cell.angle([1,0,0],[0,1,0]))
     # real lattice [1,0,0] and [0,0,1]
-    print cell.angle([1,0,0],[0,0,1])
+    print(cell.angle([1,0,0],[0,0,1]))
     # real lattice [0,0,1] and [1,1,1]
-    print cell.angle([0,0,1],[1,1,1])
+    print(cell.angle([0,0,1],[1,1,1]))
 
     # real [0,0,1] and recip [0,0,1]
-    print cell.angle_rr([0,0,1],[0,0,1])
+    print(cell.angle_rr([0,0,1],[0,0,1]))
     # real [1,1,1] and recip [0,0,1]
-    print cell.angle_rr([1,1,1],[0,0,1])
+    print(cell.angle_rr([1,1,1],[0,0,1]))
     # real dv and recip [0,0,1]
-    print cell.angle_rr(dv,[0,0,1])
+    print(cell.angle_rr(dv,[0,0,1]))
     # real dv and recip [1,1,0]
-    print cell.angle_rr(dv,[1,1,0])
+    print(cell.angle_rr(dv,[1,1,0]))
 
     return cell
 
@@ -597,26 +597,26 @@ def test_transform():
 
     # create an instance of the rhombohedral lattice
     # shows the rhomb lattice params
-    print t.plat()
+    print(t.plat())
 
     # given the hkl = [001] in hex calc hkl in rhom
-    print t.hp([0,0,1])
+    print(t.hp([0,0,1]))
     
     # given the hkl = [111] in rhom calc hkl in hex
-    print t.h([1,1,1])
+    print(t.h([1,1,1]))
 
     # create a cartesian representation
     t.cartesian()
     cart = t.plat()
-    print cart
+    print(cart)
     
     # convert a [1,1,0] vector in hex lattice to cartesian
     vc = t.xp([1,1,0])
-    print vc
+    print(vc)
 
     # check that the vector is the same length
-    print cell.mag([1,1,0])
-    print cart.mag(vc)
+    print(cell.mag([1,1,0]))
+    print(cart.mag(vc))
 
     return t
 

@@ -1028,12 +1028,12 @@ class Integrator(wx.Frame, wx.Notebook):
                                        style=wx.OPEN)
             if loadDialog.ShowModal() == wx.ID_OK:
                 if not os.path.isfile(loadDialog.GetPath()):
-                    print 'Error: File does not exist'
+                    print("Error: File does not exist")
                     return
                 try:
                     self.hdfObject.close()
                     self.lockFile.release()
-                    print 'Lock released'
+                    print("Lock released")
                 except:
                     pass
                 
@@ -1055,7 +1055,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.hdfTreeObject = None
                 self.customTreeObject = None
                 
-                print 'Loading ' + loadDialog.GetPath()
+                print("Loading " + loadDialog.GetPath())
                 self.loadFile(loadDialog.GetPath())
             loadDialog.Destroy()
         
@@ -1065,7 +1065,7 @@ class Integrator(wx.Frame, wx.Notebook):
             try:
                 self.hdfObject = hdf_data.HdfDataFile(fileName)
             except file_locker.FileLockException as e:
-                print 'Error: ' + str(e)
+                print("Error: " + str(e))
                 return
             except:
                 return
@@ -1169,7 +1169,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 try:
                     self.hdfTree.SelectItem(dataLookup[allLs[thisPoint]])#item)
                 except:
-                    print 'Error: can\'t locate point.'
+                    print("Error: can\'t locate point.")
                 self.hdfTree.SetFocus()
         
         # Copy parameters from one set of points to another by closest L value
@@ -1338,7 +1338,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 ofMe = self.hdfTree.GetSelection()
                 itemData = self.hdfTree.GetItemPyData(ofMe)
             except:
-                print 'Error getting tree selection'
+                print("Error getting tree selection")
                 self.badPointToggle.SetValue(False)
                 return
             if itemData is None:
@@ -1401,7 +1401,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 ofMe = self.hdfTree.GetSelection()
                 itemData = self.hdfTree.GetItemPyData(ofMe)
             except:
-                print 'Error getting tree selection'
+                print("Error getting tree selection")
                 self.clearFields()
                 return
             if itemData is None:
@@ -1628,7 +1628,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                                             iterItem)
                     self.statusBar.SetStatusText("Integrating " + iterString, 2)
                     if not self.integrateContinue:
-                        print 'Integration aborted on ' + iterString.lower()
+                        print("Integration aborted on " + iterString.lower())
                         break
                     try:
                         if eval(self.hdfObject[iterData]['det_0']\
@@ -1637,7 +1637,7 @@ class Integrator(wx.Frame, wx.Notebook):
                         if self.hdfObject[iterData]['det_0']['F_changed']:
                             self.updateF(iterData)
                     except:
-                        print 'Error reading ' + iterString.lower()
+                        print("Error reading " + iterString.lower())
                         raise
                     integrateProgress += 1
                     self.statusBar.SetProgress(integrateProgress)
@@ -1727,7 +1727,7 @@ class Integrator(wx.Frame, wx.Notebook):
                         self.hdfObject.set_all(('det_0', 'F_changed'),
                                                True, justThese)
                 except:
-                    print 'Error updating selection'
+                    print("Error updating selection")
                     raise
             if fOnly:
                 self.updateF(itemData)
@@ -1771,7 +1771,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                                         iterItem)
                 self.statusBar.SetStatusText("Integrating " + iterString, 2)
                 if not self.integrateContinue:
-                    print 'Integration aborted on ' + iterString.lower()
+                    print("Integration aborted on " + iterString.lower())
                     break
                 try:
                     if eval(self.hdfObject[iterData]['det_0']\
@@ -1780,7 +1780,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     if self.hdfObject[iterData]['det_0']['F_changed']:
                         self.updateF(iterData)
                 except:
-                    print 'Error reading ' + iterString.lower()
+                    print("Error reading " + iterString.lower())
                     raise
                 integrateProgress += 1
                 self.statusBar.SetProgress(integrateProgress)
@@ -2320,7 +2320,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 ofMe = self.hdfTree.GetSelection()
                 itemData = self.hdfTree.GetItemPyData(ofMe)
             except:
-                print 'Error getting tree selection'
+                print("Error getting tree selection")
                 return
             if itemData is None:
                 return
@@ -2331,11 +2331,11 @@ class Integrator(wx.Frame, wx.Notebook):
                                                 'All files (*.*)|*',
                                        style=wx.SAVE | wx.OVERWRITE_PROMPT)
             if saveDialog.ShowModal() == wx.ID_OK:
-                print 'Saving attribute file ' + saveDialog.GetPath()
+                print("Saving attribute file " + saveDialog.GetPath())
                 try:
                     attributeFile = open(saveDialog.GetPath(), 'w')
                 except:
-                    print 'Error opening attribute file'
+                    print("Error opening attribute file")
                     saveDialog.Destroy()
                     raise
                 try:
@@ -2349,7 +2349,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     attributeFile.write('geom\t' + \
                                         self.hdfObject[itemData]['geom'])
                 except:
-                    print 'Error writing to file'
+                    print("Error writing to file")
                     attributeFile.close()
                     saveDialog.Destroy()
                     raise
@@ -2730,7 +2730,7 @@ class customSelector(wx.Dialog):
 
 # Holds the RectangleSelector used to pick an ROI
 def toggle_selector(event):
-    print ' Key pressed.'
+    print("Key pressed.")
     '''
     if event.key in ['Q', 'q'] and toggle_selector.RS.active:
         print ' RectangleSelector deactivated.'
