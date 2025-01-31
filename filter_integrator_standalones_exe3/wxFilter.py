@@ -1078,8 +1078,8 @@ class filterGUI(wx.Frame):
                 mtp.master_to_project(self.filterFileName,
                                       self.projectDict,
                                       out_file, append=True, gui=True)
-            except:
-                print("Error saving to project file")
+            except Exception as e:
+                print("Error saving to project file:", e)
                 mlockFile.release()
                 plockFile.release()
                 print("Locks released")
