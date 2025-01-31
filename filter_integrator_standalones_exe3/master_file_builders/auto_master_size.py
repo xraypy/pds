@@ -21,13 +21,13 @@ def auto_master(spec_dir):
             if item not in spec_sizes:
                 spec_sizes[item] = edit_size
                 subprocess.call([sys.executable,
-                                 'C:\\Users\\guntaka\\Documents\\PDSv1\\master_file_builders\\spectohdf_v6p3p3.py',
+                                 'C:\\Users\\guntaka\\Documents\\GitHub\\pds\\master_file_builders\\spectohdf_v6p3p3.py',
                                  full_item, '', '-a'])
             else:
                 if spec_sizes[item] < edit_size:
                     spec_sizes[item] = edit_size
                     subprocess.call([sys.executable,
-                                    'C:\\Users\\guntaka\\Documents\\PDSv1\\master_file_builders\\spectohdf_v6p3p3.py',
+                                    'C:\\Users\\guntaka\\Documents\\GitHub\\pds\\master_file_builders\\spectohdf_v6p3p3.py',
                                      full_item, '', '-a'])
         time.sleep(20)
     
