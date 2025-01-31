@@ -1,0 +1,19 @@
+bad_pixel_map	[]
+beam_slits	{'horz': 0.36, 'vert': 0.055}
+bgrflag	2
+cnbgr	5
+cpow	0.0
+ctan	False
+cwidth	15
+det_slits	{}
+rnbgr	5
+roi	[248, 37, 280, 104]
+rotangle	0.0
+rpow	0.0
+rtan	False
+rwidth	15
+sample_angles	{}
+sample_diameter	0.2
+sample_polygon	[]
+scale	1000000.0
+geom	psic
