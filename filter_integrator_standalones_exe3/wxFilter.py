@@ -33,7 +33,7 @@ class filterGUI(wx.Frame):
     '''The GUI window for filtering.'''
     def __init__(self, *args, **kwargs):
         wx.Frame.__init__(self, args[0], -1, title='HDF Project File Builder',
-                          size=(1440, 890))
+                          size=(1650, 890))
         
         # Set up shell
         #self.shell = None
@@ -1207,8 +1207,7 @@ class SpecWindow(wx.Dialog):
             self.currentSpec = allSpec
         self.allRoot = self.list.AddRoot(self.GetParent().fileButton.GetLabel(),
                                          ct_type=1)
-        specKeys = self.allSpec.keys()
-        specKeys.sort()
+        specKeys = sorted(self.allSpec.keys())
         for spec in specKeys:
             specRoot = self.list.AppendItem(self.allRoot, spec, ct_type=1)
             allScans = self.allSpec[spec]
@@ -1254,7 +1253,7 @@ class SpecWindow(wx.Dialog):
     # dictionary with selected scan numbers. With this done, filter the
     # hdf file for the matching scans and update the table in the main window.
     def onApply(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         selectedSpec = {}
         specKids = self.allRoot.GetChildren()
         for spec in specKids:
@@ -1290,7 +1289,7 @@ class SpecWindow(wx.Dialog):
     
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         self.Destroy()
         del self
 
@@ -1324,8 +1323,7 @@ class HKWindow(wx.Dialog):
         for hk in self.allHKKeys:
             hkRoot = self.list.AppendItem(self.allRoot,
                                           str(tuple(map(float, hk))), ct_type=1)
-            allSpecs = self.allHK[hk].keys()
-            allSpecs.sort()
+            allSpecs = sorted(self.allHK[hk].keys())
             for spec in allSpecs:
                 specRoot = self.list.AppendItem(hkRoot,
                                                 spec + ': ' + 
@@ -1372,7 +1370,7 @@ class HKWindow(wx.Dialog):
     # parent class. Once this is done, filter the hdf file to return the
     # desired scans and update the table in the main window.
     def onApply(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         selectedHK = {}
         hkKids = self.allRoot.GetChildren()
         for hk in hkKids:
@@ -1418,7 +1416,7 @@ class HKWindow(wx.Dialog):
     
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         self.Destroy()
         del self
 
@@ -1429,7 +1427,7 @@ class LWindow(wx.Dialog):
     
         # Make the window
         wx.Dialog.__init__(self, parent, -1,
-                           title="L Range", size=(232, 100))
+                           title="L Range", size=(232, 120))
         
         self.LMin, self.LMax = allL
         if currentL is not None:
@@ -1492,7 +1490,7 @@ class LWindow(wx.Dialog):
     # to pick out scans within the specified range. Also, filter out 
     # anything that's not a rodscan to reduce clutter.
     def onApply(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         try:
             fromL = float(self.fromValue.GetValue())
         except:
@@ -1531,7 +1529,7 @@ class LWindow(wx.Dialog):
     
     #Release the focus and close the window, making no changes
     def onCancel(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         self.Destroy()
         del self
 
@@ -1558,8 +1556,7 @@ class TypeWindow(wx.Dialog):
             self.currentTypes = currentTypes
         else:
             self.currentTypes = allTypes
-        self.allTypeKeys = self.allTypes.keys()
-        self.allTypeKeys.sort()
+        self.allTypeKeys = sorted(self.allTypes.keys())
         for key in self.allTypeKeys:
             newType = self.list.Append(["", key, self.allTypes[key]])
             if key in self.currentTypes:
@@ -1622,9 +1619,9 @@ class TypeWindow(wx.Dialog):
     def setCheck(self, event):
         num = self.list.GetItemCount()
         if num == 0: return
-        thirdState = self.list.IsChecked(0)
+        thirdState = self.list.IsItemChecked(0)
         for i in range(1, num):
-            if self.list.IsChecked(i) != thirdState:
+            if self.list.IsItemChecked(i) != thirdState:
                 self.selector.Set3StateValue(wx.CHK_UNDETERMINED)
                 return
         self.selector.SetValue(thirdState)
@@ -1653,11 +1650,11 @@ class TypeWindow(wx.Dialog):
     # Then, filter the hdf file to select the checked scans and update
     # the table in the main window.
     def onApply(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         selectedTypes = []
         num = self.list.GetItemCount()
         for i in range(num):
-            if self.list.IsChecked(i):
+            if self.list.IsItemChecked(i):
                 selectedTypes.append(self.list.GetItem(i, 1).GetText())
         self.GetParent().typeCases = None
         if set(self.allTypes.keys()) == set(selectedTypes):
@@ -1676,7 +1673,7 @@ class TypeWindow(wx.Dialog):
     
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         self.Destroy()
         del self
 
@@ -1689,7 +1686,7 @@ class DateWindow(wx.Dialog):
         
         # Make the window
         wx.Dialog.__init__(self, parent, -1,
-                           title="Date Range", size=(288, 117))
+                           title="Date Range", size=(288, 150))
         
         self.dateMin, self.dateMax = allDates
         if currentDates is not None:
@@ -1829,7 +1826,7 @@ class DateWindow(wx.Dialog):
     # Then, capture the selected 'from' and 'to' dates and filter the 
     # hdf file to select the scans that were initiated in the given range.
     def onApply(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         # Check the 'From' date to make sure it exists
         if self.fromMonth.GetStringSelection() in ['Sep', 'Apr', 'Jun', 'Nov'] \
                         and self.fromDay.GetStringSelection() == '31':
@@ -1906,7 +1903,7 @@ class DateWindow(wx.Dialog):
     
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
-        wx.Window.MakeModal(self, False)
+        self.Enable(True)
         self.Destroy()
         del self
 
@@ -1922,19 +1919,18 @@ class TableDataCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
         listmix.ListCtrlAutoWidthMixin.__init__(self)
 
 
-class NumberListCtrl(wx.ListCtrl, listmix.CheckListCtrlMixin,
-                     listmix.ListCtrlAutoWidthMixin):
+class NumberListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
     '''This class is used to make a list with check boxes'''
     def __init__(self, *args, **kwargs):
         wx.ListCtrl.__init__(self, *args, **kwargs)
-        listmix.CheckListCtrlMixin.__init__(self)
         listmix.ListCtrlAutoWidthMixin.__init__(self)
+        self.EnableCheckBoxes(True)
     
     # This function can be used to update the 'check all' check box,
-    # but for large numbers ofitems it can be noticeably slow
+    # but for large numbers of items it can be noticeably slow
     def OnCheckItem(self, index, flag):
         wx.PostEvent(self.GetEventHandler(),
-                     wx.PyCommandEvent(wx.EVT_CHECKBOX.typeId,
+                     wx.CommandEvent(wx.EVT_CHECKBOX.typeId,
                                        self.GetId()))
         
 

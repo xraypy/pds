@@ -108,7 +108,7 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
         # Once a project has a point with a 7-digit name, appending
         # may cause overwrites.
         write_this = h5py.File(project_file, 'a')
-        this_items = write_this.items()
+        this_items = list(write_this.items())
         point_counter = int(this_items[-1][0]) + 1
         all_names = {}
         for item in this_items:
@@ -158,7 +158,7 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                 point_labs_list = [x.decode('utf-8') if isinstance(x, bytes) else x for x in read_head['point_labs']]
                 epoch_loc = point_labs_list.index('Epoch')
                 
-                param_labs_list = [x.decode() if isinstance(x, bytes) else x for x in read_head['param_labs']]
+                param_labs_list = [x.decode('utf-8') if isinstance(x, bytes) else x for x in read_head['param_labs']]
 
                 #add_time = 0
                 for i in range(num_points):
@@ -223,6 +223,10 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                     for j in range(6):
                         ang_lbl = ang_labels[j]
                         pang_lbl = pang_labels[j]
+                        
+                        print("ang_lbl", ang_lbl)
+                        print("pang_lbl", pang_lbl)
+                        
                         if ang_lbl in point_labs_list:
                             ang_pos = list(\
                                         point_labs_list).index(ang_lbl)
