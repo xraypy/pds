@@ -224,9 +224,6 @@ def master_to_project(master_file, desired_scans, project_file, append=True,
                         ang_lbl = ang_labels[j]
                         pang_lbl = pang_labels[j]
                         
-                        print("ang_lbl", ang_lbl)
-                        print("pang_lbl", pang_lbl)
-                        
                         if ang_lbl in point_labs_list:
                             ang_pos = list(\
                                         point_labs_list).index(ang_lbl)
