@@ -259,12 +259,15 @@ class filterGUI(wx.Frame):
         # The drop down list
         self.attrSelect = wx.Choice(self.middlePanel, size=(110, -1))
         self.attrSelect.SetItems(POSSIBLE_ATTRIBUTES)
+        self.attrSelect.SetToolTip('Select Attribute')
         
         # The text box
         self.attrSpecify = wx.TextCtrl(self.middlePanel)
+        self.attrSpecify.SetToolTip('Enter Value')
         
         # The add button
         self.attrAdd = wx.Button(self.middlePanel, label='+', size=(40, -1))
+        self.attrAdd.SetToolTip('Add Attribute')
         
         # Arrange the attribute adder line
         self.newAttributeSizer.Add(self.attrSelect)
@@ -857,7 +860,7 @@ class filterGUI(wx.Frame):
                 saveDialog.Destroy()
                 raise
             try:
-                for key, value in self.attrDict.iteritems():
+                for key, value in self.attrDict.items():
                     attributeFile.write(key + '\t' + value + '\n')
             except:
                 print("Error writing to file")
