@@ -7,6 +7,10 @@ Authors/Modifications:
 * Frank Heberling (Frank.Heberling@ine.fzk.de)
 * Matt Newville (newville@cars.uchicago.edu)
 
+* Python 2.x to Python 3.12.3
+  Author: Jaswitha (jaswithareddy@uchicago.edu)
+  Last modified: 2/5/2025
+
 Notes:
 ------
 Reads in data for the pilatus detector
@@ -738,7 +742,7 @@ class ImageAna:
         self.Ierr = (self.I + self.Ibgr)**0.5
         
         # integrate col sum
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             (I,Ierr,Ibgr) = line_sum_integral(self.clpimg-self.bgrimg,sumflag='c',nbgr=0)
         else:
             (I,Ierr,Ibgr) = line_sum_integral(self.clpimg,sumflag='c',
@@ -752,7 +756,7 @@ class ImageAna:
         self.Ibgr_c   = Ibgr
         
         # integrate row sum
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             (I,Ierr,Ibgr) = line_sum_integral(self.clpimg-self.bgrimg,sumflag='r',nbgr=0)
         else:
             (I,Ierr,Ibgr) = line_sum_integral(self.clpimg,sumflag='r',
@@ -785,7 +789,7 @@ class ImageAna:
         title_c = 'Col sum\nI_c = %g, Ierr_c = %g, Ibgr_c = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
         title_r = 'Row sum\nI_r = %g, Ierr_r = %g, Ibgr_r = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
         title_roi = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I,self.Ierr,self.Ibgr)
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             title_roi = title_roi + '\n(background subtracted)'
 
         # calc full image with an roi box
@@ -811,7 +815,7 @@ class ImageAna:
         rawmax = data.max()
         pyplot.plot(data_idx, data, 'k',label='raw sum')
         # get bgr and data-bgr
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             # here data is automatically bgr subracted
             (data, data_idx, xx) = line_sum(self.clpimg-self.bgrimg,sumflag='c',nbgr=0)
             bgr = self.bgrimg.sum(axis=0)
@@ -840,7 +844,7 @@ class ImageAna:
         # plot zoom on image 
         pyplot.subplot(223)
         pyplot.title(title_roi,fontsize = 12)
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             pyplot.imshow(self.clpimg-self.bgrimg, cmap=colormap, aspect='auto')
         else:
             pyplot.imshow(self.clpimg, cmap=colormap, aspect='auto')
@@ -854,7 +858,7 @@ class ImageAna:
         rawmax = data.max()
         pyplot.plot(data, data_idx, 'k',label='raw sum')
         # get bgr and data-bgr
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             # here data is automatically bgr subracted
             (data, data_idx, xx) = line_sum(self.clpimg-self.bgrimg,sumflag='r',nbgr=0)
             bgr = self.bgrimg.sum(axis=1)
@@ -899,7 +903,7 @@ class ImageAna:
         title_c = 'Col sum\nI_c = %g, Ierr_c = %g, Ibgr_c = %g' % (self.I_c,self.Ierr_c,self.Ibgr_c)
         title_r = 'Row sum\nI_r = %g, Ierr_r = %g, Ibgr_r = %g' % (self.I_r,self.Ierr_r,self.Ibgr_r)
         title_roi = 'I = %g, Ierr = %g, Ibgr = %g' % (self.I,self.Ierr,self.Ibgr)
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             title_roi = title_roi + '\n(background subtracted)'
 
         # calc full image with an roi box
@@ -931,7 +935,7 @@ class ImageAna:
         sp1Rawmax = rawmax
         self.subplot1.plot(data_idx, data, 'k',label='raw sum')
         # get bgr and data-bgr
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             # here data is automatically bgr subracted
             (data, data_idx, xx) = line_sum(self.clpimg-self.bgrimg,sumflag='c',nbgr=0)
             bgr = self.bgrimg.sum(axis=0)
@@ -961,7 +965,7 @@ class ImageAna:
         # plot zoom on image 
         self.subplot3 = fig.add_subplot(223, title = title_roi)
         self.subplot3.set_title(title_roi,fontsize = 12)
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             self.subplot3.imshow(self.clpimg-self.bgrimg, cmap=colormap, aspect='auto')
         else:
             self.subplot3.imshow(self.clpimg, cmap=colormap, aspect='auto')
@@ -977,7 +981,7 @@ class ImageAna:
         sp4Rawmax = rawmax
         self.subplot4.plot(data, data_idx, 'k',label='raw sum')
         # get bgr and data-bgr
-        if self.bgrimg != None:
+        if self.bgrimg is not None and self.bgrimg.any():
             # here data is automatically bgr subracted
             (data, data_idx, xx) = line_sum(self.clpimg-self.bgrimg,sumflag='r',nbgr=0)
             bgr = self.bgrimg.sum(axis=1)

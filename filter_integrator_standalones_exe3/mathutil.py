@@ -7,6 +7,10 @@ Authors/Modifications:
   M. Newville (newville@cars.uchicago.edu)
 * minimize and random from original tdl
 
+* Python 2.x to Python 3.12.3
+  Author: Jaswitha (jaswithareddy@uchicago.edu)
+  Last modified: 2/5/2025
+
 Todo:
 -----
 * peak fit

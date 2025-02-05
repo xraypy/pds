@@ -5,6 +5,10 @@ Authors/Modifications:
 ----------------------
 Tom Trainor (tptrainor@alaska.edu)
 
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last modified: 2/5/2025
+
 Notes:
 ------
 These area are based on completley geometric projections.  ie we assume

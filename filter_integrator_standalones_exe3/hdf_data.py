@@ -5,6 +5,10 @@ Authors / Modifications:
 ------------------------
 Craig and Tom
 
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last modified: 2/5/2025
+
 Notes:
 ------
 
@@ -13,8 +17,6 @@ Todo:
 -----
 * HdfDataFile also needs search / filter methods
 that return lists of point numbers
-
-
 """
 ##############################################################################
 import numpy
@@ -335,7 +337,8 @@ class HdfDataFile:
             for item in self.all_items:
                 points.append(item[0])
         #for point in points:
-        if isinstance(key, basestring):
+        if isinstance(key, bytes):
+            key = key.decode('utf-8')
             if key in GEN_KEYS:
                 key_loc = GEN_KEYS[key]
                 for point in points:
@@ -510,7 +513,8 @@ class HdfDataFile:
             for item in self.all_items:
                 points.append(item[0])
         #for point in points:
-        if isinstance(key, basestring):
+        if isinstance(key, bytes):
+            key = key.decode('utf-8')
             if key in GEN_KEYS:
                 if self.point in points:
                     self.point_dict[key] = value

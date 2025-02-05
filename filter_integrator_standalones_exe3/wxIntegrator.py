@@ -2,6 +2,10 @@
 Specfile Integrator
 Author: Craig Biwer (cbiwer@uchicago.edu)
 J. Stubbs added transmission, filter mask, corrdet April 2015
+
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last modified: 2/5/2025
 '''
 
 import os
@@ -19,7 +23,7 @@ from matplotlib.widgets import RectangleSelector
 from matplotlib.widgets import Cursor
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
 from wx.lib.splitter import MultiSplitterWindow
-from wx.tools.Editra.src.eclib import pstatbar
+# from wx.tools.Editra.src.eclib import pstatbar
 
 import file_locker
 import image_data
@@ -44,7 +48,7 @@ class Integrator(wx.Frame, wx.Notebook):
             
             # Make the window
             wx.Frame.__init__(self, args[0], -1, title="HDF Integrator",
-                              size=(1024, 664))
+                              size=(1024, 760))
             
             self.menuBar = wx.MenuBar()
             self.fileMenu = wx.Menu()
@@ -84,8 +88,7 @@ class Integrator(wx.Frame, wx.Notebook):
             self.SetMenuBar(self.menuBar)
             
             # Make the status bar
-            self.statusBar = pstatbar.ProgressStatusBar(self)
-            self.statusBar.SetFieldsCount(5)
+            self.statusBar = self.CreateStatusBar(5)
             self.statusBar.SetStatusWidths([238, -1, 238, 56, 91])
             
             self.statusSizer = wx.BoxSizer(wx.VERTICAL)
@@ -244,21 +247,21 @@ class Integrator(wx.Frame, wx.Notebook):
             # Create all the fields here; this allows for easier tab traversal
             # since the order of focus depends on the order of creation
             self.colNbgrField = wx.TextCtrl(self.basicPage,
-                                            style=wx.PROCESS_ENTER)
+                                            style=wx.TE_PROCESS_ENTER)
             self.colPowerField = wx.TextCtrl(self.basicPage,
-                                             style=wx.PROCESS_ENTER)
+                                             style=wx.TE_PROCESS_ENTER)
             self.colWidthField = wx.TextCtrl(self.basicPage,
-                                             style=wx.PROCESS_ENTER)
+                                             style=wx.TE_PROCESS_ENTER)
             self.rowNbgrField = wx.TextCtrl(self.basicPage,
-                                            style=wx.PROCESS_ENTER)
+                                            style=wx.TE_PROCESS_ENTER)
             self.rowPowerField = wx.TextCtrl(self.basicPage,
-                                             style=wx.PROCESS_ENTER)
+                                             style=wx.TE_PROCESS_ENTER)
             self.rowWidthField = wx.TextCtrl(self.basicPage,
-                                             style=wx.PROCESS_ENTER)
-            self.flagField = wx.TextCtrl(self.basicPage, style=wx.PROCESS_ENTER)
-            self.roiField = wx.TextCtrl(self.basicPage, style=wx.PROCESS_ENTER)
+                                             style=wx.TE_PROCESS_ENTER)
+            self.flagField = wx.TextCtrl(self.basicPage, style=wx.TE_PROCESS_ENTER)
+            self.roiField = wx.TextCtrl(self.basicPage, style=wx.TE_PROCESS_ENTER)
             self.rotateField = wx.TextCtrl(self.basicPage,
-                                           style=wx.PROCESS_ENTER)
+                                           style=wx.TE_PROCESS_ENTER)
             
             # The 'Apply above to:' row (placed here for tab traversal order)
             self.applyLbl1 = wx.StaticText(self.basicPage,
@@ -527,7 +530,7 @@ class Integrator(wx.Frame, wx.Notebook):
             self.histSizer = wx.BoxSizer(wx.VERTICAL)
             self.histLabel = wx.StaticText(self.morePage, label='Notes: ')
             self.histBox = wx.TextCtrl(self.morePage,
-                                       style=wx.PROCESS_ENTER | wx.TE_MULTILINE)
+                                       style=wx.TE_PROCESS_ENTER | wx.TE_MULTILINE)
             self.histButtonSizer = wx.BoxSizer(wx.HORIZONTAL)
             self.histApplyLbl = wx.StaticText(self.morePage, label='Apply to:')
             self.histScan = wx.Button(self.morePage, label='Scan')
@@ -579,19 +582,19 @@ class Integrator(wx.Frame, wx.Notebook):
             self.corrPanel.SetBackgroundColour(wx.WHITE)
             
             self.scaleField = wx.TextCtrl(self.corrPanel,
-                                          style=wx.PROCESS_ENTER)
+                                          style=wx.TE_PROCESS_ENTER)
             self.beamSlitField = wx.TextCtrl(self.corrPanel,
-                                             style=wx.PROCESS_ENTER)
+                                             style=wx.TE_PROCESS_ENTER)
             self.detSlitField = wx.TextCtrl(self.corrPanel,
-                                            style=wx.PROCESS_ENTER)
+                                            style=wx.TE_PROCESS_ENTER)
             self.sampleAngleField = wx.TextCtrl(self.corrPanel,
-                                                style=wx.PROCESS_ENTER)
+                                                style=wx.TE_PROCESS_ENTER)
             self.sampleDiameterField = wx.TextCtrl(self.corrPanel,
-                                                   style=wx.PROCESS_ENTER)
+                                                   style=wx.TE_PROCESS_ENTER)
             self.samplePolygonField = wx.TextCtrl(self.corrPanel,
-                                                  style=wx.PROCESS_ENTER)
+                                                  style=wx.TE_PROCESS_ENTER)
             self.badMapField = wx.TextCtrl(self.corrPanel,
-                                           style=wx.PROCESS_ENTER)
+                                           style=wx.TE_PROCESS_ENTER)
             
             # The 'Apply to Custom' button
             self.applyCorrLbl = wx.StaticText(self.corrPanel,
@@ -854,24 +857,24 @@ class Integrator(wx.Frame, wx.Notebook):
             # START TOOLTIPS
             ####################################################################
             
-            self.colNbgrLbl1.SetToolTipString(labelTips['colNbgr'])
-            self.colPowerLbl1.SetToolTipString(labelTips['colPower'])
-            self.colWidthLbl1.SetToolTipString(labelTips['colWidth'])
-            self.rowNbgrLbl1.SetToolTipString(labelTips['rowNbgr'])
-            self.rowPowerLbl1.SetToolTipString(labelTips['rowPower'])
-            self.rowWidthLbl1.SetToolTipString(labelTips['rowWidth'])
-            self.flagLbl1.SetToolTipString(labelTips['flag'])
-            self.roiLbl1.SetToolTipString(labelTips['roi'])
-            self.rotateLbl1.SetToolTipString(labelTips['rotate'])
+            self.colNbgrLbl1.SetToolTip(labelTips['colNbgr'])
+            self.colPowerLbl1.SetToolTip(labelTips['colPower'])
+            self.colWidthLbl1.SetToolTip(labelTips['colWidth'])
+            self.rowNbgrLbl1.SetToolTip(labelTips['rowNbgr'])
+            self.rowPowerLbl1.SetToolTip(labelTips['rowPower'])
+            self.rowWidthLbl1.SetToolTip(labelTips['rowWidth'])
+            self.flagLbl1.SetToolTip(labelTips['flag'])
+            self.roiLbl1.SetToolTip(labelTips['roi'])
+            self.rotateLbl1.SetToolTip(labelTips['rotate'])
             
-            self.scaleLbl1.SetToolTipString(labelTips['scale'])
-            self.beamSlitLbl1.SetToolTipString(labelTips['beamSlit'])
-            self.detSlitLbl1.SetToolTipString(labelTips['detSlit'])
-            self.sampleAngleLbl1.SetToolTipString(labelTips['sampleAngle'])
-            self.sampleDiameterLbl1.SetToolTipString(\
+            self.scaleLbl1.SetToolTip(labelTips['scale'])
+            self.beamSlitLbl1.SetToolTip(labelTips['beamSlit'])
+            self.detSlitLbl1.SetToolTip(labelTips['detSlit'])
+            self.sampleAngleLbl1.SetToolTip(labelTips['sampleAngle'])
+            self.sampleDiameterLbl1.SetToolTip(\
                     labelTips['sampleDiameter'])
-            self.samplePolygonLbl1.SetToolTipString(labelTips['samplePolygon'])
-            self.badMapLbl1.SetToolTipString(labelTips['badMap'])
+            self.samplePolygonLbl1.SetToolTip(labelTips['samplePolygon'])
+            self.badMapLbl1.SetToolTip(labelTips['badMap'])
             
             ####################################################################
             # END TOOLTIPS
@@ -1025,7 +1028,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                        defaultDir=os.getcwd(), defaultFile='',
                                        wildcard='HDF files (*.ph5)|*.ph5|'+\
                                                 'All file(*.*)|*',
-                                       style=wx.OPEN)
+                                       style=wx.FD_OPEN)
             if loadDialog.ShowModal() == wx.ID_OK:
                 if not os.path.isfile(loadDialog.GetPath()):
                     print("Error: File does not exist")
@@ -1145,7 +1148,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 dataLookup = {}
                 item, cookie = self.hdfTree.GetFirstChild(myParent)
                 while item:
-                    iterData = self.hdfTree.GetItemPyData(item)
+                    iterData = self.hdfTree.GetItemData(item)
                     childrenList.append(iterData)
                     dataLookup[iterData] = item
                     item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
@@ -1235,7 +1238,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     holding = holding[copyData]
                     self.hdfObject.set_all(('det_0', key), holding, [itemData])
             ofMe = self.hdfTree.GetSelection()
-            itemData = self.hdfTree.GetItemPyData(ofMe)
+            itemData = self.hdfTree.GetItemData(ofMe)
             if itemData is None:
                 return
             myParent = self.hdfTree.GetItemParent(ofMe)
@@ -1284,7 +1287,7 @@ class Integrator(wx.Frame, wx.Notebook):
         # Plot the area correction
         def showAreaCorrection(self, event):
             ofMe = self.hdfTree.GetSelection()
-            itemData = self.hdfTree.GetItemPyData(ofMe)
+            itemData = self.hdfTree.GetItemData(ofMe)
             if itemData is None:
                 return
             # Because the G array is already parsed, we need to build
@@ -1336,7 +1339,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 pass
             try:
                 ofMe = self.hdfTree.GetSelection()
-                itemData = self.hdfTree.GetItemPyData(ofMe)
+                itemData = self.hdfTree.GetItemData(ofMe)
             except:
                 print("Error getting tree selection")
                 self.badPointToggle.SetValue(False)
@@ -1361,7 +1364,7 @@ class Integrator(wx.Frame, wx.Notebook):
         def updateImageMax(self, event):
             ofMe = self.hdfTree.GetSelection()
             myParent = self.hdfTree.GetItemParent(ofMe)
-            itemData = self.hdfTree.GetItemPyData(ofMe)
+            itemData = self.hdfTree.GetItemData(ofMe)
             if itemData is None:
                 self.imageMaxField.Clear()
                 return
@@ -1399,7 +1402,7 @@ class Integrator(wx.Frame, wx.Notebook):
             event.Skip()
             try:
                 ofMe = self.hdfTree.GetSelection()
-                itemData = self.hdfTree.GetItemPyData(ofMe)
+                itemData = self.hdfTree.GetItemData(ofMe)
             except:
                 print("Error getting tree selection")
                 self.clearFields()
@@ -1451,7 +1454,7 @@ class Integrator(wx.Frame, wx.Notebook):
         def applyToScan(self, event):
             #print 'Copying to scan'
             ofMe = self.hdfTree.GetSelection()
-            itemData = self.hdfTree.GetItemPyData(ofMe)
+            itemData = self.hdfTree.GetItemData(ofMe)
             if itemData is None:
                 self.clearFields()
                 return
@@ -1492,7 +1495,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     updateThese = []
                     item, cookie = self.hdfTree.GetFirstChild(myParent)
                     while item:
-                        updateThese.append(self.hdfTree.GetItemPyData(item))
+                        updateThese.append(self.hdfTree.GetItemData(item))
                         item, cookie = \
                                 self.hdfTree.GetNextChild(myParent, cookie)
                     del item
@@ -1522,7 +1525,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 updateThese = []
                 item, cookie = self.hdfTree.GetFirstChild(myParent)
                 while item:
-                    updateThese.append(self.hdfTree.GetItemPyData(item))
+                    updateThese.append(self.hdfTree.GetItemData(item))
                     item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
                 self.hdfObject.set_all('hist', str(self.histBox.GetValue()),
                                        updateThese)
@@ -1539,7 +1542,7 @@ class Integrator(wx.Frame, wx.Notebook):
             updateThese = []
             item, cookie = self.hdfTree.GetFirstChild(myParent)
             while item:
-                updateThese.append(self.hdfTree.GetItemPyData(item))
+                updateThese.append(self.hdfTree.GetItemData(item))
                 item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             del item
             for updateThis, ofType, whatField in toChange:
@@ -1574,13 +1577,13 @@ class Integrator(wx.Frame, wx.Notebook):
         def applyToCustom(self, event):
             #print 'Copying to custom'
             ofMe = self.hdfTree.GetSelection()
-            itemData = self.hdfTree.GetItemPyData(ofMe)
+            itemData = self.hdfTree.GetItemData(ofMe)
             if itemData is None and \
                                 event.GetEventObject() != self.integrateCustom:
                 return
             while itemData is None:
                 ofMe = self.hdfTree.GetFirstChild(ofMe)[0]
-                itemData = self.hdfTree.GetItemPyData(ofMe)
+                itemData = self.hdfTree.GetItemData(ofMe)
             myParent = self.hdfTree.GetItemParent(ofMe)
             if self.firstOpen:
                 self.firstOpen = False
@@ -1737,22 +1740,22 @@ class Integrator(wx.Frame, wx.Notebook):
         # Integrate the currently-selected scan
         def integrateSelectedScan(self, event):
             ofMe = self.hdfTree.GetSelection()
-            itemData = self.hdfTree.GetItemPyData(ofMe)
+            itemData = self.hdfTree.GetItemData(ofMe)
             updateThese = []
             if itemData is None:
                 firstChild, cookie = self.hdfTree.GetFirstChild(ofMe)
-                childData = self.hdfTree.GetItemPyData(firstChild)
+                childData = self.hdfTree.GetItemData(firstChild)
                 if childData is None:
                     return
                 while firstChild:
-                    childData = self.hdfTree.GetItemPyData(firstChild)
+                    childData = self.hdfTree.GetItemData(firstChild)
                     updateThese.append(childData)
                     firstChild, cookie = self.hdfTree.GetNextChild(ofMe, cookie)
             else:
                 myParent = self.hdfTree.GetItemParent(ofMe)
                 item, cookie = self.hdfTree.GetFirstChild(myParent)
                 while item:
-                    iterData = self.hdfTree.GetItemPyData(item)
+                    iterData = self.hdfTree.GetItemData(item)
                     updateThese.append(iterData)
                     item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
                 
@@ -1916,6 +1919,7 @@ class Integrator(wx.Frame, wx.Notebook):
             # TPT changed 'numPoints' to 'dims'
             # transmission, etc. added April 2015, JES
             psicG = self.buildPsicG(itemData)
+            print(self.hdfObject[itemData])
             scan_dict = {'I':[self.hdfObject[itemData]['det_0']['I']],
                          'io':[self.hdfObject[itemData]['io']],
                          'Ierr':[self.hdfObject[itemData]['det_0']['Ierr']],
@@ -1939,6 +1943,11 @@ class Integrator(wx.Frame, wx.Notebook):
             self.hdfObject[itemData]['det_0']['alpha'] = fDict['alpha']
             self.hdfObject[itemData]['det_0']['beta'] = fDict['beta']
             self.hdfObject[itemData]['det_0']['F_changed'] = False
+        
+        def convert_bytes_to_utf8(data):
+            if isinstance(data, bytes):
+                return data.decode('utf-8')
+            return data
             
         # Integrate a point without updating the GUI
         def integratePoint(self, itemData):
@@ -2000,7 +2009,7 @@ class Integrator(wx.Frame, wx.Notebook):
             doneFerrList = []
             item, cookie = self.hdfTree.GetFirstChild(myParent)
             while item:
-                iterData = self.hdfTree.GetItemPyData(item)
+                iterData = self.hdfTree.GetItemData(item)
                 iterList.append(iterData)
                 item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             iterImageChanged = \
@@ -2255,8 +2264,8 @@ class Integrator(wx.Frame, wx.Notebook):
             #print 'New selected'
             ofMe = event.GetItem()
             myParent = self.hdfTree.GetItemParent(ofMe)
-            itemData = self.hdfTree.GetItemPyData(ofMe)
-            #print self.hdfTree.GetItemPyData(ofMe)
+            itemData = self.hdfTree.GetItemData(ofMe)
+            #print self.hdfTree.GetItemData(ofMe)
             if itemData is None:
                 self.fig4.clear()
                 self.canvas4.draw()
@@ -2318,7 +2327,7 @@ class Integrator(wx.Frame, wx.Notebook):
         def saveAttrFile(self, event):
             try:
                 ofMe = self.hdfTree.GetSelection()
-                itemData = self.hdfTree.GetItemPyData(ofMe)
+                itemData = self.hdfTree.GetItemData(ofMe)
             except:
                 print("Error getting tree selection")
                 return
@@ -2329,7 +2338,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                        defaultDir=os.getcwd(), defaultFile='',
                                        wildcard='txt files (*.txt)|*.txt|'+\
                                                 'All files (*.*)|*',
-                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+                                       style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             if saveDialog.ShowModal() == wx.ID_OK:
                 print("Saving attribute file " + saveDialog.GetPath())
                 try:
@@ -2380,7 +2389,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                        defaultDir=os.getcwd(), defaultFile='',
                                        wildcard='lst files (*.lst)|*.lst|' + \
                                                 'All files (*.*)|*',
-                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+                                       style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             if saveDialog.ShowModal() == wx.ID_OK:
                 fname = saveDialog.GetPath()
                 try:
@@ -2438,7 +2447,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                        defaultDir=os.getcwd(), defaultFile='',
                                        wildcard='lst files (*.lst)|*.lst|' + \
                                                 'All files (*.*)|*',
-                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+                                       style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             if saveDialog.ShowModal() == wx.ID_OK:
                 fname = saveDialog.GetPath()
                 try:
@@ -2499,7 +2508,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                        defaultDir=os.getcwd(), defaultFile='',
                                        wildcard='rsd files (*.rsd)|*.rsd|' + \
                                                 'All files (*.*)|*',
-                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+                                       style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             if saveDialog.ShowModal() == wx.ID_OK:
                 fname = saveDialog.GetPath()
                 try:
@@ -2563,7 +2572,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                        defaultDir=os.getcwd(), defaultFile='',
                                        wildcard='lst files (*.lst)|*.lst|' + \
                                                 'All files (*.*)|*',
-                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+                                       style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             if saveDialog.ShowModal() == wx.ID_OK:
                 fname = saveDialog.GetPath()
                 try:
@@ -2627,7 +2636,7 @@ class Integrator(wx.Frame, wx.Notebook):
                                        defaultDir=os.getcwd(), defaultFile='',
                                        wildcard='int files (*.int)|*.int|' + \
                                                 'All files (*.*)|*',
-                                       style=wx.SAVE | wx.OVERWRITE_PROMPT)
+                                       style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             if saveDialog.ShowModal() == wx.ID_OK:
                 fname = saveDialog.GetPath()
                 try:

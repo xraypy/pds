@@ -1,3 +1,9 @@
+'''
+Python 2.x to Python 3.12.3
+Author: Jaswitha (jaswithareddy@uchicago.edu)
+Last modified: 2/5/2025
+'''
+
 import wx
 import time
 
@@ -10,11 +16,11 @@ class hdfToTree():
         for key, value in thisDict.items():
             if type(value) == dict:
                 parentItem = thisTree.AppendItem(thisRoot, key)
-                thisTree.SetPyData(parentItem, None)
+                thisTree.SetItemData(parentItem, None)
                 self.dictToTree(value, thisTree, parentItem)
             else:
                 childItem = thisTree.AppendItem(thisRoot, str(key))
-                thisTree.SetPyData(childItem, thisDict[key])
+                thisTree.SetItemData(childItem, thisDict[key])
         thisTree.SortChildren(thisRoot)
     
     def populateTree(self, thisTree, thisObject):
@@ -28,7 +34,7 @@ class hdfToTree():
             item0 = item[0]
             item1 = item[1]
             itemString = item1.attrs.get('name')
-            (specName, scanNum, pointNum, epoch) = itemString.split(':')
+            (specName, scanNum, pointNum, epoch) = itemString.decode('utf-8').split(':')
             scanNum = 'Scan ' + scanNum[1:]
             pointNum = pointNum.split('/')[0]
             pointNum = 'Point ' + pointNum[1:]
@@ -50,7 +56,7 @@ class hdfToTree():
     def populateReverse(self, thisTree, thisRoot):
         item, cookie = thisTree.GetFirstChild(thisRoot)
         while item:
-            iterData = thisTree.GetItemPyData(item)
+            iterData = thisTree.GetItemData(item)
             if iterData is not None:
                 self.reverseLookup[iterData] = item
             else:
@@ -61,7 +67,7 @@ class hdfToTree():
         """Given a tree, an hdf_data object, and an item,
             delete the item and its children from both
             the tree and the object."""
-        thisData = thisTree.GetItemPyData(thisItem)
+        thisData = thisTree.GetItemData(thisItem)
         if thisData is not None:
             thisObject.delete(thisData)
         elif thisTree.ItemHasChildren(thisItem):
@@ -78,7 +84,7 @@ class hdfToTree():
             are associated with a point in the object.
             This list includes the point itself to allow
             for recursive function calls."""
-        thisData = thisTree.GetItemPyData(thisItem)
+        thisData = thisTree.GetItemData(thisItem)
         if thisData is not None:
             return [thisData]
         elif thisTree.ItemHasChildren(thisItem):
@@ -95,7 +101,7 @@ class hdfToTree():
     def statusString(self, thisTree, thisObject, thisItem):
         """Given a tree, an hdf_data object, and an item,
             return a string describing the item."""
-        thisData = thisTree.GetItemPyData(thisItem)
+        thisData = thisTree.GetItemData(thisItem)
         if thisData is not None:
             thisName = thisObject[thisData]['name']
             thisSpec, thisScan, thisPoint, thisTime = thisName.split(':')
@@ -119,6 +125,6 @@ class myTreeCtrl(wx.TreeCtrl):
         if item1Str.startswith('Scan') or item1Str.startswith('Point'):
             item1Num = item1Str.split(' ')[1]
             item2Num = item2Str.split(' ')[1]
-            return cmp(int(item1Num), int(item2Num))
+            return (int(item1Num) > int(item2Num)) - (int(item1Num) < int(item2Num))
         else:
-            return cmp(item1Str, item2Str)
+            return (item1Str > item2Str) - (item1Str < item2Str)

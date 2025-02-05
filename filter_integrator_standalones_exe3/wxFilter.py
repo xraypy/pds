@@ -33,7 +33,7 @@ class filterGUI(wx.Frame):
     '''The GUI window for filtering.'''
     def __init__(self, *args, **kwargs):
         wx.Frame.__init__(self, args[0], -1, title='HDF Project File Builder',
-                          size=(1650, 890))
+                          size=(1440, 890))
         
         # Set up shell
         #self.shell = None

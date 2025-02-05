@@ -44,8 +44,7 @@ def linear_background(data,nbgr=0):
     xlin = num.append(xlin,num.arange(ndat-nbgr,ndat,1))
     ylin = num.array(data[0:nbgr],dtype=float)
     ylin = num.append(ylin,data[ndat-nbgr:])
-    # m, b, rval, pval, stderr = linregress(xlin, ylin) - variables not defined anywhere (modified - Jas)
-    m, b= linregress(xlin, ylin)
+    m, b, rval, pval, stderr = linregress(xlin, ylin)
     return m * num.arange(ndat) + b
 
 #######################################################################

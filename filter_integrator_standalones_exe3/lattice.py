@@ -7,6 +7,10 @@ Authors/Modifications:
 * convert matlab to python, Kunal Tanwar
 * Convert classes, TPT
 
+* Python 2.x to Python 3.12.3
+  Author: Jaswitha (jaswithareddy@uchicago.edu)
+  Last modified: 2/5/2025
+
 Notes on Convention and Generalized Transforms
 ----------------------------------------------
 The set of basis vectors that defines the real lattice are
