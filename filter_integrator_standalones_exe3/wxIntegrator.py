@@ -1154,10 +1154,10 @@ class Integrator(wx.Frame, wx.Notebook):
                     item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
                 allLs = {}
                 if self.hdfObject.get_all('type',
-                        [childrenList[0]])[childrenList[0]].startswith('Escan'):
+                        [childrenList[0]])[childrenList[0]].startswith(b'Escan'):
                     allLs = self.hdfObject.get_all('Energy', childrenList)
                 elif self.hdfObject.get_all('type',
-                        [childrenList[0]])[childrenList[0]].startswith('ascan'):
+                        [childrenList[0]])[childrenList[0]].startswith(b'ascan'):
                     get_this = self.hdfObject.get_all('info',
                             [childrenList[0]])[childrenList[0]].split()[1]
                     allLs = self.hdfObject.get_all(get_this, childrenList)
@@ -1921,17 +1921,17 @@ class Integrator(wx.Frame, wx.Notebook):
             psicG = self.buildPsicG(itemData)
             print(self.hdfObject[itemData])
             scan_dict = {'I':[self.hdfObject[itemData]['det_0']['I']],
-                         'io':[self.hdfObject[itemData]['io']],
+                         'io':[self.hdfObject[itemData][b'io']],
                          'Ierr':[self.hdfObject[itemData]['det_0']['Ierr']],
                          'Ibgr':[self.hdfObject[itemData]['det_0']['Ibgr']],
                          'dims':(1,0),
-                         'transm':[self.hdfObject[itemData]['transm']],
-                         'phi':float(self.hdfObject[itemData].get('phi')),
-                         'chi':float(self.hdfObject[itemData].get('chi')),
-                         'eta':float(self.hdfObject[itemData].get('eta')),
-                         'mu':float(self.hdfObject[itemData].get('mu')),
-                         'nu':float(self.hdfObject[itemData].get('nu')),
-                         'del':float(self.hdfObject[itemData].get('del')),
+                         'transm':[self.hdfObject[itemData][b'transm']],
+                         'phi':float(self.hdfObject[itemData].get(b'phi')),
+                         'chi':float(self.hdfObject[itemData].get(b'chi')),
+                         'eta':float(self.hdfObject[itemData].get(b'eta')),
+                         'mu':float(self.hdfObject[itemData].get(b'mu')),
+                         'nu':float(self.hdfObject[itemData].get(b'nu')),
+                         'del':float(self.hdfObject[itemData].get(b'del')),
                          'G':psicG}
             fDict = ctr_data.image_point_F(scan=scan_dict,
                                             point=0,
@@ -1943,11 +1943,6 @@ class Integrator(wx.Frame, wx.Notebook):
             self.hdfObject[itemData]['det_0']['alpha'] = fDict['alpha']
             self.hdfObject[itemData]['det_0']['beta'] = fDict['beta']
             self.hdfObject[itemData]['det_0']['F_changed'] = False
-        
-        def convert_bytes_to_utf8(data):
-            if isinstance(data, bytes):
-                return data.decode('utf-8')
-            return data
             
         # Integrate a point without updating the GUI
         def integratePoint(self, itemData):
@@ -2011,22 +2006,26 @@ class Integrator(wx.Frame, wx.Notebook):
             while item:
                 iterData = self.hdfTree.GetItemData(item)
                 iterList.append(iterData)
+                print("iterList", iterList)
                 item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
-            iterImageChanged = \
-                    self.hdfObject.get_all(('det_0', 'image_changed'), iterList)
+            iterImageChanged = self.hdfObject.get_all(('det_0', 'image_changed'), 
+                                                      iterList)
             iterFChanged = self.hdfObject.get_all(('det_0', 'F_changed'),
                                                   iterList)
-            if self.hdfObject[itemData]['type'].startswith('Escan'):
+            if self.hdfObject[itemData]['type'].startswith(b'Escan'):
                 iterLList = self.hdfObject.get_all('Energy', iterList)
-            elif self.hdfObject[itemData]['type'].startswith('ascan'):
+            elif self.hdfObject[itemData]['type'].startswith(b'ascan'):
                 get_this = self.hdfObject[itemData]['info'].split()[1]
                 iterLList = self.hdfObject.get_all(get_this, iterList)
             else:
-                iterLList = self.hdfObject.get_all('L', iterList)
+                iterLList = self.hdfObject.get_all(b'L', iterList)
+                print("iterLList= ", iterLList)
             iterFList = self.hdfObject.get_all(('det_0', 'F'), iterList)
             iterFerrList = self.hdfObject.get_all(('det_0', 'Ferr'), iterList)
             for key in iterImageChanged.keys():
+                print("key = ", key)
                 if not (eval(iterImageChanged[key]) or iterFChanged[key]):
+                    print("iterLList= ", iterLList)
                     doneLList.append(iterLList[key])
                     doneFList.append(iterFList[key])
                     doneFerrList.append(iterFerrList[key])
@@ -2049,18 +2048,18 @@ class Integrator(wx.Frame, wx.Notebook):
                                  fmt ='b', linestyle='')
             except:
                 pass
-            if self.hdfObject[itemData]['type'].startswith('Escan'):
+            if self.hdfObject[itemData]['type'].startswith(b'Escan'):
                 rodPlot.plot(self.hdfObject[itemData]['Energy'],
                              self.hdfObject[itemData]['det_0']['F'], 'ro')
-            elif self.hdfObject[itemData]['type'].startswith('ascan'):
+            elif self.hdfObject[itemData]['type'].startswith(b'ascan'):
                 rodPlot.plot(self.hdfObject[itemData][get_this],
                              self.hdfObject[itemData]['det_0']['F'], 'ro')
             else:
                 rodPlot.plot(self.hdfObject[itemData]['L'],
                              self.hdfObject[itemData]['det_0']['F'], 'ro')
             try:
-                if not self.hdfObject[itemData]['type'].startswith('Escan') and\
-                   not self.hdfObject[itemData]['type'].startswith('ascan'):
+                if not self.hdfObject[itemData]['type'].startswith(b'Escan') and\
+                   not self.hdfObject[itemData]['type'].startswith(b'ascan'):
                     rodPlot.semilogy()
             except:
                 pass
@@ -2191,18 +2190,17 @@ class Integrator(wx.Frame, wx.Notebook):
             self.hdfObject[itemData]['det_0']['real_image_max'] = str(im_max)
             if self.hdfObject[itemData]['det_0']['F_changed']:
                 self.updateF(itemData)
-            toggle_selector.RS = RectangleSelector(subplot2,
-                                                   updateROIFromClick,
-                                                   drawtype='box',
-                                                   useblit=True,
-                                                   button=[1],
-                                                   minspanx=5,
-                                                   minspany=5,
-                                                   spancoords='pixels',
-                                                   rectprops=\
-                                                        {'edgecolor': 'red',
-                                                         'alpha': 1,
-                                                         'fill': False})
+            toggle_selector.RS = RectangleSelector(
+                                                subplot2,
+                                                updateROIFromClick,
+                                                useblit=True,
+                                                button=[1],
+                                                minspanx=5,
+                                                minspany=5,
+                                                spancoords='pixels',
+                                                interactive=True,
+                                                props={'edgecolor': 'red', 'alpha': 1, 'fill': False}
+                                            )
             self.canvas4.draw()
         
         # Clear all input fields of values
