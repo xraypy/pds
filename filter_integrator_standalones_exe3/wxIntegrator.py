@@ -1804,13 +1804,6 @@ class Integrator(wx.Frame, wx.Notebook):
         # hdfObject and writes them to the appropriate
         # entry fields.
         def updateFields(self, itemData):
-            #print 'Updating fields'
-            self.badPointToggle.SetValue(\
-                    eval(self.hdfObject[itemData]['det_0']['bad_point']))
-            self.imageMaxField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['image_max']))
-            self.imageMaxValue.SetLabel('ROI Max: ' + \
-                    str(self.hdfObject[itemData]['det_0']['real_image_max']))
             
             # Converts bytes to str
             # for entry field values
@@ -1819,7 +1812,14 @@ class Integrator(wx.Frame, wx.Notebook):
                     return value.decode('utf-8') 
                 else: 
                     return str(value)
-            
+                
+            #print 'Updating fields'
+            self.badPointToggle.SetValue(\
+                    eval(self.hdfObject[itemData]['det_0']['bad_point']))
+            self.imageMaxField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['image_max']))
+            self.imageMaxValue.SetLabel('ROI Max: ' + \
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['real_image_max']))
             self.colNbgrField.SetValue(\
                     bytes_to_str(self.hdfObject[itemData]['det_0']['cnbgr']))
             self.colPowerField.SetValue(\
