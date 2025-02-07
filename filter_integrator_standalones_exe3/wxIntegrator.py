@@ -1162,18 +1162,23 @@ class Integrator(wx.Frame, wx.Notebook):
                             [childrenList[0]])[childrenList[0]].split()[1]
                     allLs = self.hdfObject.get_all(get_this, childrenList)
                 else:
-                    allLs = self.hdfObject.get_all('L', childrenList)
-                allLs = dict([L,child] for child,L in allLs.items())
+                    allLs = self.hdfObject.get_all(b'L', childrenList)
+                
+                allLs = dict([L,child] for child, L in allLs.items())
+                print("allLs=", allLs)
                 thisPoint = closestL(event.xdata, allLs.keys())
+                
                 #item, cookie = self.hdfTree.GetFirstChild(myParent)
                 #while item and \
                 #        self.hdfTree.GetItemPyData(item) != allLs[thisPoint]:
                 #    item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
                 try:
                     self.hdfTree.SelectItem(dataLookup[allLs[thisPoint]])#item)
+                    print("In the try block for graph point.")
                 except:
                     print("Error: can\'t locate point.")
                 self.hdfTree.SetFocus()
+                print("After focus.")
         
         # Copy parameters from one set of points to another by closest L value
         def copyFromTo(self, event):
@@ -2267,6 +2272,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.clearFields()
                 self.statusBar.SetStatusText(self.hdfTree.GetItemText(ofMe))
             else:
+                print("Has pixel map changed: ", self.hdfObject[itemData]['det_0']['pixel_map_changed'])
                 if eval(self.hdfObject[itemData]['det_0']['pixel_map_changed']):
                     self.hdfObject[itemData]['det_0']['pixel_map_changed'] = \
                                                                         'False'
@@ -2388,9 +2394,9 @@ class Integrator(wx.Frame, wx.Notebook):
                 try:
                     allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
                                                       saveThese)
-                    allHs = self.hdfObject.get_all('H', saveThese)
-                    allKs = self.hdfObject.get_all('K', saveThese)
-                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allHs = self.hdfObject.get_all(b'H', saveThese)
+                    allKs = self.hdfObject.get_all(b'K', saveThese)
+                    allLs = self.hdfObject.get_all(b'L', saveThese)
                     allFs = self.hdfObject.get_all(('det_0', 'F'), saveThese)
                     allFerrs = self.hdfObject.get_all(('det_0', 'Ferr'),
                                                       saveThese)
@@ -2446,9 +2452,9 @@ class Integrator(wx.Frame, wx.Notebook):
                 try:
                     allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
                                                       saveThese)
-                    allHs = self.hdfObject.get_all('H', saveThese)
-                    allKs = self.hdfObject.get_all('K', saveThese)
-                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allHs = self.hdfObject.get_all(b'H', saveThese)
+                    allKs = self.hdfObject.get_all(b'K', saveThese)
+                    allLs = self.hdfObject.get_all(b'L', saveThese)
                     allEs = self.hdfObject.get_all('Energy', saveThese)
                     allFs = self.hdfObject.get_all(('det_0', 'F'), saveThese)
                     allFerrs = self.hdfObject.get_all(('det_0', 'Ferr'),
@@ -2507,9 +2513,9 @@ class Integrator(wx.Frame, wx.Notebook):
                 try:
                     allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
                                                       saveThese)
-                    allHs = self.hdfObject.get_all('H', saveThese)
-                    allKs = self.hdfObject.get_all('K', saveThese)
-                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allHs = self.hdfObject.get_all(b'H', saveThese)
+                    allKs = self.hdfObject.get_all(b'K', saveThese)
+                    allLs = self.hdfObject.get_all(b'L', saveThese)
                     allEs = self.hdfObject.get_all('Energy', saveThese)
                     allFs = self.hdfObject.get_all(('det_0', 'F'), saveThese)
                     allFerrs = self.hdfObject.get_all(('det_0', 'Ferr'),
@@ -2571,9 +2577,9 @@ class Integrator(wx.Frame, wx.Notebook):
                 try:
                     allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
                                                       saveThese)
-                    allHs = self.hdfObject.get_all('H', saveThese)
-                    allKs = self.hdfObject.get_all('K', saveThese)
-                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allHs = self.hdfObject.get_all(b'H', saveThese)
+                    allKs = self.hdfObject.get_all(b'K', saveThese)
+                    allLs = self.hdfObject.get_all(b'L', saveThese)
                     allFs = self.hdfObject.get_all(('det_0', 'F'), saveThese)
                     allFerrs = self.hdfObject.get_all(('det_0', 'Ferr'),
                                                       saveThese)
@@ -2635,9 +2641,9 @@ class Integrator(wx.Frame, wx.Notebook):
                 try:
                     allBadPs = self.hdfObject.get_all(('det_0', 'bad_point'),
                                                       saveThese)
-                    allHs = self.hdfObject.get_all('H', saveThese)
-                    allKs = self.hdfObject.get_all('K', saveThese)
-                    allLs = self.hdfObject.get_all('L', saveThese)
+                    allHs = self.hdfObject.get_all(b'H', saveThese)
+                    allKs = self.hdfObject.get_all(b'K', saveThese)
+                    allLs = self.hdfObject.get_all(b'L', saveThese)
                     allIs = self.hdfObject.get_all(('det_0', 'I'), saveThese)
                     allIos = self.hdfObject.get_all('io', saveThese)
                     allIbgrs = self.hdfObject.get_all(('det_0', 'Ibgr'), saveThese)  
