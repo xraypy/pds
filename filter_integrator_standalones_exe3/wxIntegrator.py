@@ -1163,7 +1163,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     allLs = self.hdfObject.get_all(get_this, childrenList)
                 else:
                     allLs = self.hdfObject.get_all('L', childrenList)
-                allLs = dict([L,child] for child,L in allLs.iteritems())
+                allLs = dict([L,child] for child,L in allLs.items())
                 thisPoint = closestL(event.xdata, allLs.keys())
                 #item, cookie = self.hdfTree.GetFirstChild(myParent)
                 #while item and \
@@ -1200,7 +1200,7 @@ class Integrator(wx.Frame, wx.Notebook):
             #    fromL = scanData[parentNumber][myNumber].get('L', 0.)
             #    fromDict[fromL] = (parentNumber, myNumber)
             fromDict = self.hdfObject.get_all('L', fromThese)
-            fromDict = dict([L,child] for child,L in fromDict.iteritems())
+            fromDict = dict([L,child] for child,L in fromDict.items())
             possibleLs = fromDict.keys()
             
             self.customSelection.SetTitle('Apply to...')
@@ -1368,8 +1368,8 @@ class Integrator(wx.Frame, wx.Notebook):
             if itemData is None:
                 self.imageMaxField.Clear()
                 return
-            newValue = self.imageMaxField.GetValue()
-            currentValue = self.hdfObject[itemData]['det_0']['image_max']
+            newValue = bytes_to_str(self.imageMaxField.GetValue())
+            currentValue = bytes_to_str(self.hdfObject[itemData]['det_0']['image_max'])
             if event.GetEventType() == wx.wxEVT_KILL_FOCUS:
                 self.imageMaxField.SetValue(str(currentValue))
                 return
@@ -1803,16 +1803,7 @@ class Integrator(wx.Frame, wx.Notebook):
         # Gets the values of the parameters from the
         # hdfObject and writes them to the appropriate
         # entry fields.
-        def updateFields(self, itemData):
-            
-            # Converts bytes to str
-            # for entry field values
-            def bytes_to_str(value):
-                if isinstance(value, bytes):
-                    return value.decode('utf-8') 
-                else: 
-                    return str(value)
-                
+        def updateFields(self, itemData):    
             #print 'Updating fields'
             self.badPointToggle.SetValue(\
                     eval(self.hdfObject[itemData]['det_0']['bad_point']))
@@ -1927,7 +1918,7 @@ class Integrator(wx.Frame, wx.Notebook):
             # TPT changed 'numPoints' to 'dims'
             # transmission, etc. added April 2015, JES
             psicG = self.buildPsicG(itemData)
-            print(self.hdfObject[itemData])
+            print("item_data", self.hdfObject[itemData])
             scan_dict = {'I':[self.hdfObject[itemData]['det_0']['I']],
                          'io':[self.hdfObject[itemData][b'io']],
                          'Ierr':[self.hdfObject[itemData]['det_0']['Ierr']],
@@ -2014,7 +2005,6 @@ class Integrator(wx.Frame, wx.Notebook):
             while item:
                 iterData = self.hdfTree.GetItemData(item)
                 iterList.append(iterData)
-                print("iterList", iterList)
                 item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             iterImageChanged = self.hdfObject.get_all(('det_0', 'image_changed'), 
                                                       iterList)
@@ -2031,7 +2021,6 @@ class Integrator(wx.Frame, wx.Notebook):
             iterFList = self.hdfObject.get_all(('det_0', 'F'), iterList)
             iterFerrList = self.hdfObject.get_all(('det_0', 'Ferr'), iterList)
             for key in iterImageChanged.keys():
-                print("key = ", key)
                 if not (eval(iterImageChanged[key]) or iterFChanged[key]):
                     doneLList.append(iterLList[key])
                     doneFList.append(iterFList[key])
@@ -2096,7 +2085,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 #       eclick.button, erelease.button
                 x1, y1 = eclick.xdata, eclick.ydata
                 x2, y2 = erelease.xdata, erelease.ydata
-                thisROI = str(map(int, map(round, [x1, y1, x2, y2])))
+                thisROI = str(list(map(int, map(round, [x1, y1, x2, y2]))))
                 self.hdfObject[itemData]['det_0']['roi'] = thisROI
                 # Just to make sure it was written properly:
                 thisROI = self.hdfObject[itemData]['det_0']['roi']
@@ -2173,8 +2162,8 @@ class Integrator(wx.Frame, wx.Notebook):
                            False, # 'plot'
                            None, # 'fig'
                            '', # 'figtitle'
-                           im_max=eval(self.hdfObject[itemData]['det_0']\
-                                                               ['image_max']))
+                           im_max=eval(bytes_to_str(self.hdfObject[itemData]['det_0']\
+                                                               ['image_max'])))
                 # TPT changed getVars to get_vars
                 (holding1, # 'clpimg',
                     holding2, # 'bgrimg',
@@ -2740,6 +2729,13 @@ class customSelector(wx.Dialog):
         self.choosingSizer1.Add(self.choosingSizer2, flag=wx.EXPAND)
         
         self.SetSizer(self.choosingSizer1)
+
+# Converts bytes to str for entry field values
+def bytes_to_str(value):
+    if isinstance(value, bytes):
+        return value.decode('utf-8') 
+    else: 
+        return str(value)
 
 # Holds the RectangleSelector used to pick an ROI
 def toggle_selector(event):
