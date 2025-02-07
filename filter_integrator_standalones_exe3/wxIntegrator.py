@@ -1812,41 +1812,49 @@ class Integrator(wx.Frame, wx.Notebook):
             self.imageMaxValue.SetLabel('ROI Max: ' + \
                     str(self.hdfObject[itemData]['det_0']['real_image_max']))
             
-            self.colNbgrField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['cnbgr']))
-            self.colPowerField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['cpow']))
-            self.colWidthField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['cwidth']))
-            self.rowNbgrField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['rnbgr']))
-            self.rowPowerField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['rpow']))
-            self.rowWidthField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['rwidth']))
-            self.flagField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['bgrflag']))
-            self.roiField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['roi']))
-            self.rotateField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['rotangle']))
+            # Converts bytes to str
+            # for entry field values
+            def bytes_to_str(value):
+                if isinstance(value, bytes):
+                    return value.decode('utf-8') 
+                else: 
+                    return str(value)
             
-            self.histBox.SetValue(str(self.hdfObject[itemData]['hist']))
+            self.colNbgrField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['cnbgr']))
+            self.colPowerField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['cpow']))
+            self.colWidthField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['cwidth']))
+            self.rowNbgrField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['rnbgr']))
+            self.rowPowerField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['rpow']))
+            self.rowWidthField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['rwidth']))
+            self.flagField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['bgrflag']))
+            self.roiField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['roi']))
+            self.rotateField.SetValue(\
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['rotangle']))
+            
+            self.histBox.SetValue(bytes_to_str(self.hdfObject[itemData]['hist']))
             
             self.scaleField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['scale']))
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['scale']))
             self.beamSlitField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['beam_slits']))
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['beam_slits']))
             self.detSlitField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['det_slits']))
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['det_slits']))
             self.sampleAngleField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['sample_angles']))
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['sample_angles']))
             self.sampleDiameterField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['sample_diameter']))
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['sample_diameter']))
             self.samplePolygonField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['sample_polygon']))
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['sample_polygon']))
             self.badMapField.SetValue(\
-                    str(self.hdfObject[itemData]['det_0']['bad_pixel_map']))
+                    bytes_to_str(self.hdfObject[itemData]['det_0']['bad_pixel_map']))
             
             self.updateLabels(itemData)
             
@@ -1854,9 +1862,9 @@ class Integrator(wx.Frame, wx.Notebook):
         # transmission,etc. added April 2015, JES
         def updateLabels(self, itemData):
             #print 'Updating labels'
-            self.hLbl.SetLabel('H: ' + str(self.hdfObject[itemData]['H']))
-            self.kLbl.SetLabel('K: ' + str(self.hdfObject[itemData]['K']))
-            self.lLbl.SetLabel('L: ' + str(self.hdfObject[itemData]['L']))
+            self.hLbl.SetLabel('H: ' + str(self.hdfObject[itemData][b'H']))
+            self.kLbl.SetLabel('K: ' + str(self.hdfObject[itemData][b'K']))
+            self.lLbl.SetLabel('L: ' + str(self.hdfObject[itemData][b'L']))
             self.iLbl.SetLabel('I: ' + \
                     str(round(self.hdfObject[itemData]['det_0']['I'], 2)))
             self.iErrLbl.SetLabel('Ierr: ' + \
@@ -1874,13 +1882,13 @@ class Integrator(wx.Frame, wx.Notebook):
             self.bLbl.SetLabel('Beta: ' + \
                     str(round(self.hdfObject[itemData]['det_0']['beta'], 2)))
             self.secLbl.SetLabel('Seconds: ' + \
-                    str(round(self.hdfObject[itemData]['Seconds'], 2)))
+                    str(round(self.hdfObject[itemData][b'Seconds'], 2)))
             self.transmLbl.SetLabel('transm: ' + \
-                    str(round(self.hdfObject[itemData]['transm'], 4)))
+                    str(round(self.hdfObject[itemData][b'transm'], 4)))
             self.filtersLbl.SetLabel('filters: ' + \
-                    str(round(self.hdfObject[itemData]['filters'], 2)))
+                    str(round(self.hdfObject[itemData][b'filters'], 2)))
             self.corrdetLbl.SetLabel('corrdet: ' + \
-                    str(round(self.hdfObject[itemData]['corrdet'], 2)))
+                    str(round(self.hdfObject[itemData][b'corrdet'], 2)))
             
         # How to (re)calculate the F value for a point
         # Since the rod plot may need to update regardless
@@ -2013,19 +2021,18 @@ class Integrator(wx.Frame, wx.Notebook):
             iterFChanged = self.hdfObject.get_all(('det_0', 'F_changed'),
                                                   iterList)
             if self.hdfObject[itemData]['type'].startswith(b'Escan'):
-                iterLList = self.hdfObject.get_all('Energy', iterList)
+                iterLList = self.hdfObject.get_all('energy', iterList)
             elif self.hdfObject[itemData]['type'].startswith(b'ascan'):
                 get_this = self.hdfObject[itemData]['info'].split()[1]
                 iterLList = self.hdfObject.get_all(get_this, iterList)
             else:
                 iterLList = self.hdfObject.get_all(b'L', iterList)
-                print("iterLList= ", iterLList)
+
             iterFList = self.hdfObject.get_all(('det_0', 'F'), iterList)
             iterFerrList = self.hdfObject.get_all(('det_0', 'Ferr'), iterList)
             for key in iterImageChanged.keys():
                 print("key = ", key)
                 if not (eval(iterImageChanged[key]) or iterFChanged[key]):
-                    print("iterLList= ", iterLList)
                     doneLList.append(iterLList[key])
                     doneFList.append(iterFList[key])
                     doneFerrList.append(iterFerrList[key])
@@ -2055,11 +2062,10 @@ class Integrator(wx.Frame, wx.Notebook):
                 rodPlot.plot(self.hdfObject[itemData][get_this],
                              self.hdfObject[itemData]['det_0']['F'], 'ro')
             else:
-                rodPlot.plot(self.hdfObject[itemData]['L'],
+                rodPlot.plot(self.hdfObject[itemData][b'L'],
                              self.hdfObject[itemData]['det_0']['F'], 'ro')
             try:
-                if not self.hdfObject[itemData]['type'].startswith(b'Escan') and\
-                   not self.hdfObject[itemData]['type'].startswith(b'ascan'):
+                if not self.hdfObject[itemData]['type'].startswith(b'Escan') and not self.hdfObject[itemData]['type'].startswith(b'ascan'):
                     rodPlot.semilogy()
             except:
                 pass

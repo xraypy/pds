@@ -337,8 +337,7 @@ class HdfDataFile:
             for item in self.all_items:
                 points.append(item[0])
         #for point in points:
-        if isinstance(key, bytes):
-            key = key.decode('utf-8')
+        if isinstance(key, (str, bytes)):
             if key in GEN_KEYS:
                 key_loc = GEN_KEYS[key]
                 for point in points:
@@ -374,7 +373,7 @@ class HdfDataFile:
                         all_results[point] = \
                                 self.file[point]['scaler_values'][key_loc]
                     else:
-                        print("Unrecognized Key Error: ", key)
+                        print("Position/Scaler Labels Unrecognized Key Error: ", key)
                 if self.point in points and key in self.point_dict.keys():
                     all_results[self.point] = self.point_dict[key]
         elif isinstance(key, tuple):
