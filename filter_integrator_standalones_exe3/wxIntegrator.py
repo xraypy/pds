@@ -48,7 +48,7 @@ class Integrator(wx.Frame, wx.Notebook):
             
             # Make the window
             wx.Frame.__init__(self, args[0], -1, title="HDF Integrator",
-                              size=(1024, 760))
+                              size=(1024, 780))
             
             self.menuBar = wx.MenuBar()
             self.fileMenu = wx.Menu()
@@ -1165,7 +1165,6 @@ class Integrator(wx.Frame, wx.Notebook):
                     allLs = self.hdfObject.get_all(b'L', childrenList)
                 
                 allLs = dict([L,child] for child, L in allLs.items())
-                print("allLs=", allLs)
                 thisPoint = closestL(event.xdata, allLs.keys())
                 
                 #item, cookie = self.hdfTree.GetFirstChild(myParent)
@@ -1173,12 +1172,10 @@ class Integrator(wx.Frame, wx.Notebook):
                 #        self.hdfTree.GetItemPyData(item) != allLs[thisPoint]:
                 #    item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
                 try:
-                    self.hdfTree.SelectItem(dataLookup[allLs[thisPoint]])#item)
-                    print("In the try block for graph point.")
+                    self.hdfTree.SelectItem(dataLookup[allLs[thisPoint]])
                 except:
                     print("Error: can\'t locate point.")
                 self.hdfTree.SetFocus()
-                print("After focus.")
         
         # Copy parameters from one set of points to another by closest L value
         def copyFromTo(self, event):
@@ -1894,7 +1891,6 @@ class Integrator(wx.Frame, wx.Notebook):
         # this function does not call updateRodPlot, leaving
         # that to whichever function initially called updateF
         def updateF(self, itemData):
-            #print 'Updating F'
             if eval(self.hdfObject[itemData]['det_0']['bad_point']):
                 self.hdfObject[itemData]['det_0']['F'] = 0
                 self.hdfObject[itemData]['det_0']['Ferr'] = 0
@@ -2272,7 +2268,6 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.clearFields()
                 self.statusBar.SetStatusText(self.hdfTree.GetItemText(ofMe))
             else:
-                print("Has pixel map changed: ", self.hdfObject[itemData]['det_0']['pixel_map_changed'])
                 if eval(self.hdfObject[itemData]['det_0']['pixel_map_changed']):
                     self.hdfObject[itemData]['det_0']['pixel_map_changed'] = \
                                                                         'False'

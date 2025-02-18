@@ -260,7 +260,8 @@ class HdfDataFile:
         if arg == self.point:
             return self.point_dict
         if self.point != 0 and self.point_dict != {}:
-            self.write_point(self.point_dict, self.point)
+            # self.write_point(self.point_dict, self.point)
+            pass
         self.read_point(arg)        
         return self.point_dict
     
@@ -273,7 +274,8 @@ class HdfDataFile:
         
         try:
             if self.point != 0 and self.point_dict != {}:
-                self.write_point(self.point_dict, self.point)
+                #self.write_point(self.point_dict, self.point)
+                pass
         except ValueError:
             print("Error writing point; file may already be closed")
         
@@ -597,11 +599,13 @@ class HdfDataFile:
         pass
     
     def write_point(self,data,num=None):
+        pass
         """
         write data to file 
         
         data is a dictionary 
         """
+        '''
         #self._check_file()
         #
         if num is None:
@@ -626,6 +630,7 @@ class HdfDataFile:
                         pass
             else:
                 pass
+            '''
 
 ##############################################################################
 if __name__ == "__main__":
