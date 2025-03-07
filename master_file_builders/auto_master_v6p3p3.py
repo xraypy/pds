@@ -104,4 +104,9 @@ class FileLock(object):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    auto_master(spec_dir=args[0], scripts_dir=args[1])
+    scripts_dir = None
+
+    if len(args) > 1:
+        scripts_dir = args[1]
+    
+    auto_master(spec_dir=args[0], scripts_dir=scripts_dir)
