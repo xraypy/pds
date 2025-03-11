@@ -3,7 +3,7 @@ Lattice calcs
 
 Authors/Modifications:
 -----------------------
-* Tom Trainor (tptrainor@alaska.edu) 
+* Tom Trainor (tptrainor@alaska.edu)
 * convert matlab to python, Kunal Tanwar
 * Convert classes, TPT
 
@@ -20,7 +20,7 @@ real space vectors are contravarient:
     v = (x,y,z)* |b| = x*a + y*b + z*c
                  |c|
 If A is an arbitrary matrix that transforms the contravarient
-vector indicies, its assumed that the indicies left multiply 
+vector indicies, its assumed that the indicies left multiply
     (x',y',z') = (x,y,z) * A
 
 Note that the usual convention is to express covarient quantities
@@ -32,7 +32,7 @@ as above, the matrix vector multiplications will need to be changed to:
     |x'|                 |x|
     |y'| = transpose(A)* |y|
     |z'|                 |z|
-We can express the same in numpy given a vector v and matrix A 
+We can express the same in numpy given a vector v and matrix A
     dot(v,A) = dot(transpose(A),v)
 where v is multiplied as a row vector on the lhs and a column
 vector on the rhs; ie the transpose of v bewteen column and
@@ -44,9 +44,9 @@ Assume there is a matrix that transforms the covarient basis
     |b'| = F* |b|   or   b' = (F21*a + F22*b + F23*c)
     |c'|      |c|        c' = (F31*a + F32*b + F33*c)
 with a well defined inverse:
-    |a|           |a'|   
-    |b| = inv(F)* |b'|   
-    |c|           |c'|   
+    |a|           |a'|
+    |b| = inv(F)* |b'|
+    |c|           |c'|
 
 The covarient/contravarient relationship bewteen basis vectors
 and the vector indicies implies that the indicies of a (stationary)
@@ -77,7 +77,7 @@ Therefore:
      |h'|      |h|
      |k'| = F* |k|
      |l'|      |l|
-     
+
 The reciprocal relation is:
     |h|      |k'|
     |k| = G* |k'|
@@ -133,7 +133,7 @@ and
 e.g. in above we take recip lattice as primed basis and
 real lattice as the unprimed basis, therefore equate:
   F = gr
-  G = inv(F) = inv(gr) = g 
+  G = inv(F) = inv(gr) = g
   M = transpose(inv(F)) = transpose(g)
   N = inv(M) = transpose(F) = inv(transpose(g)) = transpose(gr)
 
@@ -141,13 +141,15 @@ Note that g and gr are always symmetric, therefore
   g = transpose(g) and gr = transpose(gr).
   F = N = gr
   G = M = g
-  
+
 """
+
 ##########################################################################
 
 import numpy as num
 from mathutil import cosd, sind, tand
 from mathutil import arccosd, arcsind, arctand
+
 
 ##########################################################################
 class Lattice:
@@ -156,45 +158,48 @@ class Lattice:
     operations within the lattice
 
     """
-    def __init__(self,a=10.,b=10.,c=10.,alpha=90.,beta=90.,gamma=90.,lam=1.5406):
+
+    def __init__(self, a=10.0, b=10.0, c=10.0, alpha=90.0, beta=90.0, gamma=90.0, lam=1.5406):
         """
         Initialize
 
         Parameters:
         -----------
-        * a,b,c in angstroms 
+        * a,b,c in angstroms
         * alpha, beta, gamma in degrees,
         * lambda in angstroms (default lambda is Cu Ka1)
         """
-        self.update(a=a,b=b,c=c,alpha=alpha,beta=beta,gamma=gamma,lam=lam)
+        self.update(a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma, lam=lam)
 
-    def __repr__(self,):
-        """ display """
+    def __repr__(
+        self,
+    ):
+        """display"""
         lout = "a=%6.5f, b=%6.5f, c=%6.5f" % (self.a, self.b, self.c)
-        lout = "%s, alpha=%6.5f,beta=%6.5f,gamma=%6.5f\n" % (lout,
-                                                             self.alpha,
-                                                             self.beta,
-                                                             self.gamma)
-        lout = "%sar=%6.5f, br=%6.5f, cr=%6.5f" % (lout,self.ar, self.br, self.cr)
-        lout = "%s, alphar=%6.5f,betar=%6.5f,gammar=%6.5f\n" % (lout,
-                                                                self.alphar,
-                                                                self.betar,
-                                                                self.gammar)
-        lout = "%sDefault wavelength for angle calculations=%6.5f\n" % (lout,
-                                                                      self.lam)
+        lout = "%s, alpha=%6.5f,beta=%6.5f,gamma=%6.5f\n" % (lout, self.alpha, self.beta, self.gamma)
+        lout = "%sar=%6.5f, br=%6.5f, cr=%6.5f" % (lout, self.ar, self.br, self.cr)
+        lout = "%s, alphar=%6.5f,betar=%6.5f,gammar=%6.5f\n" % (lout, self.alphar, self.betar, self.gammar)
+        lout = "%sDefault wavelength for angle calculations=%6.5f\n" % (lout, self.lam)
         return lout
 
-    def update(self,a=None,b=None,c=None,alpha=None,beta=None,gamma=None,lam=None):
+    def update(self, a=None, b=None, c=None, alpha=None, beta=None, gamma=None, lam=None):
         """
         Update lattice parameters
         """
-        if a != None:     self.a = float(a)
-        if b != None:     self.b = float(b)
-        if c != None:     self.c = float(c)
-        if alpha != None: self.alpha = float(alpha)
-        if beta  != None: self.beta  = float(beta)
-        if gamma != None: self.gamma = float(gamma)
-        if lam != None:   self.lam = float(lam)
+        if a != None:
+            self.a = float(a)
+        if b != None:
+            self.b = float(b)
+        if c != None:
+            self.c = float(c)
+        if alpha != None:
+            self.alpha = float(alpha)
+        if beta != None:
+            self.beta = float(beta)
+        if gamma != None:
+            self.gamma = float(gamma)
+        if lam != None:
+            self.lam = float(lam)
         # update calc quantities
         self._calc_g()
 
@@ -202,15 +207,13 @@ class Lattice:
         """
         Return array of real lattice cell parameters
         """
-        return num.array([self.a,self.b,self.c,
-                          self.alpha,self.beta,self.gamma],dtype=float)
+        return num.array([self.a, self.b, self.c, self.alpha, self.beta, self.gamma], dtype=float)
 
     def rcell(self):
         """
         Return array of reciprocal lattice cell parameters
         """
-        return num.array([self.ar,self.br,self.cr,
-                          self.alphar,self.betar,self.gammar],dtype=float)
+        return num.array([self.ar, self.br, self.cr, self.alphar, self.betar, self.gammar], dtype=float)
 
     def _calc_g(self):
         """
@@ -218,22 +221,22 @@ class Lattice:
         self.g  = real space metric tensor
         self.gr = recip space metric tensor
         """
-        (a,b,c,alp,bet,gam) = self.cell()
+        (a, b, c, alp, bet, gam) = self.cell()
         # real metric tensor
-        self.g = num.array([ [ a*a, a*b*cosd(gam), a*c*cosd(bet) ],
-                             [ b*a*cosd(gam), b*b, b*c*cosd(alp) ],
-                             [ c*a*cosd(bet), c*b*cosd(alp), c*c ] ])
+        self.g = num.array(
+            [[a * a, a * b * cosd(gam), a * c * cosd(bet)], [b * a * cosd(gam), b * b, b * c * cosd(alp)], [c * a * cosd(bet), c * b * cosd(alp), c * c]]
+        )
         # recip lattice metric tensor
         # and recip lattice params
-        self.gr     = num.linalg.inv(self.g)
-        self.ar     = num.sqrt(self.gr[0,0])
-        self.br     = num.sqrt(self.gr[1,1])
-        self.cr     = num.sqrt(self.gr[2,2])
-        self.alphar = arccosd(self.gr[1,2]/(self.br*self.cr))
-        self.betar  = arccosd(self.gr[0,2]/(self.ar*self.cr))
-        self.gammar = arccosd(self.gr[0,1]/(self.ar*self.br))
-        
-    def vol(self,recip=False):
+        self.gr = num.linalg.inv(self.g)
+        self.ar = num.sqrt(self.gr[0, 0])
+        self.br = num.sqrt(self.gr[1, 1])
+        self.cr = num.sqrt(self.gr[2, 2])
+        self.alphar = arccosd(self.gr[1, 2] / (self.br * self.cr))
+        self.betar = arccosd(self.gr[0, 2] / (self.ar * self.cr))
+        self.gammar = arccosd(self.gr[0, 1] / (self.ar * self.br))
+
+    def vol(self, recip=False):
         """
         Calculate the cell volume.
 
@@ -248,15 +251,17 @@ class Lattice:
         V_recip = sqrt(determiant(inv(g)))
 
         """
-        if recip == True: g = self.gr
-        else: g = self.g
+        if recip == True:
+            g = self.gr
+        else:
+            g = self.g
         det = num.linalg.det(g)
         if det > 0:
             return num.sqrt(det)
         else:
             return 0.0
-        
-    def dot(self,u,v,recip=False):
+
+    def dot(self, u, v, recip=False):
         """
         Calculate dot product of two vectors (u,v)
 
@@ -274,13 +279,15 @@ class Lattice:
         If u and v are recip lattice vectors replace g with
         gr = inv(g)
         """
-        if recip == True: g = self.gr
-        else: g = self.g
-        u = num.array(u,dtype=float)
-        v = num.array(v,dtype=float)
-        return num.dot(u,num.dot(g,v))
+        if recip == True:
+            g = self.gr
+        else:
+            g = self.g
+        u = num.array(u, dtype=float)
+        v = num.array(v, dtype=float)
+        return num.dot(u, num.dot(g, v))
 
-    def mag(self,v,recip=False):
+    def mag(self, v, recip=False):
         """
         Calculate the norm of a vector (v)
 
@@ -292,10 +299,10 @@ class Lattice:
         Note v is assumed to be normal numpy array
         (ie not matrix objects)
         """
-        m = num.sqrt(self.dot(v,v,recip=recip))
+        m = num.sqrt(self.dot(v, v, recip=recip))
         return m
 
-    def angle(self,u,v,recip=False):
+    def angle(self, u, v, recip=False):
         """
         Calculate the angle between two vectors (u,v)
 
@@ -307,46 +314,46 @@ class Lattice:
         Note u and v are assumed to be normal numpy arrays
         (ie not matrix objects)
         """
-        uv = self.dot(u,v,recip=recip)
-        um = self.mag(u,recip=recip)
-        vm = self.mag(v,recip=recip)
-        arg = uv/(um*vm)
+        uv = self.dot(u, v, recip=recip)
+        um = self.mag(u, recip=recip)
+        vm = self.mag(v, recip=recip)
+        arg = uv / (um * vm)
         if num.fabs(arg) > 1.0:
             arg = arg / num.fabs(arg)
         alpha = arccosd(arg)
         return alpha
 
-    def angle_rr(self,x,h):
+    def angle_rr(self, x, h):
         """
         Calculate the angle between a real vector x = [x,y,z]
         and a recip vector h = [h,k,l]
         """
-        x = num.array(x,dtype=float)
-        h = num.array(h,dtype=float)
-        hx = num.sum(x*h)
-        xm = self.mag(x,recip=False)
-        hm = self.mag(h,recip=True)
-        arg = hx/(hm*xm)
+        x = num.array(x, dtype=float)
+        h = num.array(h, dtype=float)
+        hx = num.sum(x * h)
+        xm = self.mag(x, recip=False)
+        hm = self.mag(h, recip=True)
+        arg = hx / (hm * xm)
         if num.fabs(arg) > 1.0:
             arg = arg / num.fabs(arg)
         alpha = arccosd(arg)
         return alpha
 
-    def d(self,hkl):
+    def d(self, hkl):
         """
         Calculate d space for given [h,k,l]
         """
-        if len(hkl)!=3:
+        if len(hkl) != 3:
             print("Error need an array of [h,k,l]")
-            return 0.
-        h = self.mag(hkl,recip=True)
-        if h == 0.:
-            #print "Error [h,k,l] magnitude is zero:", hkl
             return 0.0
-        d = 1./h
+        h = self.mag(hkl, recip=True)
+        if h == 0.0:
+            # print "Error [h,k,l] magnitude is zero:", hkl
+            return 0.0
+        d = 1.0 / h
         return d
 
-    def tth(self,hkl,lam=None):
+    def tth(self, hkl, lam=None):
         """
         Calculate 2Theta for given [h,k,l] and wavelength
 
@@ -356,55 +363,60 @@ class Lattice:
         If you pass in lam, this will change the default for
         subsequent calls
         """
-        if lam != None: self.lam = float(lam)
+        if lam != None:
+            self.lam = float(lam)
         d = self.d(hkl)
-        if d == 0.: return 0.
-        r = self.lam/(2.*d)
+        if d == 0.0:
+            return 0.0
+        r = self.lam / (2.0 * d)
         if num.fabs(r) > 1.0:
-            r = r/num.fabs(r)
-        tth = 2.*arcsind(r)
+            r = r / num.fabs(r)
+        tth = 2.0 * arcsind(r)
         return tth
 
-    def dvec(self,hkl):
+    def dvec(self, hkl):
         """
         Calculate the real space vector d
         which has a magnitude of the d spacing
         and is normal to the plane hkl = [h,k,l]
         """
         # convert hkl vector to real space indicies
-        #hkl  = num.array(hkl,dtype=float)
-        #dvec = num.dot(self.gr,hkl)
+        # hkl  = num.array(hkl,dtype=float)
+        # dvec = num.dot(self.gr,hkl)
         dvec = self.recip_to_real(hkl)
         dspc = self.d(hkl)
-        if dspc == 0: return num.array([0.,0.,0.])
-        dvec = (dspc**2.)*dvec
+        if dspc == 0:
+            return num.array([0.0, 0.0, 0.0])
+        dvec = (dspc**2.0) * dvec
         return dvec
 
-    def recip_to_real(self,hkl):
+    def recip_to_real(self, hkl):
         """
         Given recip vector hkl = [h,k,l] calculate the
         vectors indicies in the real lattice
         """
-        hkl = num.array(hkl,dtype=float)
-        #v   = num.dot(self.gr.transpose(),hkl)
-        v   = num.dot(self.gr,hkl)
+        hkl = num.array(hkl, dtype=float)
+        # v   = num.dot(self.gr.transpose(),hkl)
+        v = num.dot(self.gr, hkl)
         return v
-    
-    def real_to_recip(self,v):
+
+    def real_to_recip(self, v):
         """
         Given real vector v = [x,y,z] calculate the
         vectors indicies in the reciprocal lattice
         """
-        v   = num.array(v,dtype=float)
-        hkl = num.dot(v,self.g)
+        v = num.array(v, dtype=float)
+        hkl = num.dot(v, self.g)
         return hkl
+
 
 ##########################################################################
 class LatticeTransform:
     """
     Generalized lattice transformations
     """
-    def __init__(self,lattice,Va=None,Vb=None,Vc=None,shift=None):
+
+    def __init__(self, lattice, Va=None, Vb=None, Vc=None, shift=None):
         """
         Initialize
 
@@ -419,13 +431,13 @@ class LatticeTransform:
         * (V's and shift are defined in the unprimed system)
         """
         self.lattice = lattice
-        self.Va    = num.array([1.,0.,0.])
-        self.Vb    = num.array([0.,1.,0.])
-        self.Vc    = num.array([0.,0.,1.])
-        self.shift = num.array([0.,0.,0.])
-        self._update(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
-    
-    def basis(self,Va=None,Vb=None,Vc=None,shift=None):
+        self.Va = num.array([1.0, 0.0, 0.0])
+        self.Vb = num.array([0.0, 1.0, 0.0])
+        self.Vc = num.array([0.0, 0.0, 1.0])
+        self.shift = num.array([0.0, 0.0, 0.0])
+        self._update(Va=Va, Vb=Vb, Vc=Vc, shift=shift)
+
+    def basis(self, Va=None, Vb=None, Vc=None, shift=None):
         """
         Define new basis vectors.
 
@@ -433,7 +445,7 @@ class LatticeTransform:
         ----------
         * Va, Vb and Vc should define the a',b',c' lattice
           vectors of the new basis (rotation/dialation part).
-          
+
         * Shift describes an origin shift of the new lattice
           (ie take the new basis defined by Va,Vb,Vc then
           apply the shift vector)
@@ -442,8 +454,8 @@ class LatticeTransform:
         ------
         All the vectors should be defined in terms of fractional
         coordinate indicies in the original basis, for example:
-           a' = x1*a + y1*b + z1*c 
-           b' = x2*a + y2*b + z2*c 
+           a' = x1*a + y1*b + z1*c
+           b' = x2*a + y2*b + z2*c
            c' = x3*a + y3*b + z3*c
            shift = x4*a + y4*b + z4*c
         and
@@ -452,21 +464,25 @@ class LatticeTransform:
            Vc = [x3,y3,y3]
            shift = [x4,y4,z4]
         """
-        self._update(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
+        self._update(Va=Va, Vb=Vb, Vc=Vc, shift=shift)
 
-    def _update(self,Va=None,Vb=None,Vc=None,shift=None):
-        """ update """
-        if Va != None: self.Va = num.array(Va,dtype=float)
-        if Vb != None: self.Vb = num.array(Vb,dtype=float)
-        if Vc != None: self.Vc = num.array(Vc,dtype=float)
-        if shift != None: self.shift = num.array(shift,dtype=float)
-        F = [self.Va,self.Vb,self.Vc]
+    def _update(self, Va=None, Vb=None, Vc=None, shift=None):
+        """update"""
+        if Va != None:
+            self.Va = num.array(Va, dtype=float)
+        if Vb != None:
+            self.Vb = num.array(Vb, dtype=float)
+        if Vc != None:
+            self.Vc = num.array(Vc, dtype=float)
+        if shift != None:
+            self.shift = num.array(shift, dtype=float)
+        F = [self.Va, self.Vb, self.Vc]
         self.F = num.array(F, dtype=float)
         self.G = num.linalg.inv(self.F)
         self.M = self.G.transpose()
         self.N = self.F.transpose()
-        
-    def cartesian(self,shift=[0.,0.,0.]):
+
+    def cartesian(self, shift=[0.0, 0.0, 0.0]):
         """
         Calculates a cartesian basis using:
           Va = a' is parallel to a
@@ -477,72 +493,73 @@ class LatticeTransform:
         origin (specify shift in fractional coordinates of
         the original lattice)
         """
-        (a,b,c,alp,bet,gam) = self.lattice.cell()
-        (ar,br,cr,alpr,betr,gamr) = self.lattice.rcell()
-        Va = [1./a,                 0. ,             0.]
-        Vb = [-1./(a*tand(gam)), 1./(b*sind(gam)),   0.]
-        Vc = [ar*cosd(betr),     br*cosd(alpr),      cr]
-        self.basis(Va=Va,Vb=Vb,Vc=Vc,shift=shift)
+        (a, b, c, alp, bet, gam) = self.lattice.cell()
+        (ar, br, cr, alpr, betr, gamr) = self.lattice.rcell()
+        Va = [1.0 / a, 0.0, 0.0]
+        Vb = [-1.0 / (a * tand(gam)), 1.0 / (b * sind(gam)), 0.0]
+        Vc = [ar * cosd(betr), br * cosd(alpr), cr]
+        self.basis(Va=Va, Vb=Vb, Vc=Vc, shift=shift)
 
-    def xp(self,x):
+    def xp(self, x):
         """
         Given x = [x,y,z] in the original lattice
         compute the indicies of the vector in the new basis
            xp = M*(x - shift)
         """
-        x  = num.array(x,dtype=float)
-        if self.shift.sum() != 0.:
+        x = num.array(x, dtype=float)
+        if self.shift.sum() != 0.0:
             x = x - self.shift
-        xp = num.dot(self.M,x)
+        xp = num.dot(self.M, x)
         return xp
-        
-    def x(self,xp):
+
+    def x(self, xp):
         """
         Given xp = [x',y',z'] in the primed basis
         compute the indicies of the vector in the original basis
             x = N*(xp + shiftp) = N*xp + shift
         """
-        xp  = num.array(xp,dtype=float)
-        x = num.dot(self.N,xp)
-        if self.shift.sum() != 0.:
+        xp = num.array(xp, dtype=float)
+        x = num.dot(self.N, xp)
+        if self.shift.sum() != 0.0:
             x = x + self.shift
         return x
 
-    def hp(self,h):
+    def hp(self, h):
         """
         Given h = [h,k,l] in the original (recip) basis
         compute the indicies of the vector in the primed
         (recip) basis
         """
-        h  = num.array(h,dtype=float)
-        return num.dot(self.F,h)
-        
-    def h(self,hp):
+        h = num.array(h, dtype=float)
+        return num.dot(self.F, h)
+
+    def h(self, hp):
         """
         Given hp = [h',k',l'] in the primed (recip) basis
         compute the indicies of the vector in the original
         (recip) basis
         """
-        hp  = num.array(hp,dtype=float)
-        return num.dot(self.G,hp)
+        hp = num.array(hp, dtype=float)
+        return num.dot(self.G, hp)
 
     def plat(self):
         """
-        Return a Lattice instance for the primed basis 
+        Return a Lattice instance for the primed basis
         """
         a = self.lattice.mag(self.Va)
         b = self.lattice.mag(self.Vb)
         c = self.lattice.mag(self.Vc)
-        alp = self.lattice.angle(self.Vb,self.Vc)
-        bet = self.lattice.angle(self.Va,self.Vc)
-        gam = self.lattice.angle(self.Va,self.Vb)
-        return Lattice(a,b,c,alp,bet,gam)
-    
+        alp = self.lattice.angle(self.Vb, self.Vc)
+        bet = self.lattice.angle(self.Va, self.Vc)
+        gam = self.lattice.angle(self.Va, self.Vb)
+        return Lattice(a, b, c, alp, bet, gam)
+
+
 ##########################################################################
 ##########################################################################
 def test_lattice():
     # create a new lattice instance
-    cell = Lattice(5.6,5.6,13,90,90,120)
+    cell = Lattice(5.6, 5.6, 13, 90, 90, 120)
 
     # show lattice parameters and real
     # recip lattice cell volumes
@@ -552,74 +569,75 @@ def test_lattice():
 
     # what the hkl = [0,0,1] dspace
     # and 2 theta value for lambda = 1 ang.
-    print(cell.d([0,0,1]))
-    print(cell.tth([0,0,1],lam=1.))
-    
+    print(cell.d([0, 0, 1]))
+    print(cell.tth([0, 0, 1], lam=1.0))
+
     # create a real space vector perpendicular
     # to hkl = [0,0,1], with magnitude = dspace(001)
-    dv = cell.dvec([0,0,1])
+    dv = cell.dvec([0, 0, 1])
     print(dv)
     print(cell.mag(dv))
 
     # compute the angle between some vectors
     # recip lattice [1,0,0] and [0,1,0]
-    print(cell.angle([1,0,0],[0,1,0],recip=True))
+    print(cell.angle([1, 0, 0], [0, 1, 0], recip=True))
     # recip lattice [1,0,0] and [0,0,1]
-    print(cell.angle([1,0,0],[0,0,1],recip=True))
+    print(cell.angle([1, 0, 0], [0, 0, 1], recip=True))
     # recip lattice [0,0,1] and [1,1,1]
-    print(cell.angle([0,0,1],[1,1,1],recip=True))
+    print(cell.angle([0, 0, 1], [1, 1, 1], recip=True))
 
     # real lattice [1,0,0] and [0,1,0]
-    print(cell.angle([1,0,0],[0,1,0]))
+    print(cell.angle([1, 0, 0], [0, 1, 0]))
     # real lattice [1,0,0] and [0,0,1]
-    print(cell.angle([1,0,0],[0,0,1]))
+    print(cell.angle([1, 0, 0], [0, 0, 1]))
     # real lattice [0,0,1] and [1,1,1]
-    print(cell.angle([0,0,1],[1,1,1]))
+    print(cell.angle([0, 0, 1], [1, 1, 1]))
 
     # real [0,0,1] and recip [0,0,1]
-    print(cell.angle_rr([0,0,1],[0,0,1]))
+    print(cell.angle_rr([0, 0, 1], [0, 0, 1]))
     # real [1,1,1] and recip [0,0,1]
-    print(cell.angle_rr([1,1,1],[0,0,1]))
+    print(cell.angle_rr([1, 1, 1], [0, 0, 1]))
     # real dv and recip [0,0,1]
-    print(cell.angle_rr(dv,[0,0,1]))
+    print(cell.angle_rr(dv, [0, 0, 1]))
     # real dv and recip [1,1,0]
-    print(cell.angle_rr(dv,[1,1,0]))
+    print(cell.angle_rr(dv, [1, 1, 0]))
 
     return cell
 
+
 def test_transform():
     # create a new hexagonal lattice instance
-    cell = Lattice(5.6,5.6,13,90,90,120)
-    
+    cell = Lattice(5.6, 5.6, 13, 90, 90, 120)
+
     # test lattice transform
     # below defines rhombohedral basis vectors
     # in terms of the heaxagonal basis vectors
     Va_rhom = [0.6667, 0.3333, 0.3333]
     Vb_rhom = [-0.3333, 0.3333, 0.3333]
     Vc_rhom = [-0.3333, -0.6667, 0.3333]
-    t = LatticeTransform(cell,Va=Va_rhom,Vb=Vb_rhom,Vc=Vc_rhom)
+    t = LatticeTransform(cell, Va=Va_rhom, Vb=Vb_rhom, Vc=Vc_rhom)
 
     # create an instance of the rhombohedral lattice
     # shows the rhomb lattice params
     print(t.plat())
 
     # given the hkl = [001] in hex calc hkl in rhom
-    print(t.hp([0,0,1]))
-    
+    print(t.hp([0, 0, 1]))
+
     # given the hkl = [111] in rhom calc hkl in hex
-    print(t.h([1,1,1]))
+    print(t.h([1, 1, 1]))
 
     # create a cartesian representation
     t.cartesian()
     cart = t.plat()
     print(cart)
-    
+
     # convert a [1,1,0] vector in hex lattice to cartesian
-    vc = t.xp([1,1,0])
+    vc = t.xp([1, 1, 0])
     print(vc)
 
     # check that the vector is the same length
-    print(cell.mag([1,1,0]))
+    print(cell.mag([1, 1, 0]))
     print(cart.mag(vc))
 
     return t
@@ -629,8 +647,7 @@ def test_transform():
 ##########################################################################
 if __name__ == "__main__":
     """
-    test 
+    test
     """
     test_lattice()
     test_transform()
-    

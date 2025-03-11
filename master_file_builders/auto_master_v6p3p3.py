@@ -12,7 +12,7 @@ def auto_master(spec_dir, scripts_dir):
         print("Updating...")
 
         if scripts_dir is None:
-            spectopdf_path = "C:\\apps\\tdl\\scripts\\spectohdf_v6p3p3.py"
+            spectopdf_path = "C:\\Users\\skordas\\Desktop\\GPD\\pds\\master_file_builders\\spectohdf_v6p3p3.py"
         else:
             spectopdf_path = Path(scripts_dir) / "spectohdf_v6p3p3.py"
 

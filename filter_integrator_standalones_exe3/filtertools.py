@@ -1,4 +1,4 @@
-'''
+"""
 Filter Tools
 Author: Craig Biwer (cbiwer@uchicago.edu)
 Last Modified: 2/13/2012
@@ -6,19 +6,18 @@ Last Modified: 2/13/2012
 Python 2.x to Python 3.12.3
 Author: Jaswitha (jaswithareddy@uchicago.edu)
 Last modified: 1/30/2025
-'''
+"""
 
 import h5py
 import numpy
 
+
 # Given two dates, checks that the first comes before the second
 # Format: 'Day Month Date Time Year', e.g. 'Mon Jan 12 08:42:32 2011'
 def is_before(am_i, before_me):
-    all_months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    all_months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     (test_day, test_month, test_date, test_time, test_year) = am_i.split()
-    (other_day, other_month, other_date,
-                             other_time, other_year) = before_me.split()
+    (other_day, other_month, other_date, other_time, other_year) = before_me.split()
     if int(test_year) < int(other_year):
         return True
     elif int(test_year) == int(other_year):
@@ -31,11 +30,13 @@ def is_before(am_i, before_me):
                 if test_time < other_time:
                     return True
     return False
-    
+
+
 # Given two dates, checks that the first comes after the second
 # Format: 'Day Month Date Time Year', e.g. 'Mon Jan 12 08:42:32 2011'
 def is_after(am_i, after_me):
     return am_i == after_me or not is_before(am_i, after_me)
+
 
 # Given a series of lists, returns the union of those lists
 def list_union(*args):
@@ -47,6 +48,7 @@ def list_union(*args):
     union = [item for sublist in args for item in sublist]
     union = list(set(union))
     return union
+
 
 # Given a series of lists, returns the intersection of those lists
 def list_intersect(*args):

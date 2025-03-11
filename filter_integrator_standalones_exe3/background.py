@@ -1,14 +1,8 @@
 """
 Methods to handle generic background determination
 
-Authors/Modifications:
-----------------------
-*  Jaswitha (jaswithareddy@uchicago.edu), 1/30/2025
-*  Tom Trainor (tptrainor@alaska.edu)
-*  The polynomial background model follows closely 
-   the XRF background code by Mark Rivers
+The polynomial background model follows closely the XRF background code by Mark Rivers
 """
-#######################################################################
 
 import numpy as num
 from matplotlib import pyplot
@@ -16,40 +10,37 @@ from matplotlib import pyplot
 from scipy.stats import linregress
 import time
 
-#######################################################################
-def linear_background(data,nbgr=0):
+
+def linear_background(data, nbgr=0):
     """
     Calculate a linear background of the data based on the endpoints
 
     Parameters:
     -----------
-    * data is the data to be fit.  We assume that the data is on an
-      evenly spaced grid so no abscica is used in calculating the
-      background line. If your data has uneven spacing then you
-      should use a spline to regrid it before calling this routine
+    * data is the data to be fit.  We assume that the data is on an evenly spaced grid so no abscica is used in calculating the
+      background line. If your data has uneven spacing then you hould use a spline to regrid it before calling this routine
     * ngr is the number of end points to use in the fit.
 
     Example:
     --------
     >>bgr = linear_background(data,nbgr=3)
-    
+
     """
     ndat = len(data)
     if nbgr <= 0:
         return num.zeros(ndat)
-    if ndat < 2*nbgr + 1:
+    if ndat < 2 * nbgr + 1:
         return num.zeros(ndat)
     # calc linear bgr from end points
-    xlin = num.arange(0,nbgr,1,dtype=float)
-    xlin = num.append(xlin,num.arange(ndat-nbgr,ndat,1))
-    ylin = num.array(data[0:nbgr],dtype=float)
-    ylin = num.append(ylin,data[ndat-nbgr:])
+    xlin = num.arange(0, nbgr, 1, dtype=float)
+    xlin = num.append(xlin, num.arange(ndat - nbgr, ndat, 1))
+    ylin = num.array(data[0:nbgr], dtype=float)
+    ylin = num.append(ylin, data[ndat - nbgr :])
     m, b, rval, pval, stderr = linregress(xlin, ylin)
     return m * num.arange(ndat) + b
 
-#######################################################################
-def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
-               compress=1,debug=False):
+
+def background(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=False):
     """
     Calculate the background under a curve.
 
@@ -65,8 +56,8 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
       background.  This part of the background is removed from the data
       before polynomials are adjusted.  We then add it back to the polynomial
       sum so the total background returned from this function includes both
-      if nbgr is zero no linear background is applied.  
-      
+      if nbgr is zero no linear background is applied.
+
     * width is the polynomial (half) width in units of steps
       in y.  If pow = 0.5, width is the radius of a circle.
       Note that the extent of the polynomial used in bgr fitting
@@ -85,10 +76,10 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
 
     * compress is a compression factor for the array.  It should help
       speed up the fitting and smooth the background
-      
+
     * debug is a flag (True/False) to indicate if additional debug arrays
       should be calculated
-    
+
     Notes:
     ------
     This is a simplified form of the algorithm used for fitting
@@ -107,16 +98,17 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     """
     # make sure pow is positive
     # and create some debug stuff
-    if pow < 0.:
+    if pow < 0.0:
         print("Warning power is less than 0, changing it to positive")
-        pow = -1.*pow
+        pow = -1.0 * pow
     if debug:
         p = []
         d = []
-    
+
     # linear bgr subtract data
-    linbgr = linear_background(data,nbgr=nbgr)
-    if width <= 0. or pow == 0.: return linbgr
+    linbgr = linear_background(data, nbgr=nbgr)
+    if width <= 0.0 or pow == 0.0:
+        return linbgr
     y = data - linbgr
 
     # Compression
@@ -127,14 +119,15 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     # if the array length is not an integer divisor
     # of the compression factor
     if compress > 1:
-        (y,rem) = compress_array(y,compress)
-        width = int(width/compress)
-        if width == 0: width = 1 
+        (y, rem) = compress_array(y, compress)
+        width = int(width / compress)
+        if width == 0:
+            width = 1
 
     # create bgr array
     ndat = len(y)
-    bgr  = num.zeros(ndat)
-    
+    bgr = num.zeros(ndat)
+
     # calc polynomial (old)
     """
     Note on computing the polynomial based on the width:
@@ -165,61 +158,61 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     """
     ## edits / new
     # make sure npoly is odd
-    #npoly = num.min(int(6*width)+1, 2*int(ndat/2.)+1)
-    #pdelx = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
+    # npoly = num.min(int(6*width)+1, 2*int(ndat/2.)+1)
+    # pdelx = num.array(range(npoly),dtype=float) - float((npoly-1.)/2.)
     if width <= 1:
-        npoly = min(11, 2*int(ndat/2)+1)
+        npoly = min(11, 2 * int(ndat / 2) + 1)
     else:
-        npoly = min(10*int(width/2)+1, 2*int(ndat/2)+1)
+        npoly = min(10 * int(width / 2) + 1, 2 * int(ndat / 2) + 1)
     #
-    pdelx   = num.array(range(npoly),dtype=float) - (npoly-1.)/2.
+    pdelx = num.array(range(npoly), dtype=float) - (npoly - 1.0) / 2.0
     """
     pdelx = range(-npoly,-1)
     pdelx.append(1)
     pdelx.extend(range(2,npoly+1))
     pdelx = num.array(pdelx,dtype=float)
     """
-    #print npoly,pdelx
+    # print npoly,pdelx
     npoly = len(pdelx)
-    r     = 2*float(width)
-    poly  = -1.*(pdelx/r)**(2.*pow)
-    # renorm poly 
-    pnorm = (data[0:3].sum() + data[-3:].sum())/6.
-    poly  = poly*pnorm
+    r = 2 * float(width)
+    poly = -1.0 * (pdelx / r) ** (2.0 * pow)
+    # renorm poly
+    pnorm = (data[0:3].sum() + data[-3:].sum()) / 6.0
+    poly = poly * pnorm
     ## end edits
-    
+
     # loop through each point
     # NOTE this loop is the bottleneck
     # in the background calculations!
-    # We should speed up this loop.  
-    #delta = num.zeros(len(poly))
-    n = (npoly-1)/2
+    # We should speed up this loop.
+    # delta = num.zeros(len(poly))
+    n = (npoly - 1) / 2
     for j in range(ndat):
         # data and polynomial indicies
-        dlidx = max(0,j-n)
-        dridx = min(ndat,j+n+1)
-        plidx = max(0,n-j)
-        pridx = min(npoly,ndat-j+n)
-        delta  = y[dlidx:dridx] - (y[j] + poly[plidx:pridx])
+        dlidx = max(0, j - n)
+        dridx = min(ndat, j + n + 1)
+        plidx = max(0, n - j)
+        pridx = min(npoly, ndat - j + n)
+        delta = y[dlidx:dridx] - (y[j] + poly[plidx:pridx])
         if tangent:
             # calc avg val to l and r of center
             # and use to calc avg slope
-            nl    = len(y[dlidx:j])
+            nl = len(y[dlidx:j])
             if nl == 0:
                 lyave = 0.0
                 lxave = 0.0
             else:
-                lyave = num.sum(y[dlidx:j])/nl
-                lxave = num.sum(num.arange(dlidx,j))
-            nr    = len(y[j+1:dridx])
+                lyave = num.sum(y[dlidx:j]) / nl
+                lxave = num.sum(num.arange(dlidx, j))
+            nr = len(y[j + 1 : dridx])
             if nr == 0:
                 ryave = 0.0
                 rxave = 0.0
             else:
-                ryave = num.sum(y[j+1:dridx])/nr
-                rxave = num.sum(num.arange(j+1,dridx))
-            slope = (ryave - lyave)/ num.abs(rxave - lxave)
-            delta = delta - slope*num.arange(-1*nl,nr+1)
+                ryave = num.sum(y[j + 1 : dridx]) / nr
+                rxave = num.sum(num.arange(j + 1, dridx))
+            slope = (ryave - lyave) / num.abs(rxave - lxave)
+            delta = delta - slope * num.arange(-1 * nl, nr + 1)
 
         bgr[j] = min(0, delta.min())
         # debug arrays
@@ -232,62 +225,59 @@ def background(data,nbgr=0,width=0,pow=0.5,tangent=False,
     # note this seem important since the polynomials
     # come up from the bottom, they will always tend to
     # underfit.  So having an additional linear part
-    # helps to limit the residual. 
-    linbgr2 = linear_background(-bgr,nbgr=nbgr)
-    bgr = bgr + y +  linbgr2
+    # helps to limit the residual.
+    linbgr2 = linear_background(-bgr, nbgr=nbgr)
+    bgr = bgr + y + linbgr2
 
     # Compression
     if compress > 1:
-        bgr = expand_array(bgr,compress)
+        bgr = expand_array(bgr, compress)
         if rem > 0:
-            temp = bgr[-1]*num.ones(rem,dtype=bgr.dtype)
-            bgr = num.append(bgr,temp)
+            temp = bgr[-1] * num.ones(rem, dtype=bgr.dtype)
+            bgr = num.append(bgr, temp)
 
     # Add back the original linear background / slope
     bgr = bgr + linbgr
-    
+
     if debug:
-        return (bgr,p,d,linbgr)
+        return (bgr, p, d, linbgr)
     else:
         return bgr
 
-############################################################################
-def show_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1):
+
+def show_bgr(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1):
     """
     make a non-fancy background plot
     """
     #
     t0 = time.time()
-    bgr = background(data,nbgr=nbgr,width=width,pow=pow,
-                     tangent=tangent,compress=compress,debug=False)
+    bgr = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress, debug=False)
     print("time to calc background = %.5f sec" % (time.time() - t0))
     pyplot.plot(data)
-    pyplot.plot(data-bgr, 'r')
-    pyplot.plot(bgr, 'k-')
+    pyplot.plot(data - bgr, "r")
+    pyplot.plot(bgr, "k-")
     pyplot.show()
-    
-############################################################################
-def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1,debug=False):
+
+
+def plot_bgr(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=False):
     """
     make a fancy background plot
     """
     #
     if debug:
-        (bgr,p,d,l) = background(data,nbgr=nbgr,width=width,pow=pow,
-                                 tangent=tangent,compress=compress,debug=debug)
+        (bgr, p, d, l) = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress, debug=debug)
     else:
-        bgr = background(data,nbgr=nbgr,width=width,pow=pow,
-                         tangent=tangent,compress=compress,debug=debug)
-        
+        bgr = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress, debug=debug)
+
     # plot data and bgr
     pyplot.figure(1)
     pyplot.clf()
     npts = len(data)
-    pyplot.subplot(1,1,1)
-    pyplot.plot(data,'k-o',label='data')
-    pyplot.plot(bgr,'r-*',label='bgr')
-    pyplot.plot(data-bgr,'g-',label='data-bgr')
-    pyplot.plot(num.zeros(npts),'k-')
+    pyplot.subplot(1, 1, 1)
+    pyplot.plot(data, "k-o", label="data")
+    pyplot.plot(bgr, "r-*", label="bgr")
+    pyplot.plot(data - bgr, "g-", label="data-bgr")
+    pyplot.plot(num.zeros(npts), "k-")
     pyplot.legend(loc=2)
 
     # plot data and polynomials
@@ -295,42 +285,42 @@ def plot_bgr(data,nbgr=0,width=0,pow=0.5,tangent=False,compress=1,debug=False):
     # plot the diff between data
     # and the polynomial
     if debug == False:
-      return
-    
+        return
+
     pyplot.figure(2)
     pyplot.clf()
-    pyplot.subplot(2,1,1)
-    pyplot.plot(data-l,'k-o')
-    pyplot.subplot(2,1,2)
-    pyplot.plot(data-l,'k-o')
-    pyplot.plot(num.zeros(npts),'k-')
-    pyplot.plot(bgr-l,'k--')
+    pyplot.subplot(2, 1, 1)
+    pyplot.plot(data - l, "k-o")
+    pyplot.subplot(2, 1, 2)
+    pyplot.plot(data - l, "k-o")
+    pyplot.plot(num.zeros(npts), "k-")
+    pyplot.plot(bgr - l, "k--")
 
     for j in range(len(p)):
         n = len(p[j])
-        if j < int(n/2):
+        if j < int(n / 2):
             s = 0
         else:
-            s = j - int(n/2)
-        xx = range(s,s+n)
-        pyplot.subplot(2,1,1)
-        pyplot.plot(xx,p[j],'*-')
-        pyplot.subplot(2,1,2)
-        #pyplot.plot(xx,d[j],'*-')
-        dd = num.min((0,num.min(d[j]))) 
-        pyplot.plot(xx,p[j]+dd,'*-')
+            s = j - int(n / 2)
+        xx = range(s, s + n)
+        pyplot.subplot(2, 1, 1)
+        pyplot.plot(xx, p[j], "*-")
+        pyplot.subplot(2, 1, 2)
+        # pyplot.plot(xx,d[j],'*-')
+        dd = num.min((0, num.min(d[j])))
+        pyplot.plot(xx, p[j] + dd, "*-")
     dma = num.max(data)
-    pyplot.subplot(2,1,1)
-    mi,ma = pyplot.ylim()
-    mi = num.max((mi,-dma))
-    pyplot.ylim(mi,1.1*dma)
-    pyplot.subplot(2,1,2)
-    mi,ma = pyplot.ylim()
-    mi = num.max((mi,-dma))
-    pyplot.ylim(mi,1.1*dma)
+    pyplot.subplot(2, 1, 1)
+    mi, ma = pyplot.ylim()
+    mi = num.max((mi, -dma))
+    pyplot.ylim(mi, 1.1 * dma)
+    pyplot.subplot(2, 1, 2)
+    mi, ma = pyplot.ylim()
+    mi = num.max((mi, -dma))
+    pyplot.ylim(mi, 1.1 * dma)
     pyplot.show()
-    
-############################################################
+
+
 def compress_array(array, compress):
     """
     Compresses a 1-D array by the integer factor "compress".
@@ -350,15 +340,15 @@ def compress_array(array, compress):
     """
     compress = int(compress)
     alen = len(array)
-    nlen = int(len(array)/compress)
-    rem  = alen % compress
+    nlen = int(len(array) / compress)
+    rem = alen % compress
 
     temp = num.resize(array, (nlen, compress))
-    newarray = num.sum(temp, 1)/compress
-    #ra = array[alen-rem:]
-    return (newarray,rem)
+    newarray = num.sum(temp, 1) / compress
+    # ra = array[alen-rem:]
+    return (newarray, rem)
 
-############################################################
+
 def expand_array(array, expand, sample=0, rem=0):
     """
     Expands an 1-D array by the integer factor "expand".
@@ -370,36 +360,39 @@ def expand_array(array, expand, sample=0, rem=0):
     * sample is the sampling flag. if 'sample' is 1 the new array is
       created with sampling (ie no interpolation), if 0 then the new
       array is created via interpolation (default)
-    * rem is not used... 
+    * rem is not used...
     """
 
     alen = len(array)
-    if (expand == 1): return array
-    if (sample == 1): return num.repeat(array, expand)
+    if expand == 1:
+        return array
+    if sample == 1:
+        return num.repeat(array, expand)
 
-    kernel = num.ones(expand)/float(expand)
+    kernel = num.ones(expand) / float(expand)
     temp = num.convolve(num.repeat(array, expand), kernel, mode=2)
     # Discard the first "expand-1" entries
-    temp = temp[expand-1:]
+    temp = temp[expand - 1 :]
     # Replace the last "expand" entries with the last entry of original
-    for i in range(1,expand): temp[-i]=array[-1]
+    for i in range(1, expand):
+        temp[-i] = array[-1]
     if temp.dtype != array.dtype:
-        temp = num.array(temp,dtype=array.dtype)
+        temp = num.array(temp, dtype=array.dtype)
     return temp
-    
-################################################################################
-################################################################################
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     from matplotlib import pyplot
+
     # generate a curve
     def gauss(x, cen, sigma):
-        return  num.exp(-(x-cen)**2 /(2*sigma**2))
+        return num.exp(-((x - cen) ** 2) / (2 * sigma**2))
+
     npts = 2000
-    x  = 1.0 * num.arange(npts)
-    g1 = 40 * gauss(x, 0.6*npts, 8.)
-    g2 = 20 * gauss(x, 0.5*npts,  270)
-    r  = 2 * num.random.normal(size=npts)
-    y  = r + x/25 + g1 + g2
+    x = 1.0 * num.arange(npts)
+    g1 = 40 * gauss(x, 0.6 * npts, 8.0)
+    g2 = 20 * gauss(x, 0.5 * npts, 270)
+    r = 2 * num.random.normal(size=npts)
+    y = r + x / 25 + g1 + g2
 
     show_bgr(y, nbgr=3, width=100, pow=1, tangent=False, compress=1)
-    
