@@ -1,11 +1,5 @@
 """
 Filter Tools
-Author: Craig Biwer (cbiwer@uchicago.edu)
-Last Modified: 2/13/2012
-
-Python 2.x to Python 3.12.3
-Author: Jaswitha (jaswithareddy@uchicago.edu)
-Last modified: 1/30/2025
 """
 
 import h5py
@@ -65,9 +59,9 @@ def list_intersect(*args):
 # NOTE: No longer used in the wxFilter window
 ####################################################################################
 
-"""
-def cases(in_here, of_this, such_that, this_level='scan'):
-    '''
+
+def cases(in_here, of_this, such_that, this_level="scan"):
+    """
     Filters the given file or list of scans and returns those that pass the
     specified criteria. Returns None if an error is encountered.
 
@@ -81,8 +75,8 @@ def cases(in_here, of_this, such_that, this_level='scan'):
 
     If this_level is scan, returns a list of paths in the h5 file
     If this_level is point, returns a list of (path, index) tuples
-    '''
-    
+    """
+
     if isinstance(in_here, h5py.File):
         all_possible = []
         for spec, group in in_here.items():
@@ -91,25 +85,25 @@ def cases(in_here, of_this, such_that, this_level='scan'):
     else:
         print("Error: input file not recognized")
         return None
-    
+
     return_this = []
-    if this_level == 'scan':
+    if this_level == "scan":
         for scan in all_possible:
             this_ind = None
             this_value = None
             if in_here[scan].attrs.get(of_this, None) is not None:
                 this_value = in_here[scan].attrs.get(of_this)
-            elif of_this in in_here[scan]['param_labs']:
-                this_ind = list(in_here[scan]['param_labs']).index(of_this)
-                this_value = in_here[scan]['param_data'][this_ind]
-            '''
+            elif of_this in in_here[scan]["param_labs"]:
+                this_ind = list(in_here[scan]["param_labs"]).index(of_this)
+                this_value = in_here[scan]["param_data"][this_ind]
+            """
             else:
                 print 'Error: Unrecognized attribute or label'
                 return None
-            '''
+            """
             if this_value is None:
                 pass
-            elif isinstance(this_value, basestring):
+            elif isinstance(this_value, str):
                 if eval('"' + this_value + '" ' + such_that):
                     return_this.append(scan)
             elif isinstance(this_value, (int, float, bool, numpy.bool_)):
@@ -120,50 +114,49 @@ def cases(in_here, of_this, such_that, this_level='scan'):
                 print(this_value)
                 return None
         return return_this
-                
-    elif this_level == 'point':
+
+    elif this_level == "point":
         for scan in all_possible:
             this_ind = None
             this_value = None
             if in_here[scan].attrs.get(of_this, None) is not None:
                 this_value = in_here[scan].attrs.get(of_this)
-                if isinstance(this_value, basestring):
+                if isinstance(this_value, str):
                     if eval('"' + this_value + '" ' + such_that):
-                        for i in range(len(in_here[scan]['point_data'])):
+                        for i in range(len(in_here[scan]["point_data"])):
                             return_this.append((scan, i))
                 elif isinstance(this_value, (int, float, bool, numpy.bool_)):
                     if eval(str(this_value) + " " + such_that):
-                        for i in range(len(in_here[scan]['point_data'])):
+                        for i in range(len(in_here[scan]["point_data"])):
                             return_this.append((scan, i))
                 else:
                     print("Error: Unrecognized type")
                     print(this_value)
                     return None
-            elif of_this in in_here[scan]['point_labs']:
-                this_ind = list(in_here[scan]['point_labs']).index(of_this)
-                for i in range(len(in_here[scan]['point_data'])):
-                    this_value = in_here[scan]['point_data'][i][this_ind]
-                    if isinstance(this_value, basestring):
+            elif of_this in in_here[scan]["point_labs"]:
+                this_ind = list(in_here[scan]["point_labs"]).index(of_this)
+                for i in range(len(in_here[scan]["point_data"])):
+                    this_value = in_here[scan]["point_data"][i][this_ind]
+                    if isinstance(this_value, str):
                         if eval('"' + this_value + '" ' + such_that):
                             return_this.append((scan, i))
-                    elif isinstance(this_value,
-                                    (int, float, bool, numpy.bool_)):
+                    elif isinstance(this_value, (int, float, bool, numpy.bool_)):
                         if eval(str(this_value) + " " + such_that):
                             return_this.append((scan, i))
                     else:
                         print("Error: Unrecognized type")
                         print(this_value)
                         return None
-            elif of_this in in_here[scan]['param_labs']:
-                this_ind = list(in_here[scan]['param_labs']).index(of_this)
-                this_value = in_here[scan]['param_data'][this_ind]
-                if isinstance(this_value, basestring):
+            elif of_this in in_here[scan]["param_labs"]:
+                this_ind = list(in_here[scan]["param_labs"]).index(of_this)
+                this_value = in_here[scan]["param_data"][this_ind]
+                if isinstance(this_value, str):
                     if eval('"' + this_value + '" ' + such_that):
-                        for i in range(len(in_here[scan]['point_data'])):
+                        for i in range(len(in_here[scan]["point_data"])):
                             return_this.append((scan, i))
                 elif isinstance(this_value, (int, float, bool, numpy.bool_)):
                     if eval(str(this_value) + " " + such_that):
-                        for i in range(len(in_here[scan]['point_data'])):
+                        for i in range(len(in_here[scan]["point_data"])):
                             return_this.append((scan, i))
                 else:
                     print("Error: Unrecognized type")
@@ -173,5 +166,3 @@ def cases(in_here, of_this, such_that, this_level='scan'):
     else:
         print("Error: unrecognized filter level")
         return None
-
-"""
