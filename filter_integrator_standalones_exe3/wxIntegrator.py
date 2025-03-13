@@ -1360,11 +1360,11 @@ class Integrator(wx.Frame, wx.Notebook):
         if event.GetEventObject() == self.integrateCustom:
             self.integrateContinue = True
             integrateProgress = 0
-            self.statusBar.SetRange(len(updateThese))
-            self.statusBar.SetProgress(0)
+            # self.statusBar.SetRange(len(updateThese))
+            # self.statusBar.SetProgress(0)
             self.onSize(None)
             self.integrateCancel.Show()
-            self.statusBar.Start()
+            # self.statusBar.Start()
             for iterData in updateThese:
                 iterItem = self.hdfTreeObject.reverseLookup[iterData]
                 iterString = self.hdfTreeObject.statusString(self.hdfTree, self.hdfObject, iterItem)
@@ -1381,9 +1381,8 @@ class Integrator(wx.Frame, wx.Notebook):
                     print("Error reading " + iterString.lower())
                     raise
                 integrateProgress += 1
-                self.statusBar.SetProgress(integrateProgress)
-                while wx.GetApp().Pending():
-                    wx.GetApp().Dispatch()
+                # self.statusBar.SetProgress(integrateProgress)
+                while wx.GetApp().HasPendingEvents():
                     wx.GetApp().Yield(True)
             self.integrateContinue = False
             self.hdfTree.SetFocus()
@@ -1392,7 +1391,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.updateRodPlot(myParent, itemData)
             self.statusBar.SetStatusText("", 2)
             self.integrateCancel.Hide()
-            self.statusBar.Stop()
+            # self.statusBar.Stop()
             return
         elif event.GetEventObject() == self.histCustom:
             self.hdfObject.set_all("hist", str(self.histBox.GetValue()), updateThese)
@@ -1479,11 +1478,11 @@ class Integrator(wx.Frame, wx.Notebook):
 
         self.integrateContinue = True
         integrateProgress = 0
-        self.statusBar.SetRange(len(updateThese))
-        self.statusBar.SetProgress(0)
+        # self.statusBar.SetRange(len(updateThese))
+        # self.statusBar.SetProgress(0)
         self.onSize(None)
         self.integrateCancel.Show()
-        self.statusBar.Start()
+        # self.statusBar.Start()
         for iterData in updateThese:
             iterItem = self.hdfTreeObject.reverseLookup[iterData]
             iterString = self.hdfTreeObject.statusString(self.hdfTree, self.hdfObject, iterItem)
@@ -1500,9 +1499,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 print("Error reading " + iterString.lower())
                 raise
             integrateProgress += 1
-            self.statusBar.SetProgress(integrateProgress)
-            while wx.GetApp().Pending():
-                wx.GetApp().Dispatch()
+            # self.statusBar.SetProgress(integrateProgress)
+            while wx.GetApp().HasPendingEvents():
                 wx.GetApp().Yield(True)
         self.integrateContinue = False
         self.hdfTree.SetFocus()
@@ -1511,7 +1509,7 @@ class Integrator(wx.Frame, wx.Notebook):
             self.updateRodPlot(myParent, itemData)
         self.statusBar.SetStatusText("", 2)
         self.integrateCancel.Hide()
-        self.statusBar.Stop()
+        # self.statusBar.Stop()
         return
 
     # Gets the values of the parameters from the
