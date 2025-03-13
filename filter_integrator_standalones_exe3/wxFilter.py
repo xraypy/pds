@@ -684,7 +684,6 @@ class filterGUI(wx.Frame):
         """When the '+' button is clicked, add the corresponding
         attribute and value to the list (if the attribute isn't
         already present).
-
         """
 
         attrText = self.attrSelect.GetStringSelection()
@@ -699,7 +698,9 @@ class filterGUI(wx.Frame):
         thisButton = wx.Button(self.attrList, label="X", size=(32, 15), name=attrText)
         thisButton.Bind(wx.EVT_BUTTON, self.deleteMe)
         self.attrList.SetItemWindow(self.attrList.GetItemCount() - 1, col=2, wnd=thisButton)
-        # self.attrList.SortItems(compare_items)
+        # Ensure the item index is valid before accessing it
+        if self.attrList.GetItemCount() > 0:
+            self.attrList.Select(self.attrList.GetItemCount() - 1)
 
     # Delete an attribute both from the dictionary and the on-screen list
     def deleteMe(self, event):
