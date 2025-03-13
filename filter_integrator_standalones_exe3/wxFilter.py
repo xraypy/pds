@@ -483,12 +483,10 @@ class filterGUI(wx.Frame):
         try:
             print("Attempting to lock file...")
             while wx.GetApp().HasPendingEvents():
-                wx.GetApp().Dispatch()
                 wx.GetApp().Yield(True)
             self.filterLock.acquire()
             print("Lock acquired")
             while wx.GetApp().HasPendingEvents():
-                wx.GetApp().Dispatch()
                 wx.GetApp().Yield(True)
         except file_locker.FileLockException as e:
             print("Error: " + str(e))
@@ -931,7 +929,6 @@ class filterGUI(wx.Frame):
             try:
                 print("Attempting to lock files...")
                 while wx.GetApp().HasPendingEvents():
-                    wx.GetApp().Dispatch()
                     wx.GetApp().Yield(True)
                 mlockFile.acquire()
                 plockFile.acquire()
@@ -971,7 +968,6 @@ class filterGUI(wx.Frame):
             try:
                 print("Attempting to lock files...")
                 while wx.GetApp().HasPendingEvents():
-                    wx.GetApp().Dispatch()
                     wx.GetApp().Yield(True)
                 mlockFile.acquire()
                 plockFile.acquire()
@@ -1099,7 +1095,7 @@ class SpecWindow(wx.Dialog):
         self.allRoot = self.list.AddRoot(self.GetParent().fileButton.GetLabel(), ct_type=1)
         specKeys = sorted(self.allSpec.keys())
         for spec in specKeys:
-            specRoot = self.list.AppendItem(self.allRoot, spec, ct_type=1)
+            specRoot = self.list.AppendItem(self.allRoot, str(spec), ct_type=1)
             allScans = self.allSpec[spec]
             allScans.sort()
             for scan in allScans:
@@ -1160,7 +1156,7 @@ class SpecWindow(wx.Dialog):
                     # thisCase = ft.cases(self.GetParent().filterFile,
                     #                    'spec_name',
                     #                    '.startswith("' + spec + '")')
-                    thisCase = [scan[10] for scan in self.GetParent().scanItems if scan[0].startswith(spec)]
+                    thisCase = [scan[10] for scan in self.GetParent().scanItems if str(scan[0]).startswith(spec)]
                     # thatCase = ft.cases(self.GetParent().filterFile, 'index',
                     #                    'in ' + str(selectedSpec[spec]))
                     thatCase = [scan[10] for scan in self.GetParent().scanItems if int(scan[1]) in selectedSpec[spec]]
