@@ -482,9 +482,14 @@ class filterGUI(wx.Frame):
 
         try:
             print("Attempting to lock file...")
+            while wx.GetApp().HasPendingEvents():
+                wx.GetApp().Dispatch()
+                wx.GetApp().Yield(True)
             self.filterLock.acquire()
             print("Lock acquired")
-            wx.GetApp().Yield(True)
+            while wx.GetApp().HasPendingEvents():
+                wx.GetApp().Dispatch()
+                wx.GetApp().Yield(True)
         except file_locker.FileLockException as e:
             print("Error: " + str(e))
             return
@@ -925,6 +930,9 @@ class filterGUI(wx.Frame):
             plockFile = file_locker.FileLock(save_dialog.GetPath())
             try:
                 print("Attempting to lock files...")
+                while wx.GetApp().HasPendingEvents():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
                 mlockFile.acquire()
                 plockFile.acquire()
                 print("Locks acquired")
@@ -962,10 +970,12 @@ class filterGUI(wx.Frame):
             plockFile = file_locker.FileLock(save_dialog.GetPath())
             try:
                 print("Attempting to lock files...")
+                while wx.GetApp().HasPendingEvents():
+                    wx.GetApp().Dispatch()
+                    wx.GetApp().Yield(True)
                 mlockFile.acquire()
                 plockFile.acquire()
                 print("Locks acquired")
-                wx.GetApp().Yield(True)
             except file_locker.FileLockException as e:
                 print("Error: " + str(e))
                 return
