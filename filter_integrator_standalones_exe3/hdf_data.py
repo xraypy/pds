@@ -259,8 +259,7 @@ class HdfDataFile:
         if arg == self.point:
             return self.point_dict
         if self.point != 0 and self.point_dict != {}:
-            # self.write_point(self.point_dict, self.point)
-            pass
+            self.write_point(self.point_dict, self.point)
         self.read_point(arg)
         return self.point_dict
 
@@ -273,8 +272,7 @@ class HdfDataFile:
 
         try:
             if self.point != 0 and self.point_dict != {}:
-                # self.write_point(self.point_dict, self.point)
-                pass
+                self.write_point(self.point_dict, self.point)
         except ValueError:
             print("Error writing point; file may already be closed")
 
@@ -574,38 +572,38 @@ class HdfDataFile:
         pass
 
     def write_point(self, data, num=None):
-        pass
         """
         write data to file 
         
         data is a dictionary 
-        """
         """
         #self._check_file()
         #
         if num is None:
             num = self.point
         for key in data:
-            if key.startswith('hist'):
-                key = key + '.' + str(self.version)
+            if isinstance(key, str):
+                key = key.encode('utf-8')
+            if key.startswith(b'hist'):
+                key = key + b'.' + str(self.version).encode('utf-8')
                 self.file[num].attrs[key] = data['hist']
-            elif key.startswith('det_'):
-                det_dict = data[key]
-                for det_key in det_dict:
-                    try:
-                        key_loc = DET_KEYS[det_key]
-                        key_loc_path = key_loc[0].split('/')[1] % self.version
+            elif key.startswith(b'det_'):
+                if key in data:
+                    det_dict = data[key]
+                    for det_key in det_dict:
                         try:
-                            self.file[num][key][key_loc_path][key_loc[1]] = \
-                                                              data[key][det_key]
-                        except IOError:
-                            self.file[num][key][key_loc_path][key_loc[1]] = \
-                                                 numpy.float(data[key][det_key])
-                    except KeyError:
-                        pass
+                            key_loc = DET_KEYS[det_key]
+                            key_loc_path = key_loc[0].split('/')[1] % self.version
+                            try:
+                                self.file[num][key][key_loc_path][key_loc[1]] = \
+                                                                  data[key][det_key]
+                            except IOError:
+                                self.file[num][key][key_loc_path][key_loc[1]] = \
+                                                     numpy.float(data[key][det_key])
+                        except KeyError:
+                            pass
             else:
                 pass
-            """
 
 
 ##############################################################################
