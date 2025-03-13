@@ -101,10 +101,10 @@ def read(file, pixel_map=None):
             print("Error reading file: %s" % file)
             return None
 
-    if type(file) == types.StringType:
+    if type(file) == str:
         image = rd(file, bad_pixels=bad_pixels, good_pixels=good_pixels)
         return image
-    elif type(file) == types.ListType:
+    elif type(file) == str:
         image = []
         for f in file:
             tmp = rd(file, bad_pixels=bad_pixels, good_pixels=good_pixels)
@@ -357,7 +357,7 @@ def image_plot(img, fig=None, figtitle="", cmap=None, verbose=False, im_max=None
     if rotangle != 0:
         img = ndimage.rotate(img, rotangle)
     if cmap != None:
-        if type(cmap) == types.StringType:
+        if type(cmap) == str:
             # if cmap in pyplot.cm.cmapnames:
             try:
                 cmap = getattr(pyplot.cm, cmap)
@@ -1094,7 +1094,7 @@ class ImageScan:
           archive['setname'] = set name for image archive
           archive['descr'] = description of data for image archive
         """
-        if type(image) != types.ListType:
+        if type(image) != list:
             image = [image]
         if archive != None:
             file = archive.get("file", "images.h5")
@@ -1116,7 +1116,7 @@ class ImageScan:
         # update roi
         if rois != None:
             if len(rois) == 4:
-                if type(rois[0]) == types.ListType and npts == 4:
+                if type(rois[0]) == list and npts == 4:
                     for j in range(npts):
                         self.rois[j] = rois[j]
                 else:
@@ -1135,7 +1135,7 @@ class ImageScan:
                     self.rotangle[j] = rotangle[j]
         # update bgr
         if bgr_params != None:
-            if type(bgr_params) == types.DictType:
+            if type(bgr_params) == dict:
                 for j in range(npts):
                     self.bgrpar[j] = copy.copy(bgr_params)
             elif len(bgr_params) == npts:
@@ -1240,7 +1240,7 @@ class ImageScan:
         # update roi
         if roi != None:
             if len(roi) == 4:
-                if type(roi[0]) == types.ListType:
+                if type(roi[0]) == list:
                     for j in idx:
                         self.rois[j] = roi[j]
                 else:
@@ -1251,7 +1251,7 @@ class ImageScan:
                     self.rois[j] = roi[j]
         # update rot angles
         if rotangle != None:
-            if type(rotangle) == types.FloatType:
+            if type(rotangle) == float:
                 for j in idx:
                     self.rotangle[j] = rotangle
             elif len(rotangle) == len(idx):
@@ -1259,7 +1259,7 @@ class ImageScan:
                     self.rotangle[j] = rotangle[j]
         # update bgr
         if bgr_params != None:
-            if type(bgr_params) == types.DictType:
+            if type(bgr_params) == dicte:
                 for j in idx:
                     self.bgrpar[j] = copy.copy(bgr_params)
             elif len(bgr_params) == len(idx):

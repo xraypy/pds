@@ -455,7 +455,10 @@ class HdfDataFile:
                 try:
                     point_image = numpy.array(self.file[num][det_str]["image_data"])
                     self.point_dict[det_str]["image_data"] = point_image
-                    point_mask = str(self.point_dict[det_str]["bad_pixel_map"])
+                    point_mask = self.point_dict[det_str]["bad_pixel_map"].decode('utf-8')
+                    # if isinstance(point_mask, bytes):
+                    #     point_mask = point_mask.decode('utf-8')
+                    # point_mask = eval(point_mask)
                     if not point_mask.startswith("(") and not point_mask.startswith("["):
                         point_mask = str(image_data.read_pixel_map(point_mask))
                         self.point_dict[det_str]["bad_pixel_map"] = point_mask

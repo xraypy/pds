@@ -175,7 +175,7 @@ def minimize(f, x, y, params, *args, **kws):
         """
         kw = {}
         if len(arguments) > 0:
-            if type(arguments[-1]) == types.DictionaryType:
+            if type(arguments[-1]) == dict:
                 kw = arguments[-1]
                 arguments = arguments[0:-1]
         # Now combine all parameters into a single tuple

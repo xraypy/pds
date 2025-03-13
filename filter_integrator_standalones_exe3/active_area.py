@@ -12,7 +12,6 @@ shifted off center (or better off center relative to a specific hkl)
 """
 
 import numpy as num
-import types
 from matplotlib import pyplot
 
 from mathutil import cartesian_mag, cartesian_angle
@@ -79,7 +78,7 @@ def active_area(nm, ki=num.array([0.0, 1.0, 0.0]), kr=num.array([0.0, 1.0, 0.0])
     # ie in-plane [x_s, y_s] points
 
     # beam
-    if type(beam) == types.ListType:
+    if type(beam) == list:
         beam_poly = []
         if len(beam) < 3:
             print("Error in beam description")
@@ -91,7 +90,7 @@ def active_area(nm, ki=num.array([0.0, 1.0, 0.0]), kr=num.array([0.0, 1.0, 0.0])
     else:
         beam_poly = None
     # det
-    if type(det) == types.ListType:
+    if type(det) == list:
         det_poly = []
         if len(det) < 3:
             print("Error in det description")
@@ -103,7 +102,7 @@ def active_area(nm, ki=num.array([0.0, 1.0, 0.0]), kr=num.array([0.0, 1.0, 0.0])
     else:
         det_poly = None
     # sample
-    if type(sample) == types.ListType:
+    if type(sample) == list:
         sam_poly = []
         if len(sample) < 3:
             print("Error in sample description")

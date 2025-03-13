@@ -14,7 +14,6 @@ corrections are applied include:
 
 ##############################################################################
 
-import types
 import numpy as num
 
 from mathutil import cosd, sind
@@ -78,14 +77,13 @@ def _get_corr(scan, point, corr_params, preparsed=False):
     det = corr_params.get("det_slits")
     sample = corr_params.get("sample")
     # get gonio instance for corrections
-    if geom == "psic":
+    if geom == "psic" or geom == b'psic':
+        # Implement the handling for 'psic' geometry
         gonio = gonio_psic.psic_from_spec(scan["G"], preparsed=preparsed)
         _update_psic_angles(gonio, scan, point)
-        corr = CtrCorrectionPsic(gonio=gonio, beam_slits=beam, det_slits=det, sample=sample)
     else:
-        print("Geometry %s not implemented" % geom)
-        corr = None
-    return corr
+        raise NotImplementedError(f"Geometry {geom} not implemented")
+    return CtrCorrectionPsic(gonio=gonio, beam_slits=beam, det_slits=det, sample=sample)
 
 
 ##############################################################################
@@ -104,66 +102,72 @@ def _update_psic_angles(gonio, scan, point, verbose=True):
         scan_name = ""
     #
     try:
-        if type(scan["phi"]) == types.FloatType:
+        if type(scan["phi"]) == float:
             phi = scan["phi"]
         elif len(scan["phi"]) == npts:
             phi = scan["phi"][point]
     except:
-        phi = None
+        phi = 0.0
     if phi == None and verbose == True:
         print("Warning no phi angle:", scan_name)
     #
     try:
-        if type(scan["chi"]) == types.FloatType:
+        if type(scan["chi"]) == float:
             chi = scan["chi"]
         elif len(scan["chi"]) == npts:
             chi = scan["chi"][point]
     except:
-        chi = None
+        chi = 0.0
     if chi == None and verbose == True:
         print("Warning no chi angle", scan_name)
     #
     try:
-        if type(scan["eta"]) == types.FloatType:
+        if type(scan["eta"]) == float:
             eta = scan["eta"]
         elif len(scan["eta"]) == npts:
             eta = scan["eta"][point]
     except:
-        eta = None
+        eta = 0.0
     if eta == None and verbose == True:
         print("Warning no eta angle", scan_name)
     #
     try:
-        if type(scan["mu"]) == types.FloatType:
+        if type(scan["mu"]) == float:
             mu = scan["mu"]
         elif len(scan["mu"]) == npts:
             mu = scan["mu"][point]
     except:
-        mu = None
+        mu = 0.0
     if mu == None and verbose == True:
         print("Warning no mu angle", scan_name)
     #
     try:
-        if type(scan["nu"]) == types.FloatType:
+        if type(scan["nu"]) == float:
             nu = scan["nu"]
         elif len(scan["nu"]) == npts:
             nu = scan["nu"][point]
     except:
-        nu = None
+        nu = 0.0
     if nu == None and verbose == True:
         print("Warning no nu angle", scan_name)
     #
     try:
-        if type(scan["del"]) == types.FloatType:
+        if type(scan["del"]) == float:
             delta = scan["del"]
         elif len(scan["del"]) == npts:
             delta = scan["del"][point]
     except:
-        delta = None
+        delta = 0.0
     if delta == None and verbose == True:
         print("Warning no del angle", scan_name)
     #
     gonio.set_angles(phi=phi, chi=chi, eta=eta, mu=mu, nu=nu, delta=delta)
+
+    # Ensure beta is valid
+    if gonio.pangles["beta"] < 0.0:
+        gonio.pangles["beta"] = 0.0
+        if verbose == True:
+            print("Warning: beta is less than 0.0, setting to 0.0")
 
 
 ##############################################################################
@@ -378,12 +382,12 @@ class CtrCorrectionPsic:
             dv = self.det_slits["vert"]
             det = gonio_psic.det_vectors(h=dh, v=dv, nu=self.gonio.angles["nu"], delta=self.gonio.angles["delta"])
         # get sample poly
-        if type(self.sample) == types.DictType:
+        if isinstance(self.sample, dict):
             sample_dia = self.sample.get("dia", 0.0)
             sample_vecs = self.sample.get("polygon", None)
             sample_angles = self.sample.get("angles", {})
             #
-            if sample_vecs != None and sample_dia <= 0.0:
+            if sample_vecs is not None and sample_dia <= 0.0:
                 sample = gonio_psic.sample_vectors(sample_vecs, angles=sample_angles, gonio=self.gonio)
             elif sample_dia > 0.0:
                 sample = sample_dia
