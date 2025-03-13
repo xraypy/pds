@@ -1594,7 +1594,6 @@ class Integrator(wx.Frame, wx.Notebook):
         # TPT changed 'numPoints' to 'dims'
         # transmission, etc. added April 2015, JES
         psicG = self.buildPsicG(itemData)
-        print("item_data", self.hdfObject[itemData])
         scan_dict = {
             "I": [self.hdfObject[itemData]["det_0"]["I"]],
             "io": [self.hdfObject[itemData][b"io"]],
