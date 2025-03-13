@@ -5,6 +5,7 @@ Filter GUI
 import h5py
 import os
 import time
+import datetime
 import wx
 import wx.lib.agw.customtreectrl as treemix
 import wx.lib.mixins.listctrl as listmix
@@ -1527,8 +1528,6 @@ class DateWindow(wx.Dialog):
     """The GUI for filtering by date."""
 
     def __init__(self, parent=None, possibleYears=[], allDates=(float("-inf"), float("inf")), currentDates=None):
-
-        # Make the window
         wx.Dialog.__init__(self, parent, -1, title="Date Range", size=(288, 150))
 
         self.dateMin, self.dateMax = allDates
@@ -1536,136 +1535,12 @@ class DateWindow(wx.Dialog):
             self.currentDateMin, self.currentDateMax = currentDates
         else:
             self.currentDateMin, self.currentDateMax = allDates
-        # Set the default choices for year, month, day, hour, and minute.
-        # The year choices are passed as an argument, sorted early to late.
-        # If the user selects February 31, it automaticalls sets it to
-        # February 28/29 at 23:59:59 to prevent an error when converting
-        # to epoch.
-        self.yearChoices = possibleYears
-        if self.yearChoices == []:
-            self.yearChoices = ["N/A"]
+
+        self.yearChoices = possibleYears if possibleYears else ["N/A"]
         self.monthChoices = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        self.dayChoices = [
-            "01",
-            "02",
-            "03",
-            "04",
-            "05",
-            "06",
-            "07",
-            "08",
-            "09",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "23",
-            "24",
-            "25",
-            "26",
-            "27",
-            "28",
-            "29",
-            "30",
-            "31",
-        ]
-        self.hourChoices = [
-            "00",
-            "01",
-            "02",
-            "03",
-            "04",
-            "05",
-            "06",
-            "07",
-            "08",
-            "09",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "23",
-        ]
-        self.minuteChoices = [
-            "00",
-            "01",
-            "02",
-            "03",
-            "04",
-            "05",
-            "06",
-            "07",
-            "08",
-            "09",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "23",
-            "24",
-            "25",
-            "26",
-            "27",
-            "28",
-            "29",
-            "30",
-            "31",
-            "32",
-            "33",
-            "34",
-            "35",
-            "36",
-            "37",
-            "38",
-            "39",
-            "40",
-            "41",
-            "42",
-            "43",
-            "44",
-            "45",
-            "46",
-            "47",
-            "48",
-            "49",
-            "50",
-            "51",
-            "52",
-            "53",
-            "54",
-            "55",
-            "56",
-            "57",
-            "58",
-            "59",
-        ]
+        self.dayChoices = [f"{i:02d}" for i in range(1, 32)]
+        self.hourChoices = [f"{i:02d}" for i in range(24)]
+        self.minuteChoices = [f"{i:02d}" for i in range(60)]
 
         # Create the colons for between the hour and minute choices,
         # set to a larger font so they're easier to see
@@ -1691,12 +1566,19 @@ class DateWindow(wx.Dialog):
         self.fromMinute = wx.Choice(self, choices=self.minuteChoices, size=(36, 21))
 
         # Set the initial selections for the 'From' fields
-        fromDate = time.ctime(self.currentDateMin).split()
-        self.fromMonth.SetStringSelection(fromDate[1])
-        self.fromDay.SetStringSelection(fromDate[2])
-        self.fromYear.SetStringSelection(fromDate[4])
-        self.fromHour.SetStringSelection(fromDate[3].split(":")[0])
-        self.fromMinute.SetStringSelection(fromDate[3].split(":")[1])
+        try:
+            fromDate = datetime.datetime.utcfromtimestamp(self.currentDateMin)
+            self.fromMonth.SetStringSelection(fromDate.strftime("%b"))
+            self.fromDay.SetStringSelection(fromDate.strftime("%d"))
+            self.fromYear.SetStringSelection(fromDate.strftime("%Y"))
+            self.fromHour.SetStringSelection(fromDate.strftime("%H"))
+            self.fromMinute.SetStringSelection(fromDate.strftime("%M"))
+        except (OverflowError, ValueError):
+            self.fromMonth.SetStringSelection("Jan")
+            self.fromDay.SetStringSelection("01")
+            self.fromYear.SetStringSelection("1970")
+            self.fromHour.SetStringSelection("00")
+            self.fromMinute.SetStringSelection("00")
 
         # Create the 'To' fields
         self.toText = wx.StaticText(self, label="To:")
@@ -1707,13 +1589,19 @@ class DateWindow(wx.Dialog):
         self.toMinute = wx.Choice(self, choices=self.minuteChoices, size=(36, 21))
 
         # Set the initial selections for the 'To' fields
-        toDate = time.ctime(self.currentDateMax).split()
-        self.toMonth.SetStringSelection(toDate[1])
-        self.toDay.SetStringSelection(toDate[2])
-        self.toYear.SetStringSelection(toDate[4])
-        self.toHour.SetStringSelection(toDate[3].split(":")[0])
-        minuteBump = str(int(toDate[3].split(":")[1]) + 1)
-        self.toMinute.SetStringSelection(minuteBump)
+        try:
+            toDate = datetime.datetime.utcfromtimestamp(self.currentDateMax)
+            self.toMonth.SetStringSelection(toDate.strftime("%b"))
+            self.toDay.SetStringSelection(toDate.strftime("%d"))
+            self.toYear.SetStringSelection(toDate.strftime("%Y"))
+            self.toHour.SetStringSelection(toDate.strftime("%H"))
+            self.toMinute.SetStringSelection(toDate.strftime("%M"))
+        except (OverflowError, ValueError):
+            self.toMonth.SetStringSelection("Jan")
+            self.toDay.SetStringSelection("01")
+            self.toYear.SetStringSelection("1970")
+            self.toHour.SetStringSelection("00")
+            self.toMinute.SetStringSelection("00")
 
         # General layout
         self.windowSizer = wx.BoxSizer(wx.VERTICAL)
@@ -1760,83 +1648,30 @@ class DateWindow(wx.Dialog):
     def onApply(self, event):
         self.Enable(True)
         # Check the 'From' date to make sure it exists
-        if self.fromMonth.GetStringSelection() in ["Sep", "Apr", "Jun", "Nov"] and self.fromDay.GetStringSelection() == "31":
-            self.fromDay.SetStringSelection("30")
-            self.fromHour.SetStringSelection("23")
-            self.fromMinute.SetStringSelection("59")
-        elif self.fromMonth.GetStringSelection() == "Feb":
-            if int(self.fromYear.GetStringSelection()) % 4 == 0:
-                if self.fromDay.GetStringSelection() in ["30", "31"]:
-                    self.fromDay.SetStringSelection("29")
-                    self.fromHour.SetStringSelection("23")
-                    self.fromMinute.SetStringSelection("59")
-            else:
-                if self.fromDay.GetStringSelection() in ["29", "30", "31"]:
-                    self.fromDay.SetStringSelection("28")
-                    self.fromHour.SetStringSelection("23")
-                    self.fromMinute.SetStringSelection("59")
-        # Concatenate the date string and convert it to epoch
-        fromDate = (
-            "Mon "
-            + self.fromMonth.GetStringSelection()
-            + " "
-            + self.fromDay.GetStringSelection()
-            + " "
-            + self.fromHour.GetStringSelection()
-            + ":"
-            + self.fromMinute.GetStringSelection()
-            + ":00 "
-            + self.fromYear.GetStringSelection()
-        )
-        fromDate = time.mktime(time.strptime(fromDate))
-        # Check the 'To' date to make sure it exists
-        if self.toMonth.GetStringSelection() in ["Sep", "Apr", "Jun", "Nov"] and self.toDay.GetStringSelection() == "31":
-            self.toDay.SetStringSelection("30")
-            self.toHour.SetStringSelection("23")
-            self.toMinute.SetStringSelection("59")
-        elif self.toMonth.GetStringSelection() == "Feb":
-            if int(self.toYear.GetStringSelection()) % 4 == 0:
-                if self.toDay.GetStringSelection() in ["30", "31"]:
-                    self.toDay.SetStringSelection("29")
-                    self.toHour.SetStringSelection("23")
-                    self.toMinute.SetStringSelection("59")
-            else:
-                if self.toDay.GetStringSelection() in ["29", "30", "31"]:
-                    self.toDay.SetStringSelection("28")
-                    self.toHour.SetStringSelection("23")
-                    self.toMinute.SetStringSelection("59")
-        # Concatenate the date string and convert it to epoch
-        toDate = (
-            "Mon "
-            + self.toMonth.GetStringSelection()
-            + " "
-            + self.toDay.GetStringSelection()
-            + " "
-            + self.toHour.GetStringSelection()
-            + ":"
-            + self.toMinute.GetStringSelection()
-            + ":00 "
-            + self.toYear.GetStringSelection()
-        )
-        toDate = time.mktime(time.strptime(toDate))
+        try:
+            fromDateStr = f"{self.fromYear.GetStringSelection()}-{self.fromMonth.GetStringSelection()}-{self.fromDay.GetStringSelection()} {self.fromHour.GetStringSelection()}:{self.fromMinute.GetStringSelection()}:00"
+            fromDate = datetime.datetime.strptime(fromDateStr, "%Y-%b-%d %H:%M:%S").timestamp()
+            toDateStr = f"{self.toYear.GetStringSelection()}-{self.toMonth.GetStringSelection()}-{self.toDay.GetStringSelection()} {self.toHour.GetStringSelection()}:{self.toMinute.GetStringSelection()}:00"
+            toDate = datetime.datetime.strptime(toDateStr, "%Y-%b-%d %H:%M:%S").timestamp()
+        except ValueError as e:
+            print(f"Error: {e}")
+            self.Destroy()
+            del self
+            return
+
         if fromDate > toDate:
             print("Error: 'To' date precedes 'From' date")
             self.Destroy()
             del self
             return
+
         self.GetParent().dateCases = None
         if fromDate <= self.dateMin and toDate >= self.dateMax:
             self.GetParent().dateResult = None
         else:
             self.GetParent().dateResult = (fromDate, toDate)
-            # thisCase = ft.cases(self.GetParent().filterFile,
-            #                    'epoch',
-            #                    '>= ' + str(fromDate))
-            thisCase = [scan[10] for scan in self.GetParent().scanItems if time.mktime(time.strptime(scan[8])) >= fromDate]
-            # thatCase = ft.cases(self.GetParent().filterFile,
-            #                    'epoch',
-            #                    '<= ' + str(toDate))
-            thatCase = [scan[10] for scan in self.GetParent().scanItems if time.mktime(time.strptime(scan[8])) <= toDate]
+            thisCase = [scan[10] for scan in self.GetParent().scanItems if datetime.datetime.strptime(scan[8], "%Y-%m-%d %H:%M:%S").timestamp() >= fromDate]
+            thatCase = [scan[10] for scan in self.GetParent().scanItems if datetime.datetime.strptime(scan[8], "%Y-%m-%d %H:%M:%S").timestamp() <= toDate]
             bothCases = ft.list_intersect(thisCase, thatCase)
             self.GetParent().dateCases = bothCases
         self.GetParent().updateTable()
