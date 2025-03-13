@@ -1888,10 +1888,17 @@ class myTreeCtrl(wx.TreeCtrl):
         return level
 
     def OnCompareItems(self, item1, item2):
+        text1 = self.GetItemText(item1)
+        text2 = self.GetItemText(item2)
+
         try:
-            return (int(self.GetItemText(item1)) > int(self.GetItemText(item2))) - (int(self.GetItemText(item1)) < int(self.GetItemText(item2)))
-        except:
-            return self.GetItemText(item1) > self.GetItemText(item2) - self.GetItemText(item1) < self.GetItemText(item2)
+            # Try to convert to integers and compare
+            int1 = int(text1)
+            int2 = int(text2)
+            return (int1 > int2) - (int1 < int2)
+        except ValueError:
+            # If conversion fails, compare as strings
+            return (text1 > text2) - (text1 < text2)
 
 
 if __name__ == "__main__":
