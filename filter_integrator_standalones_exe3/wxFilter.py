@@ -1670,8 +1670,8 @@ class DateWindow(wx.Dialog):
             self.GetParent().dateResult = None
         else:
             self.GetParent().dateResult = (fromDate, toDate)
-            thisCase = [scan[10] for scan in self.GetParent().scanItems if datetime.datetime.strptime(scan[8], "%Y-%m-%d %H:%M:%S").timestamp() >= fromDate]
-            thatCase = [scan[10] for scan in self.GetParent().scanItems if datetime.datetime.strptime(scan[8], "%Y-%m-%d %H:%M:%S").timestamp() <= toDate]
+            thisCase = [scan[10] for scan in self.GetParent().scanItems if datetime.datetime.strptime(scan[8], "%a %b %d %H:%M:%S %Y").timestamp() >= fromDate]
+            thatCase = [scan[10] for scan in self.GetParent().scanItems if datetime.datetime.strptime(scan[8], "%a %b %d %H:%M:%S %Y").timestamp() <= toDate]
             bothCases = ft.list_intersect(thisCase, thatCase)
             self.GetParent().dateCases = bothCases
         self.GetParent().updateTable()
