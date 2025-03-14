@@ -1259,7 +1259,7 @@ class ImageScan:
                     self.rotangle[j] = rotangle[j]
         # update bgr
         if bgr_params != None:
-            if type(bgr_params) == dicte:
+            if type(bgr_params) == dict:
                 for j in idx:
                     self.bgrpar[j] = copy.copy(bgr_params)
             elif len(bgr_params) == len(idx):
