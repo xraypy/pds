@@ -35,7 +35,7 @@ class hdfToTree:
             item0 = item[0]
             item1 = item[1]
             itemString = item1.attrs.get("name")
-            (specName, scanNum, pointNum, epoch) = itemString.split(":")
+            (specName, scanNum, pointNum, epoch) = itemString.decode("utf-8").split(":")
             scanNum = "Scan " + scanNum[1:]
             pointNum = pointNum.split("/")[0]
             pointNum = "Point " + pointNum[1:]
