@@ -2166,6 +2166,7 @@ class Integrator(wx.Frame, wx.Notebook):
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            print("Saving RIDS to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
                 allHs = self.hdfObject.get_all(b"H", saveThese)
@@ -2192,6 +2193,7 @@ class Integrator(wx.Frame, wx.Notebook):
                             allBetas[iterData],
                         )
                         f.write(line)
+                print("Saved RIDS to" + saveDialog.GetPath())
                 f.close()
             except Exception:
                 oops = wx.MessageDialog(self, "Error saving file\n" + str(Exception))
@@ -2227,6 +2229,7 @@ class Integrator(wx.Frame, wx.Notebook):
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            print("Saving CTR, Alpha, and Beta values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
                 allHs = self.hdfObject.get_all(b"H", saveThese)
@@ -2251,6 +2254,7 @@ class Integrator(wx.Frame, wx.Notebook):
                             allBetas[iterData],
                         )
                         f.write(line)
+                print("Saved CTR, Alpha, and Beta values to" + saveDialog.GetPath())
                 f.close()
             except Exception:
                 oops = wx.MessageDialog(self, "Error saving file\n" + str(Exception))
@@ -2286,6 +2290,7 @@ class Integrator(wx.Frame, wx.Notebook):
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            print("Saving Intesity data to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
                 allHs = self.hdfObject.get_all(b"H", saveThese)
@@ -2316,6 +2321,7 @@ class Integrator(wx.Frame, wx.Notebook):
                             allSecs[iterData],
                         )
                         f.write(line)
+                print("Saving Intensity data to" + saveDialog.GetPath())
                 f.close()
             except Exception:
                 oops = wx.MessageDialog(self, "Error saving file\n" + str(Exception))
