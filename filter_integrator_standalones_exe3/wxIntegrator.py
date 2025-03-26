@@ -925,9 +925,9 @@ class Integrator(wx.Frame, wx.Notebook):
                 dataLookup[iterData] = item
                 item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             allLs = {}
-            if self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith(b"Escan"):
+            if self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith("Escan"):
                 allLs = self.hdfObject.get_all("Energy", childrenList)
-            elif self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith(b"ascan"):
+            elif self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith("ascan"):
                 get_this = self.hdfObject.get_all("info", [childrenList[0]])[childrenList[0]].split()[1]
                 allLs = self.hdfObject.get_all(get_this, childrenList)
             else:
@@ -982,8 +982,8 @@ class Integrator(wx.Frame, wx.Notebook):
         toThese = list(set(toThese))
 
         for itemData in toThese:
-            # print itemData
             toL = self.hdfObject.get_all("L", [itemData])
+            print(itemData, type(itemData))
             toL = toL[itemData]
             copyFrom = closestL(toL, possibleLs)
             copyData = fromDict[copyFrom]
@@ -1682,9 +1682,9 @@ class Integrator(wx.Frame, wx.Notebook):
             item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
         iterImageChanged = self.hdfObject.get_all(("det_0", "image_changed"), iterList)
         iterFChanged = self.hdfObject.get_all(("det_0", "F_changed"), iterList)
-        if self.hdfObject[itemData]["type"].startswith(b"Escan"):
+        if self.hdfObject[itemData]["type"].startswith("Escan"):
             iterLList = self.hdfObject.get_all("energy", iterList)
-        elif self.hdfObject[itemData]["type"].startswith(b"ascan"):
+        elif self.hdfObject[itemData]["type"].startswith("ascan"):
             get_this = self.hdfObject[itemData]["info"].split()[1]
             iterLList = self.hdfObject.get_all(get_this, iterList)
         else:
@@ -1713,14 +1713,14 @@ class Integrator(wx.Frame, wx.Notebook):
             rodPlot.errorbar(doneLList, doneFList, doneFerrList, fmt="b", linestyle="")
         except:
             pass
-        if self.hdfObject[itemData]["type"].startswith(b"Escan"):
+        if self.hdfObject[itemData]["type"].startswith("Escan"):
             rodPlot.plot(self.hdfObject[itemData]["Energy"], self.hdfObject[itemData]["det_0"]["F"], "ro")
-        elif self.hdfObject[itemData]["type"].startswith(b"ascan"):
+        elif self.hdfObject[itemData]["type"].startswith("ascan"):
             rodPlot.plot(self.hdfObject[itemData][get_this], self.hdfObject[itemData]["det_0"]["F"], "ro")
         else:
             rodPlot.plot(self.hdfObject[itemData][b"L"], self.hdfObject[itemData]["det_0"]["F"], "ro")
         try:
-            if not self.hdfObject[itemData]["type"].startswith(b"Escan") and not self.hdfObject[itemData]["type"].startswith(b"ascan"):
+            if not self.hdfObject[itemData]["type"].startswith("Escan") and not self.hdfObject[itemData]["type"].startswith(b"ascan"):
                 rodPlot.semilogy()
         except:
             pass
