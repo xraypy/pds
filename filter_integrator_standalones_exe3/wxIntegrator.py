@@ -2011,6 +2011,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     "scale",
                 ]:
                     value = self.hdfObject[itemData]["det_0"][key]
+                    value = value.decode("utf-8")
                     attributeFile.write(key + "\t" + value + "\n")
                 attributeFile.write("geom\t" + self.hdfObject[itemData]["geom"])
             except:
