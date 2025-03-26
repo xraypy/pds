@@ -1982,7 +1982,7 @@ class Integrator(wx.Frame, wx.Notebook):
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
-            print("Saving attribute file " + saveDialog.GetPath())
+            print("Saving attribute file to" + saveDialog.GetPath())
             try:
                 attributeFile = open(saveDialog.GetPath(), "w")
             except:
@@ -2014,6 +2014,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     value = value.decode("utf-8")
                     attributeFile.write(key + "\t" + value + "\n")
                 attributeFile.write("geom\t" + self.hdfObject[itemData]["geom"])
+                print("Attribute file saved to" + saveDialog.GetPath())
             except:
                 print("Error writing to file")
                 attributeFile.close()
@@ -2048,6 +2049,7 @@ class Integrator(wx.Frame, wx.Notebook):
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            print("Saving H, K, L, F, and Ferr values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
                 allHs = self.hdfObject.get_all(b"H", saveThese)
@@ -2069,6 +2071,7 @@ class Integrator(wx.Frame, wx.Notebook):
                             allFerrs[iterData],
                         )
                         f.write(line)
+                print("Saved H, K, L, F, and Ferr values to" + saveDialog.GetPath())
                 f.close()
             except Exception:
                 oops = wx.MessageDialog(self, "Error saving file\n" + str(Exception))
@@ -2103,6 +2106,7 @@ class Integrator(wx.Frame, wx.Notebook):
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            print("Saving H, K, L, E, F, and Ferr values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
                 allHs = self.hdfObject.get_all(b"H", saveThese)
@@ -2126,6 +2130,7 @@ class Integrator(wx.Frame, wx.Notebook):
                             allFerrs[iterData],
                         )
                         f.write(line)
+                print("Saved H, K, L, E, F, and Ferr values to" + saveDialog.GetPath())
                 f.close()
             except Exception:
                 oops = wx.MessageDialog(self, "Error saving file\n" + str(Exception))
