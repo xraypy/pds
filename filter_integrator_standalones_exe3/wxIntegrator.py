@@ -983,7 +983,6 @@ class Integrator(wx.Frame, wx.Notebook):
 
         for itemData in toThese:
             toL = self.hdfObject.get_all("L", [itemData])
-            print(itemData, type(itemData))
             toL = toL[itemData]
             copyFrom = closestL(toL, possibleLs)
             copyData = fromDict[copyFrom]
@@ -1592,6 +1591,7 @@ class Integrator(wx.Frame, wx.Notebook):
         # TPT changed 'numPoints' to 'dims'
         # transmission, etc. added April 2015, JES
         psicG = self.buildPsicG(itemData)
+        # print("\nitem_data", self.hdfObject[itemData], "\n")
         scan_dict = {
             "I": [self.hdfObject[itemData]["det_0"]["I"]],
             "io": [self.hdfObject[itemData][b"io"]],

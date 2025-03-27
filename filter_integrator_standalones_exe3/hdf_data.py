@@ -359,6 +359,8 @@ class HdfDataFile:
                     all_results[self.point] = self.point_dict[key]
             else:
                 for point in points:
+                    if key == 'L':
+                        key = b'L'
                     if key in self.file[point]["position_labels"]:
                         key_loc = list(self.file[point]["position_labels"]).index(key)
                         all_results[point] = self.file[point]["position_values"][key_loc]
