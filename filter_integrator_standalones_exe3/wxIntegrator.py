@@ -1720,7 +1720,7 @@ class Integrator(wx.Frame, wx.Notebook):
         else:
             rodPlot.plot(self.hdfObject[itemData][b"L"], self.hdfObject[itemData]["det_0"]["F"], "ro")
         try:
-            if not self.hdfObject[itemData]["type"].startswith("Escan") and not self.hdfObject[itemData]["type"].startswith(b"ascan"):
+            if not self.hdfObject[itemData]["type"].startswith("Escan") and not self.hdfObject[itemData]["type"].startswith("ascan"):
                 rodPlot.semilogy()
         except:
             pass
