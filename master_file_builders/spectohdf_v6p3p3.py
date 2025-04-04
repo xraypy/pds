@@ -257,7 +257,7 @@ def spec_to_hdf(args):
     if spec_dir == "":
         spec_dir = "."
     spec_name = os.path.split(user_input)[-1]
-    image_dir = f"{spec_dir}\\images\\{spec_name[:-4]}\\"
+    image_dir = f"{spec_dir}\\images\\{spec_name[:-5]}\\"
     this_file = open(user_input)
     lines = this_file.readlines()
     this_file.close()
