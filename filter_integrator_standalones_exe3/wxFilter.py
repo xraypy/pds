@@ -618,7 +618,7 @@ class filterGUI(wx.Frame):
 
     # Delete everything in the table, then add the appropriate scans
     def updateTable(self):
-        """Delete all the scans from the filter list,
+        """ Delete all the scans from the filter list,
         then repopulate it with the scans that pass
         all of the active filters.
 
