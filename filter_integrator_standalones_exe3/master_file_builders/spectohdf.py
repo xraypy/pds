@@ -5,7 +5,7 @@ import sys
 import time
 
 import h5py
-import numpy as num
+import numpy as np
 from PIL import Image
 
 
@@ -168,9 +168,9 @@ def read_image(file):
         # arr = array.array('L', im.tostring())
         # So we'll still have to use numpy for this
         if im.mode == "I":
-            arr = num.frombuffer(im.tobytes(), dtype=num.int32)
+            arr = np.frombuffer(im.tobytes(), dtype=np.int32)
         elif im.mode == "I;16":
-            arr = num.frombuffer(im.tobytes(), dtype=num.int16)
+            arr = np.frombuffer(im.tobytes(), dtype=np.int16)
         else:
             print(f"Image mode not supported for {file}")
         arr.shape = (im.size[1], im.size[0])
