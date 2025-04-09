@@ -1065,6 +1065,8 @@ class ImageAna:
         self.subplot4.legend(loc=0)
 
         im_max = num.max(bild[r1:r2, c1:c2])
+        
+        fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.4, hspace=0.4)
 
         return (im_max, colormap, self.subplot2)
 
