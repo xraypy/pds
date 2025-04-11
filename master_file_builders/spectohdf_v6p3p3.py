@@ -173,7 +173,7 @@ def read_image(file):
             arr = np.frombuffer(im.tobytes(), dtype=np.int16)
         else:
             print(f"Image mode not supported for {file}")
-        arr.shape = (im.size[1], im.size[0])
+        arr = arr.reshape((im.size[1], im.size[0]))
         return arr
     except Exception as e:
         print(f"Error reading {file}: {e}")
