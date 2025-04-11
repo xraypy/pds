@@ -332,7 +332,7 @@ class CtrCorrectionPsic:
         p = 1.0 - (cosd(delta) * sind(nu)) ** 2.0
         if fh != 1.0:
             # Need clarification: Is it c_p or cp? (Jas)
-            p = fh * c_p + (1.0 - fh) * (1.0 - (sind(delta)) ** 2.0)
+            p = fh * cp + (1.0 - fh) * (1.0 - (sind(delta)) ** 2.0)
         if p == 0.0:
             cp = 0.0
         else:
