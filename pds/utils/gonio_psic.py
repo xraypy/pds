@@ -104,14 +104,12 @@ References:
 
 ##########################################################################
 
-import numpy as num
-import types
 import copy
 
-from mathutil import cosd, sind, tand
-from mathutil import arccosd, arcsind, arctand
-from mathutil import cartesian_mag, cartesian_angle
-from lattice import Lattice
+import numpy as np
+
+from pds.utils.lattice import Lattice
+from pds.utils.mathutil import arccosd, arcsind, cartesian_angle, cartesian_mag, cosd, sind, tand
 
 
 ##########################################################################
@@ -151,7 +149,7 @@ class Psic:
 
         # hold n (reference) vector in HKL
         # eg surface normal vector for psuedo angles
-        self.n = num.array([0.0, 0.0, 1.0], dtype=float)
+        self.n = np.array([0.0, 0.0, 1.0], dtype=float)
 
         # Z and calc h
         self.Z = []
@@ -162,11 +160,11 @@ class Psic:
 
         # dummy primary reflection
         tth = self.lattice.tth([0.0, 0.0, 1.0], lam=lam)
-        self.or0 = {"h": num.array([0.0, 0.0, 1.0]), "phi": 0.0, "chi": 0.0, "eta": 0.0, "mu": tth / 2.0, "nu": tth, "delta": 0.0, "lam": lam}
+        self.or0 = {"h": np.array([0.0, 0.0, 1.0]), "phi": 0.0, "chi": 0.0, "eta": 0.0, "mu": tth / 2.0, "nu": tth, "delta": 0.0, "lam": lam}
 
         # dummy secondary reflection
         tth = self.lattice.tth([0.0, 1.0, 0.0], lam=lam)
-        self.or1 = {"h": num.array([0.0, 1.0, 0.0]), "phi": 0.0, "chi": 0.0, "eta": tth / 2.0, "mu": 0.0, "nu": 0.0, "delta": tth, "lam": lam}
+        self.or1 = {"h": np.array([0.0, 1.0, 0.0]), "phi": 0.0, "chi": 0.0, "eta": tth / 2.0, "mu": 0.0, "nu": 0.0, "delta": tth, "lam": lam}
 
         # Compute OR matricies
         self.U = []
@@ -255,21 +253,21 @@ class Psic:
           If lam = None, then lambda defined for the lattice
           is used.
         """
-        if h != None:
-            self.or0["h"] = num.array(h, dtype=float)
-        if phi != None:
+        if h is not None:
+            self.or0["h"] = np.array(h, dtype=float)
+        if phi is not None:
             self.or0["phi"] = float(phi)
-        if chi != None:
+        if chi is not None:
             self.or0["chi"] = float(chi)
-        if eta != None:
+        if eta is not None:
             self.or0["eta"] = float(eta)
-        if mu != None:
+        if mu is not None:
             self.or0["mu"] = float(mu)
-        if nu != None:
+        if nu is not None:
             self.or0["nu"] = float(nu)
-        if delta != None:
+        if delta is not None:
             self.or0["delta"] = float(delta)
-        if lam != None:
+        if lam is not None:
             self.or0["lam"] = float(lam)
         self._calc_UB()
 
@@ -286,21 +284,21 @@ class Psic:
           If lam = None, then lambda defined for the lattice
           is used.
         """
-        if h != None:
-            self.or1["h"] = num.array(h, dtype=float)
-        if phi != None:
+        if h is not None:
+            self.or1["h"] = np.array(h, dtype=float)
+        if phi is not None:
             self.or1["phi"] = float(phi)
-        if chi != None:
+        if chi is not None:
             self.or1["chi"] = float(chi)
-        if eta != None:
+        if eta is not None:
             self.or1["eta"] = float(eta)
-        if mu != None:
+        if mu is not None:
             self.or1["mu"] = float(mu)
-        if nu != None:
+        if nu is not None:
             self.or1["nu"] = float(nu)
-        if delta != None:
+        if delta is not None:
             self.or1["delta"] = float(delta)
-        if lam != None:
+        if lam is not None:
             self.or1["lam"] = float(lam)
         self._calc_UB()
 
@@ -330,13 +328,13 @@ class Psic:
         """
         # use these, note they are used below on vectors
         # defined in the cartesian lab frame basis
-        cross = num.cross
-        norm = num.linalg.norm
+        cross = np.cross
+        norm = np.linalg.norm
 
         # Calculate the B matrix
         (a, b, c, alp, bet, gam) = self.lattice.cell()
         (ar, br, cr, alpr, betr, gamr) = self.lattice.rcell()
-        B = num.array([[ar, br * cosd(gamr), cr * cosd(betr)], [0.0, br * sind(gamr), -cr * sind(betr) * cosd(alp)], [0.0, 0.0, 1.0 / c]])
+        B = np.array([[ar, br * cosd(gamr), cr * cosd(betr)], [0.0, br * sind(gamr), -cr * sind(betr) * cosd(alp)], [0.0, 0.0, 1.0 / c]])
         self.B = B
 
         # calc Z and Q for the OR reflections
@@ -349,12 +347,12 @@ class Psic:
         # calc the phi frame coords for diffraction vectors
         # note divide out 2pi since the diffraction condition
         # is 2pi*h = Q
-        vphi_1 = num.dot(num.linalg.inv(Z1), (Q1 / (2.0 * num.pi)))
-        vphi_2 = num.dot(num.linalg.inv(Z2), (Q2 / (2.0 * num.pi)))
+        vphi_1 = np.dot(np.linalg.inv(Z1), (Q1 / (2.0 * np.pi)))
+        vphi_2 = np.dot(np.linalg.inv(Z2), (Q2 / (2.0 * np.pi)))
 
         # calc cartesian coords of h vectors
-        hc_1 = num.dot(self.B, self.or0["h"])
-        hc_2 = num.dot(self.B, self.or1["h"])
+        hc_1 = np.dot(self.B, self.or0["h"])
+        hc_2 = np.dot(self.B, self.or1["h"])
 
         # So at this point the following should be true:
         #     vphi_1 = U*hc_1
@@ -376,16 +374,16 @@ class Psic:
         tphi_2 = cross(tphi_3, tphi_1) / norm(cross(tphi_3, tphi_1))
 
         # define the following matrices
-        Tc = num.transpose(num.array([tc_1, tc_2, tc_3]))
-        Tphi = num.transpose(num.array([tphi_1, tphi_2, tphi_3]))
+        Tc = np.transpose(np.array([tc_1, tc_2, tc_3]))
+        Tphi = np.transpose(np.array([tphi_1, tphi_2, tphi_3]))
 
         # calc orientation matrix U
         # note either of the below work since Tc is orthogonal
-        # self.U = num.dot(Tphi, Tc.transpose())
-        self.U = num.dot(Tphi, num.linalg.inv(Tc))
+        # self.U = np.dot(Tphi, Tc.transpose())
+        self.U = np.dot(Tphi, np.linalg.inv(Tc))
 
         # calc UB
-        self.UB = num.dot(self.U, self.B)
+        self.UB = np.dot(self.U, self.B)
 
         # update h and psuedo angles...
         self.set_angles()
@@ -395,17 +393,17 @@ class Psic:
         """
         Set goniometer angles (all in degrees)
         """
-        if phi != None:
+        if phi is not None:
             self.angles["phi"] = float(phi)
-        if chi != None:
+        if chi is not None:
             self.angles["chi"] = float(chi)
-        if eta != None:
+        if eta is not None:
             self.angles["eta"] = float(eta)
-        if mu != None:
+        if mu is not None:
             self.angles["mu"] = float(mu)
-        if nu != None:
+        if nu is not None:
             self.angles["nu"] = float(nu)
-        if delta != None:
+        if delta is not None:
             self.angles["delta"] = float(delta)
         # update h, also calc Z etc..
         self._calc_h()
@@ -432,8 +430,8 @@ class Psic:
         self.ki = ki
         self.kr = kr
 
-        hphi = num.dot(num.linalg.inv(self.Z), self.Q) / (2.0 * num.pi)
-        h = num.dot(num.linalg.inv(self.UB), hphi)
+        hphi = np.dot(np.linalg.inv(self.Z), self.Q) / (2.0 * np.pi)
+        h = np.dot(np.linalg.inv(self.UB), hphi)
         self.h = h
 
     ###################################################
@@ -443,7 +441,7 @@ class Psic:
         The n vector is given in hkl values.  see calc_n
         to determine n from chi and phi settings
         """
-        self.n = num.array(n, dtype=float)
+        self.n = np.array(n, dtype=float)
         self._update_psuedo()
 
     def calc_n(self, fchi=0.0, fphi=0.0):
@@ -479,10 +477,10 @@ class Psic:
 
         # n in the unrotated lab frame (ie phi frame):
         # this is a unit vector!
-        n_phi = num.array([sind(sig_az) * cosd(tau_az), -sind(sig_az) * sind(tau_az), cosd(sig_az)])
+        n_phi = np.array([sind(sig_az) * cosd(tau_az), -sind(sig_az) * sind(tau_az), cosd(sig_az)])
         # n in HKL
-        n_hkl = num.dot(num.linalg.inv(self.UB), n_phi)
-        n_hkl = n_hkl / num.max(num.abs(n_hkl))
+        n_hkl = np.dot(np.linalg.inv(self.UB), n_phi)
+        n_hkl = n_hkl / np.max(np.abs(n_hkl))
 
         # note if l-component is negative, then its
         # pointing into the surface (ie assume positive L
@@ -510,7 +508,7 @@ class Psic:
         order.  Also important is that _calc_h is called before this...
         """
         self.pangles = {}
-        if self.calc_psuedo == True:
+        if self.calc_psuedo:
             self._calc_tth()
             self._calc_nm()
             self._calc_sigma_az()
@@ -558,7 +556,7 @@ class Psic:
         n = self.n
         Z = self.Z
         UB = self.UB
-        nm = num.dot(num.dot(Z, UB), n)
+        nm = np.dot(np.dot(Z, UB), n)
         nm = nm / cartesian_mag(nm)
         self.nm = nm
 
@@ -568,12 +566,12 @@ class Psic:
         in the phi frame
         """
         # calc n in the lab frame (unrotated) and make a unit vector
-        n_phi = num.dot(self.UB, self.n)
+        n_phi = np.dot(self.UB, self.n)
         n_phi = n_phi / cartesian_mag(n_phi)
 
         # note result of acosd is between 0 and pi
         # get correct sign from the sign of the x-component
-        # sigma_az = num.sign(n_phi[0])*arccosd(n_phi[2])
+        # sigma_az = np.sign(n_phi[0])*arccosd(n_phi[2])
         sigma_az = arccosd(n_phi[2])
         self.pangles["sigma_az"] = sigma_az
 
@@ -583,11 +581,11 @@ class Psic:
         xy-plane and the x-axis in the phi frame
         """
         # calc n in the lab frame (unrotated) and make a unit vector
-        n_phi = num.dot(self.UB, self.n)
+        n_phi = np.dot(self.UB, self.n)
         n_phi = n_phi / cartesian_mag(n_phi)
 
-        tau_az = num.arctan2(-n_phi[1], n_phi[0])
-        tau_az = tau_az * 180.0 / num.pi
+        tau_az = np.arctan2(-n_phi[1], n_phi[0])
+        tau_az = tau_az * 180.0 / np.pi
         self.pangles["tau_az"] = tau_az
 
     def _calc_naz(self):
@@ -597,8 +595,8 @@ class Psic:
         """
         # get norm reference vector in cartesian lab frame
         nm = self.nm
-        naz = num.arctan2(nm[0], nm[2])
-        naz = num.degrees(naz)
+        naz = np.arctan2(nm[0], nm[2])
+        naz = np.degrees(naz)
         self.pangles["naz"] = naz
 
     def _calc_alpha(self):
@@ -608,8 +606,8 @@ class Psic:
         plane perp to the reference vector n.
         """
         nm = self.nm
-        ki = num.array([0.0, -1.0, 0.0])
-        alpha = arcsind(num.dot(nm, ki))
+        ki = np.array([0.0, -1.0, 0.0])
+        alpha = arcsind(np.dot(nm, ki))
         self.pangles["alpha"] = alpha
 
     def _calc_beta(self):
@@ -624,12 +622,12 @@ class Psic:
         # calc normalized kr
         # delta = self.angles['delta']
         # nu    = self.angles['nu']
-        # kr = num.array([sind(delta),
+        # kr = np.array([sind(delta),
         #                cosd(nu)*cosd(delta),
         #                sind(nu)*cosd(delta)])
         nm = self.nm
         kr = self.kr / cartesian_mag(self.kr)
-        beta = arcsind(num.dot(nm, kr))
+        beta = arcsind(np.dot(nm, kr))
         self.pangles["beta"] = beta
 
     def _calc_tau(self):
@@ -675,8 +673,8 @@ class Psic:
         """
         nu = self.angles["nu"]
         delta = self.angles["delta"]
-        qaz = num.arctan2(sind(delta), cosd(delta) * sind(nu))
-        qaz = num.degrees(qaz)
+        qaz = np.arctan2(sind(delta), cosd(delta) * sind(nu))
+        qaz = np.degrees(qaz)
         self.pangles["qaz"] = qaz
 
     def _calc_omega(self):
@@ -694,16 +692,14 @@ class Psic:
 
         Note check sign of results???
         """
-        phi = self.angles["phi"]
-        chi = self.angles["chi"]
         eta = self.angles["eta"]
         mu = self.angles["mu"]
-        H = num.array([[cosd(eta), sind(eta), 0.0], [-sind(eta), cosd(eta), 0.0], [0.0, 0.0, 1.0]], float)
-        M = num.array([[1.0, 0.0, 0.0], [0.0, cosd(mu), -sind(mu)], [0.0, sind(mu), cosd(mu)]], float)
+        H = np.array([[cosd(eta), sind(eta), 0.0], [-sind(eta), cosd(eta), 0.0], [0.0, 0.0, 1.0]], float)
+        M = np.array([[1.0, 0.0, 0.0], [0.0, cosd(mu), -sind(mu)], [0.0, sind(mu), cosd(mu)]], float)
         # check the mult order here!!!!
-        # T = num.dot(H.transpose(),M.transpose())
-        T = num.dot(M.transpose(), H.transpose())
-        Qpp = num.dot(T, self.Q)
+        # T = np.dot(H.transpose(),M.transpose())
+        T = np.dot(M.transpose(), H.transpose())
+        Qpp = np.dot(T, self.Q)
         # omega = -1.*cartesian_angle([Qpp[0], 0, Qpp[2]],Qpp)
         omega = cartesian_angle([Qpp[0], 0, Qpp[2]], Qpp)
         self.pangles["omega"] = omega
@@ -716,7 +712,7 @@ def psic_from_spec(G, angles={}, preparsed=False):
     returns a psic instance
     """
     gonio = Psic()
-    if G != None:
+    if G is not None:
         gonio.set_spec_G(G, preparsed)
     gonio.set_angles(**angles)
     return gonio
@@ -730,24 +726,24 @@ def spec_psic_G(G):
     See specfile.py for details.
     """
     # azimuthal reference vector, n (hkl)
-    n = num.array(G[3:6], dtype=float)
+    n = np.array(G[3:6], dtype=float)
 
     # lattice params a,b,c,alp,bet,gam
     cell = G[22:28]
     # add lambda to end of cell
     cell.append(G[66])
-    cell = num.array(cell, dtype=float)
+    cell = np.array(cell, dtype=float)
 
     # or0
     or0 = {}
-    or0["h"] = num.array(G[34:37], dtype=float)
-    or0.update(_spec_or_angles(num.array(G[40:46], dtype=float)))
+    or0["h"] = np.array(G[34:37], dtype=float)
+    or0.update(_spec_or_angles(np.array(G[40:46], dtype=float)))
     or0["lam"] = float(G[52])
 
     # or1
     or1 = {}
-    or1["h"] = num.array(G[37:40], dtype=float)
-    or1.update(_spec_or_angles(num.array(G[46:52], dtype=float)))
+    or1["h"] = np.array(G[37:40], dtype=float)
+    or1.update(_spec_or_angles(np.array(G[46:52], dtype=float)))
     or1["lam"] = float(G[53])
 
     return (cell, or0, or1, n)
@@ -805,7 +801,7 @@ def _spec_or_angles(angles, calc_kappa=False):
         kap_alp = 50.031
         keta = eta - arcsind(-tand(chi / 2.0) / tand(kap_alp))
         kphi = phi - arcsind(-tand(chi / 2.0) / tand(kap_alp))
-        kappa = asind(sind(chi / 2.0) / sind(kap_alp))
+        kappa = np.degrees(np.arcsin(sind(chi / 2.0) / sind(kap_alp)))
         return {"phi": phi, "chi": chi, "eta": eta, "mu": mu, "delta": delta, "nu": nu, "keta": keta, "kphi": kphi, "kappa": kappa}
     else:
         return {"phi": phi, "chi": chi, "eta": eta, "mu": mu, "delta": delta, "nu": nu}
@@ -824,11 +820,11 @@ def calc_Z(phi=0.0, chi=0.0, eta=0.0, mu=0.0):
     the lab frame coordinates of the vector => vm are given by:
          vm = Z*vphi
     """
-    P = num.array([[cosd(phi), sind(phi), 0.0], [-sind(phi), cosd(phi), 0.0], [0.0, 0.0, 1.0]], float)
-    X = num.array([[cosd(chi), 0.0, sind(chi)], [0.0, 1.0, 0.0], [-sind(chi), 0.0, cosd(chi)]], float)
-    H = num.array([[cosd(eta), sind(eta), 0.0], [-sind(eta), cosd(eta), 0.0], [0.0, 0.0, 1.0]], float)
-    M = num.array([[1.0, 0.0, 0.0], [0.0, cosd(mu), -sind(mu)], [0.0, sind(mu), cosd(mu)]], float)
-    Z = num.dot(num.dot(num.dot(M, H), X), P)
+    P = np.array([[cosd(phi), sind(phi), 0.0], [-sind(phi), cosd(phi), 0.0], [0.0, 0.0, 1.0]], float)
+    X = np.array([[cosd(chi), 0.0, sind(chi)], [0.0, 1.0, 0.0], [-sind(chi), 0.0, cosd(chi)]], float)
+    H = np.array([[cosd(eta), sind(eta), 0.0], [-sind(eta), cosd(eta), 0.0], [0.0, 0.0, 1.0]], float)
+    M = np.array([[1.0, 0.0, 0.0], [0.0, cosd(mu), -sind(mu)], [0.0, sind(mu), cosd(mu)]], float)
+    Z = np.dot(np.dot(np.dot(M, H), X), P)
     return Z
 
 
@@ -842,7 +838,7 @@ def calc_Q(nu=0.0, delta=0.0, lam=1.0, ret_k=False):
     """
     (ki, kr) = calc_kvecs(nu=nu, delta=delta, lam=lam)
     Q = kr - ki
-    if ret_k == True:
+    if ret_k:
         return (Q, ki, kr)
     else:
         return Q
@@ -854,9 +850,9 @@ def calc_kvecs(nu=0.0, delta=0.0, lam=1.0):
     Calculate psic ki, kr in the cartesian lab frame.
     nu and delta are in degrees, lam is in angstroms
     """
-    k = 2.0 * num.pi / lam
-    ki = k * num.array([0.0, 1.0, 0.0], dtype=float)
-    kr = k * num.array([sind(delta), cosd(nu) * cosd(delta), sind(nu) * cosd(delta)], dtype=float)
+    k = 2.0 * np.pi / lam
+    ki = k * np.array([0.0, 1.0, 0.0], dtype=float)
+    kr = k * np.array([sind(delta), cosd(nu) * cosd(delta), sind(nu) * cosd(delta)], dtype=float)
     return (ki, kr)
 
 
@@ -881,11 +877,11 @@ def calc_D(nu=0.0, delta=0.0):
          kr_m = D*kr_phi
 
     """
-    D1 = num.array([[cosd(delta), sind(delta), 0.0], [-sind(delta), cosd(delta), 0.0], [0.0, 0.0, 1.0]])
+    D1 = np.array([[cosd(delta), sind(delta), 0.0], [-sind(delta), cosd(delta), 0.0], [0.0, 0.0, 1.0]])
 
-    D2 = num.array([[1.0, 0.0, 0.0], [0.0, cosd(nu), -sind(nu)], [0.0, sind(nu), cosd(nu)]])
+    D2 = np.array([[1.0, 0.0, 0.0], [0.0, cosd(nu), -sind(nu)], [0.0, sind(nu), cosd(nu)]])
 
-    D = num.dot(D2, D1)
+    D = np.dot(D2, D1)
     return D
 
 
@@ -907,8 +903,8 @@ def beam_vectors(h=1.0, v=1.0):
     Assume these are centered on the origin
     """
     # beam vectors, [x,y,z], in lab frame
-    bh = num.array([0.0, 0.0, 0.5 * h])
-    bv = num.array([0.5 * v, 0.0, 0.0])
+    bh = np.array([0.0, 0.0, 0.5 * h])
+    bv = np.array([0.5 * v, 0.0, 0.0])
 
     # corners of beam apperature
     a = bv + bh
@@ -940,11 +936,11 @@ def det_vectors(h=1.0, v=1.0, nu=0.0, delta=0.0):
     """
     # detector vectors, [x,y,z] in lab frame
     # note rotation of the vectors...
-    dh = num.array([0.0, 0.0, 0.5 * h])
-    dv = num.array([0.5 * v, 0.0, 0.0])
+    dh = np.array([0.0, 0.0, 0.5 * h])
+    dv = np.array([0.5 * v, 0.0, 0.0])
     D = calc_D(nu=nu, delta=delta)
-    dh = num.dot(D, dh)
-    dv = num.dot(D, dv)
+    dh = np.dot(D, dh)
+    dv = np.dot(D, dv)
 
     # corners of detector apperature
     e = dv + dh
@@ -999,7 +995,7 @@ def sample_vectors(sample, angles={}, gonio=None):
     being the +y direction.
 
     """
-    if sample == None:
+    if sample is None:
         return None
     if len(sample) < 3:
         print("Sample polygon must be 3 or more points")
@@ -1010,19 +1006,19 @@ def sample_vectors(sample, angles={}, gonio=None):
     # unrotate to get back to phi frame vectors
     # Otherwise we assume the vectors passed are phi frame
     # (in that case they should be 3D vectors)
-    if angles == None:
+    if angles is None:
         angles = {}
     if len(angles) > 0:
         # calc sample rotation matrix
         Z = calc_Z(**angles)
-        Zinv = num.linalg.inv(Z)
+        Zinv = np.linalg.inv(Z)
         polygon_phi = []
         # If p's have only two components then we assume they are
         # xy pairs therefore we can add a third value of zero for z
         for p in sample:
             if len(p) == 2:
                 p = [p[0], p[1], 0.0]
-            p_phi = num.dot(Zinv, p)
+            p_phi = np.dot(Zinv, p)
             polygon_phi.append(p_phi)
     else:
         polygon_phi = sample
@@ -1031,13 +1027,13 @@ def sample_vectors(sample, angles={}, gonio=None):
     # vectors into the m-frame.  Otherwise
     # just return the phi frame vectors
     polygon = []
-    if gonio != None:
+    if gonio is not None:
         for p in polygon_phi:
             # If p's have only two components then we assume they are
             # xy pairs therefore we can add a third value of zero for z
             if len(p) == 2:
                 p = [p[0], p[1], 0.0]
-            p_m = num.dot(gonio.Z, p)
+            p_m = np.dot(gonio.Z, p)
             polygon.append(p_m)
     else:
         polygon = polygon_phi
@@ -1066,8 +1062,8 @@ def test1():
     print("\nmiscut= ", psic.lattice.angle([0, 0, 1], n, recip=True))
 
     # test surf norm
-    n_phi = num.dot(psic.UB, n)
-    n_phi = n_phi / num.fabs(cartesian_mag(n_phi))
+    n_phi = np.dot(psic.UB, n)
+    n_phi = n_phi / np.fabs(cartesian_mag(n_phi))
     print("\nnphi: ", n_phi)
 
     print("\nsigma_az= ", psic.pangles["sigma_az"])

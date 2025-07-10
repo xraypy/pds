@@ -1,27 +1,22 @@
-"""
-Python 2.x to Python 3.12.3
-Author: Jaswitha (jaswithareddy@uchicago.edu)
-Last modified: 2/5/2025
-"""
-
 import wx
-import time
 
 
-class hdfToTree:
+class HDFToTree:
     def __init__(self):
         self.reverseLookup = {}
 
     def dictToTree(self, thisDict, thisTree, thisRoot):
         """Turns a nested dictionary into a tree under thisRoot."""
         for key, value in thisDict.items():
-            if type(value) == dict:
-                parentItem = thisTree.AppendItem(thisRoot, key)
+            if type(value) is dict:
+                # Branch node - create item and recurse
+                parentItem = thisTree.AppendItem(thisRoot, str(key))
                 thisTree.SetItemData(parentItem, None)
                 self.dictToTree(value, thisTree, parentItem)
             else:
+                # Leaf node - set the actual data
                 childItem = thisTree.AppendItem(thisRoot, str(key))
-                thisTree.SetItemData(childItem, thisDict[key])
+                thisTree.SetItemData(childItem, value)
         thisTree.SortChildren(thisRoot)
 
     def populateTree(self, thisTree, thisObject):
@@ -61,7 +56,13 @@ class hdfToTree:
         while item:
             iterData = thisTree.GetItemData(item)
             if iterData is not None:
-                self.reverseLookup[iterData] = item
+                try:
+                    # Test if the item data is hashable by trying to hash it
+                    hash(iterData)
+                    self.reverseLookup[iterData] = item
+                except TypeError:
+                    # Item data is not hashable (e.g., dict, list), skip it
+                    pass
             else:
                 self.populateReverse(thisTree, item)
             item, cookie = thisTree.GetNextChild(thisRoot, cookie)
@@ -108,16 +109,12 @@ class hdfToTree:
             thisName = thisObject[thisData]["name"]
             if isinstance(thisName, bytes):
                 thisName = thisName.decode("utf-8")
-            thisSpec, thisScan, thisPoint, thisTime =  thisName.split(":")
+            thisSpec, thisScan, thisPoint, thisTime = thisName.split(":")
             thisScan = thisScan[1:]
             thisPoint = thisPoint.split("/")[0][1:]
             return "Scan " + thisScan + ", Point " + thisPoint
         else:
             return thisTree.GetItemText(thisItem)
-
-    """def newSelected(self, event):
-        ofMe = event.GetItem()
-        print self.scanTree.GetItemPyData(ofMe)"""
 
 
 class myTreeCtrl(wx.TreeCtrl):

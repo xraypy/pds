@@ -19,9 +19,7 @@ Todo:
 
 #######################################################################
 
-import types
-import numpy as num
-import scipy
+import numpy as np
 
 
 #######################################################################
@@ -30,7 +28,7 @@ def ave(x):
     average of an array
     """
     # return (sum(x)/float(len(x)))
-    return num.ave(x)
+    return np.ave(x)
 
 
 def std(x):
@@ -38,8 +36,8 @@ def std(x):
     standard deviation of an array
     """
     # x_ave = self.ave(x)
-    # return( num.sqrt( sum( (x-x_ave)**2 ) / float(len(x)) ) )
-    return num.std(x)
+    # return( np.sqrt( sum( (x-x_ave)**2 ) / float(len(x)) ) )
+    return np.std(x)
 
 
 def line(x, offset, slope):
@@ -59,44 +57,44 @@ def square(a):
 
 def cosd(x):
     """
-    num.cos(x), x in degrees
+    np.cos(x), x in degrees
     """
-    return num.cos(num.radians(x))
+    return np.cos(np.radians(x))
 
 
 def sind(x):
     """
-    num.sin(x), x in degrees
+    np.sin(x), x in degrees
     """
-    return num.sin(num.radians(x))
+    return np.sin(np.radians(x))
 
 
 def tand(x):
     """
-    num.tan(x), x in degrees
+    np.tan(x), x in degrees
     """
-    return num.tan(num.radians(x))
+    return np.tan(np.radians(x))
 
 
 def arccosd(x):
     """
-    num.arccos(x), result returned in degrees
+    np.arccos(x), result returned in degrees
     """
-    return num.degrees(num.arccos(x))
+    return np.degrees(np.arccos(x))
 
 
 def arcsind(x):
     """
-    num.arcsin(x), result returned in degrees
+    np.arcsin(x), result returned in degrees
     """
-    return num.degrees(num.arcsin(x))
+    return np.degrees(np.arcsin(x))
 
 
 def arctand(x):
     """
-    num.arctan(x), result returned in degrees
+    np.arctan(x), result returned in degrees
     """
-    return num.degrees(num.arctan(x))
+    return np.degrees(np.arctan(x))
 
 
 def cartesian_mag(v):
@@ -104,9 +102,9 @@ def cartesian_mag(v):
     Calculate the norm of a vector defined in
     a cartesian basis.
 
-    This should give same as num.linalg.norm
+    This should give same as np.linalg.norm
     """
-    m = num.sqrt(num.dot(v, v))
+    m = np.sqrt(np.dot(v, v))
     return m
 
 
@@ -117,15 +115,15 @@ def cartesian_angle(u, v):
 
     Result is always between 0 and 180 degrees
     """
-    uv = num.dot(u, v)
+    uv = np.dot(u, v)
     um = cartesian_mag(u)
     vm = cartesian_mag(v)
     denom = um * vm
     if denom == 0:
         return 0.0
     arg = uv / denom
-    if num.fabs(arg) > 1.0:
-        arg = arg / num.fabs(arg)
+    if np.fabs(arg) > 1.0:
+        arg = arg / np.fabs(arg)
     alpha = arccosd(arg)
     return alpha
 
@@ -175,7 +173,7 @@ def minimize(f, x, y, params, *args, **kws):
         """
         kw = {}
         if len(arguments) > 0:
-            if type(arguments[-1]) == dict:
+            if type(arguments[-1]) is dict:
                 kw = arguments[-1]
                 arguments = arguments[0:-1]
         # Now combine all parameters into a single tuple
@@ -204,12 +202,12 @@ def random_seed(x=None):
     Seeds the random number generator
     """
     if x is None:
-        return num.random.seed()
+        return np.random.seed()
     else:
         try:
-            return num.random.seed([x])
-        except:
-            return num.random.seed()
+            return np.random.seed([x])
+        except Exception:
+            return np.random.seed()
 
 
 def random(a=1, b=1, c=1, npts=1, distribution="normal", **kw):
@@ -226,7 +224,7 @@ def random(a=1, b=1, c=1, npts=1, distribution="normal", **kw):
     --------
     returns npts random numbers.
     """
-    NR = num.random
+    NR = np.random
     if distribution == "binomial":
         return NR.binomial(a, b, size=npts)
     elif distribution == "geometric":

@@ -42,14 +42,14 @@ Also, note in older versions of PIL:
 
 #######################################################################
 
-import types
-import os
 import copy
-import numpy as num
+import os
+
+import numpy as np
 from matplotlib import pyplot
 from scipy import ndimage
 
-from background import background
+from pds.utils.background import background
 
 ########################################################################
 IMG_BGR_PARAMS = {
@@ -77,11 +77,11 @@ def read(file, pixel_map=None):
         from PIL import Image
 
         imopen = Image.open
-    except:
+    except Exception:
         print("Error importing Image.open")
         return None
     # see if there is a pixel map
-    if pixel_map != None:
+    if pixel_map is not None:
         (bad_pixels, good_pixels) = read_pixel_map(pixel_map)
     else:
         bad_pixels = None
@@ -91,20 +91,20 @@ def read(file, pixel_map=None):
     def rd(file, bad_pixels=None, good_pixels=None):
         try:
             im = imopen(file)
-            arr = num.fromstring(im.tostring(), dtype="int32")
+            arr = np.fromstring(im.tostring(), dtype="int32")
             arr.shape = (im.size[1], im.size[0])
             # return arr.transpose()
-            if bad_pixels != None:
+            if bad_pixels is not None:
                 arr = pixel_mask(arr, bad_pixels, good_pixels)
             return arr
-        except:
+        except Exception:
             print("Error reading file: %s" % file)
             return None
 
-    if type(file) == str:
+    if type(file) is str:
         image = rd(file, bad_pixels=bad_pixels, good_pixels=good_pixels)
         return image
-    elif type(file) == str:
+    elif type(file) is str:
         image = []
         for f in file:
             tmp = rd(file, bad_pixels=bad_pixels, good_pixels=good_pixels)
@@ -127,7 +127,7 @@ def correct_image(image, pixel_map=None):
         try:
             pixel_map = eval(pixel_map)
             (bad_pixels, good_pixels) = pixel_map
-        except:
+        except Exception:
             (bad_pixels, good_pixels) = ([], [])
         return pixel_mask(image, bad_pixels, good_pixels)
 
@@ -169,20 +169,20 @@ def pixel_mask(image, bad_pixels=[], good_pixels=[]):
     ------
     *  should we be concerned about types and rounding errors?
     """
-    if bad_pixels == None:
+    if bad_pixels is None:
         return
-    if good_pixels == None:
+    if good_pixels is None:
         good_pixels = []
     if len(good_pixels) == 0:
         do_ave = True
     else:
         do_ave = False
     ny = len(image)
-    nx = num.max(image[0])
+    nx = np.max(image[0])
     for j in range(len(bad_pixels)):
         x = bad_pixels[j][0]
         y = bad_pixels[j][1]
-        if do_ave == True:
+        if do_ave:
             avg = 0.0
             na = 0.0
             if (x + 1) < nx:
@@ -233,7 +233,7 @@ def read_pixel_map(fname):
             pp = p.split(",")
             good_pixels.append(map(int, pp))
         return bad_pixels, good_pixels
-    except:
+    except Exception:
         print("Error reading file: %s" % fname)
         return []
 
@@ -262,7 +262,7 @@ def clip_image(image, roi=[], rotangle=0.0, cp=False):
     if rotangle != 0:
         image = ndimage.rotate(image, rotangle)
 
-    if cp == True:
+    if cp:
         return copy.copy(image[r1:r2, c1:c2])
     else:
         return image[r1:r2, c1:c2]
@@ -310,7 +310,7 @@ def calc_roi(dx=100, dy=100, shape=(195, 487), cen=None):
     >> r = calc_roi(dx=20,dy=50,shape=a.shape)
 
     """
-    if cen == None:
+    if cen is None:
         cen = (int(shape[0] / 2), int(shape[1] / 2))
     c1 = int(cen[1] - int(dx / 2))
     c2 = int(cen[1] + int(dx / 2))
@@ -350,33 +350,33 @@ def image_plot(img, fig=None, figtitle="", cmap=None, verbose=False, im_max=None
         print("Max value = ", img.max())
         print("Min value = ", img.min())
         print("-----")
-    if fig != None:
+    if fig is not None:
         pyplot.figure(fig)
         pyplot.clf()
 
     if rotangle != 0:
         img = ndimage.rotate(img, rotangle)
-    if cmap != None:
-        if type(cmap) == str:
+    if cmap is not None:
+        if type(cmap) is str:
             # if cmap in pyplot.cm.cmapnames:
             try:
                 cmap = getattr(pyplot.cm, cmap)
-            except:
+            except Exception:
                 cmap = None
-    if im_max != None:
+    if im_max is not None:
         if im_max < 1:
             im_max = None
     #
-    if roi != None:
+    if roi is not None:
         [c1, r1, c2, r2] = _sort_roi(roi)
-        bild = num.zeros(img.shape)
+        bild = np.zeros(img.shape)
         bild[r1 - 2 : r1, c1:c2] = img.max()
         bild[r2 : r2 + 2, c1:c2] = img.max()
         bild[r1:r2, c1 - 2 : c1] = img.max()
         bild[r1:r2, c2 : c2 + 2] = img.max()
         img = img + bild
-        if im_max == None:
-            im_max = num.max(img[r1:r2, c1:c2])
+        if im_max is None:
+            im_max = np.max(img[r1:r2, c1:c2])
     #
     pyplot.imshow(img, cmap=cmap, vmax=im_max)
     pyplot.colorbar(orientation="horizontal")
@@ -394,7 +394,7 @@ def sum_plot(image, bgrflag=0, cnbgr=5, cwidth=0, cpow=2.0, ctan=False, rnbgr=5,
     to bgrflag???
     """
     #
-    if fig != None:
+    if fig is not None:
         pyplot.figure(fig)
         pyplot.clf()
     else:
@@ -427,7 +427,7 @@ def line_sum(image, sumflag="c", nbgr=0, width=0, pow=2.0, tangent=False, compre
     elif sumflag == "r":
         data = image.sum(axis=1)
     npts = len(data)
-    data_idx = num.arange(npts, dtype=float)
+    data_idx = np.arange(npts, dtype=float)
     # data_err  = data**(0.5)
 
     ### compute background
@@ -457,19 +457,19 @@ def line_sum_integral(image, sumflag="c", nbgr=0, width=0, pow=2.0, tangent=Fals
     ### integrate
     Itot = data.sum()
     Ibgr = bgr.sum()
-    # Itot = num.trapz(data)
-    # Ibgr = num.trapz(bgr)
-    I = Itot - Ibgr
+    # Itot = np.trapz(data)
+    # Ibgr = np.trapz(bgr)
+    Iitg = Itot - Ibgr
 
     ### compute errors
     # Ierr = (data.sum() + bgr.sum())**(0.5)
     Ierr = Itot + Ibgr
     if Ierr > 0.0:
-        Ierr = num.sqrt(Ierr)
+        Ierr = np.sqrt(Ierr)
     else:
         Ierr = 0.0
 
-    return (I, Ierr, Ibgr)
+    return (Iitg, Ierr, Ibgr)
 
 
 ##############################################################################
@@ -508,11 +508,11 @@ def image_bgr(image, lineflag="c", nbgr=3, width=100, pow=2.0, tangent=False, nl
 
     * plot is a flag to indicate if a 'plot' should be made
     """
-    bgr_arr = num.zeros(image.shape)
+    bgr_arr = np.zeros(image.shape)
 
     # note this works poorly if the filter removes
     # too much intensity.  Use with caution!
-    if filter == True:
+    if filter:
         # image = ndimage.laplace(image)
         # print 'spline filter'
         image = ndimage.interpolation.spline_filter(image, order=3)
@@ -522,7 +522,7 @@ def image_bgr(image, lineflag="c", nbgr=3, width=100, pow=2.0, tangent=False, nl
         if nline > 1:
             ll = int(nline / 2.0)
             n = image.shape[0]
-            line = num.zeros(len(image[0]))
+            line = np.zeros(len(image[0]))
             for j in range(n):
                 idx = [k for k in range(j - ll, j + ll + 1) if k >= 0 and k < n]
                 line = line * 0.0
@@ -539,7 +539,7 @@ def image_bgr(image, lineflag="c", nbgr=3, width=100, pow=2.0, tangent=False, nl
         if nline > 1:
             ll = int(nline / 2.0)
             n = image.shape[1]
-            line = num.zeros(len(image[:, 0]))
+            line = np.zeros(len(image[:, 0]))
             for j in range(n):
                 idx = [k for k in range(j - ll, j + ll + 1) if k >= 0 and k < n]
                 line = line * 0.0
@@ -552,7 +552,6 @@ def image_bgr(image, lineflag="c", nbgr=3, width=100, pow=2.0, tangent=False, nl
                 bgr_arr[:, j] = background(image[:, j], nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
     # show
     if plot:
-
         pyplot.figure(3)
         pyplot.clf()
         pyplot.subplot(3, 1, 1)
@@ -561,12 +560,12 @@ def image_bgr(image, lineflag="c", nbgr=3, width=100, pow=2.0, tangent=False, nl
         pyplot.colorbar()
 
         pyplot.subplot(3, 1, 2)
-        pyplot.imshow(bgr)
+        pyplot.imshow(bgr_arr)
         pyplot.title("background")
         pyplot.colorbar()
 
         pyplot.subplot(3, 1, 3)
-        pyplot.imshow(image - bgr)
+        pyplot.imshow(image - bgr_arr)
         pyplot.title("image - background")
         pyplot.colorbar()
 
@@ -602,7 +601,7 @@ class ImageAna:
         clpimg=None,
         bgrimg=None,
         integrated=False,
-        I=0.0,
+        Iitg=0.0,
         Ibgr=0.0,
         Ierr=0.0,
         I_c=0.0,
@@ -687,7 +686,7 @@ class ImageAna:
         #
         self.title = figtitle
         #
-        self.I = I
+        self.I = Iitg
         self.Ibgr = Ibgr
         self.Ierr = Ierr
         #
@@ -738,8 +737,8 @@ class ImageAna:
         self.clpimg = clip_image(self.image, self.roi, rotangle=self.rotangle)
 
         # integrate the roi
-        # self.I = num.sum(num.trapz(self.clpimg))
-        self.I = num.sum(self.clpimg)
+        # self.I = np.sum(np.trapz(self.clpimg))
+        self.I = np.sum(self.clpimg)
 
         # calculate and subtract image background
         self.bgrimg = None
@@ -800,8 +799,8 @@ class ImageAna:
                 self.bgrimg = (bgr_r + bgr_c) / 2.0
 
             # correct for 2D bgr
-            # self.Ibgr = num.sum(num.trapz(self.bgrimg))
-            self.Ibgr = num.sum(self.bgrimg)
+            # self.Ibgr = np.sum(np.trapz(self.bgrimg))
+            self.Ibgr = np.sum(self.bgrimg)
             self.I = self.I - self.Ibgr
 
         # error
@@ -809,9 +808,9 @@ class ImageAna:
 
         # integrate col sum
         if self.bgrimg is not None:
-            (I, Ierr, Ibgr) = line_sum_integral(self.clpimg - self.bgrimg, sumflag="c", nbgr=0)
+            (Iitg, Ierr, Ibgr) = line_sum_integral(self.clpimg - self.bgrimg, sumflag="c", nbgr=0)
         else:
-            (I, Ierr, Ibgr) = line_sum_integral(
+            (Iitg, Ierr, Ibgr) = line_sum_integral(
                 self.clpimg,
                 sumflag="c",
                 nbgr=self.rbgr["nbgr"],
@@ -820,15 +819,15 @@ class ImageAna:
                 tangent=self.rbgr["tan"],
                 compress=self.compress,
             )
-        self.I_c = I
+        self.I_c = Iitg
         self.Ierr_c = Ierr
         self.Ibgr_c = Ibgr
 
         # integrate row sum
         if self.bgrimg is not None:
-            (I, Ierr, Ibgr) = line_sum_integral(self.clpimg - self.bgrimg, sumflag="r", nbgr=0)
+            (Iitg, Ierr, Ibgr) = line_sum_integral(self.clpimg - self.bgrimg, sumflag="r", nbgr=0)
         else:
-            (I, Ierr, Ibgr) = line_sum_integral(
+            (Iitg, Ierr, Ibgr) = line_sum_integral(
                 self.clpimg,
                 sumflag="r",
                 nbgr=self.cbgr["nbgr"],
@@ -837,7 +836,7 @@ class ImageAna:
                 tangent=self.cbgr["tan"],
                 compress=self.compress,
             )
-        self.I_r = I
+        self.I_r = Iitg
         self.Ierr_r = Ierr
         self.Ibgr_r = Ibgr
         #
@@ -848,11 +847,11 @@ class ImageAna:
         """
         make fancy 4-panel plot. fig is figure number to plot to
         """
-        if self.integrated == False:
+        if not self.integrated:
             self.integrate()
 
         colormap = pyplot.cm.hot
-        if fig != None:
+        if fig is not None:
             pyplot.figure(fig)
             pyplot.clf()
             pyplot.figure(fig, figsize=[12, 8])
@@ -871,7 +870,7 @@ class ImageAna:
         else:
             bild = copy.copy(self.image)
         # whats the max inside the roi
-        im_max = num.max(bild[r1:r2, c1:c2])
+        im_max = np.max(bild[r1:r2, c1:c2])
         #
         bild[r1 - 1 : r1, c1:c2] = bild.max()
         bild[r2 : r2 + 1, c1:c2] = bild.max()
@@ -956,7 +955,7 @@ class ImageAna:
         Is this method redundant?  We should combine this and plot so
         we only have one display method
         """
-        if self.integrated == False:
+        if not self.integrated:
             self.integrate()
 
         fig.clear()
@@ -981,7 +980,7 @@ class ImageAna:
             bild = copy.copy(self.image)
         # whats the max inside the roi
         if self.im_max == -1:
-            im_max = num.max(bild[r1:r2, c1:c2])
+            im_max = np.max(bild[r1:r2, c1:c2])
         else:
             im_max = self.im_max
         #
@@ -998,8 +997,6 @@ class ImageAna:
         # plot raw sum
         (data, data_idx, bgr) = line_sum(self.clpimg, sumflag="c", nbgr=0)
         rawmax = data.max()
-        (sp1Data1, sp1Data_Idx1, sp1Bgr1) = (data, data_idx, bgr)
-        sp1Rawmax = rawmax
         self.subplot1.plot(data_idx, data, "k", label="raw sum")
         # get bgr and data-bgr
         if self.bgrimg is not None:
@@ -1012,7 +1009,6 @@ class ImageAna:
                 self.clpimg, sumflag="c", nbgr=self.rbgr["nbgr"], width=self.rbgr["width"], pow=self.rbgr["pow"], tangent=self.rbgr["tan"]
             )
             data = data - bgr
-        (sp1Data2, sp1Data_Idx2, sp1Bgr2) = (data, data_idx, bgr)
         # plot bgr and bgr subtracted data
         self.subplot1.plot(data_idx, bgr, "r", label="bgr")
         self.subplot1.plot(data_idx, data, "b", label="data-bgr")
@@ -1042,8 +1038,6 @@ class ImageAna:
         # plot raw sum
         (data, data_idx, bgr) = line_sum(self.clpimg, sumflag="r", nbgr=0)
         rawmax = data.max()
-        (sp4Data1, sp4Data_Idx1, sp4Bgr1) = (data, data_idx, bgr)
-        sp4Rawmax = rawmax
         self.subplot4.plot(data, data_idx, "k", label="raw sum")
         # get bgr and data-bgr
         if self.bgrimg is not None:
@@ -1056,7 +1050,6 @@ class ImageAna:
                 self.clpimg, sumflag="r", nbgr=self.cbgr["nbgr"], width=self.cbgr["width"], pow=self.cbgr["pow"], tangent=self.cbgr["tan"]
             )
             data = data - bgr
-        (sp4Data2, sp4Data_Idx2, sp4Bgr2) = (data, data_idx, bgr)
         # plot bgr and bgr subtracted data
         self.subplot4.plot(bgr, data_idx, "r", label="bgr")
         self.subplot4.plot(data, data_idx, "b", label="data-bgr")
@@ -1064,8 +1057,8 @@ class ImageAna:
         # self.subplot4.xticks(rotation=-45)
         self.subplot4.legend(loc=0)
 
-        im_max = num.max(bild[r1:r2, c1:c2])
-        
+        im_max = np.max(bild[r1:r2, c1:c2])
+
         fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.4, hspace=0.4)
 
         return (im_max, colormap, self.subplot2)
@@ -1096,9 +1089,9 @@ class ImageScan:
           archive['setname'] = set name for image archive
           archive['descr'] = description of data for image archive
         """
-        if type(image) != list:
+        if type(image) is not list:
             image = [image]
-        if archive != None:
+        if archive is not None:
             file = archive.get("file", "images.h5")
             path = archive.get("path")
             setname = archive.get("setname", "S1")
@@ -1116,9 +1109,9 @@ class ImageScan:
         #
         npts = len(self.image)
         # update roi
-        if rois != None:
+        if rois is not None:
             if len(rois) == 4:
-                if type(rois[0]) == list and npts == 4:
+                if type(rois[0]) is list and npts == 4:
                     for j in range(npts):
                         self.rois[j] = rois[j]
                 else:
@@ -1128,7 +1121,7 @@ class ImageScan:
                 for j in range(npts):
                     self.rois[j] = rois[j]
         # update rot angles
-        if rotangle != None:
+        if rotangle is not None:
             if len(rotangle) == 1:
                 for j in range(npts):
                     self.rotangle[j] = rotangle
@@ -1136,8 +1129,8 @@ class ImageScan:
                 for j in range(npts):
                     self.rotangle[j] = rotangle[j]
         # update bgr
-        if bgr_params != None:
-            if type(bgr_params) == dict:
+        if bgr_params is not None:
+            if type(bgr_params) is dict:
                 for j in range(npts):
                     self.bgrpar[j] = copy.copy(bgr_params)
             elif len(bgr_params) == npts:
@@ -1160,11 +1153,11 @@ class ImageScan:
             self.rotangle = []
             self.bgrpar = []
             self.peaks = {}
-        if self.rois == None:
+        if self.rois is None:
             self.rois = []
-        if self.rotangle == None:
+        if self.rotangle is None:
             self.rotangle = []
-        if self.bgrpar == None:
+        if self.bgrpar is None:
             self.bgrpar = []
         # init rois
         if len(self.rois) != npts:
@@ -1188,17 +1181,17 @@ class ImageScan:
                 self.bgrpar.append(copy.copy(IMG_BGR_PARAMS))
         # should we init all these or set based on an integrate flag?
         self.peaks = {}
-        self.peaks["I"] = num.zeros(npts, dtype=float)
-        self.peaks["Ierr"] = num.zeros(npts, dtype=float)
-        self.peaks["Ibgr"] = num.zeros(npts, dtype=float)
+        self.peaks["I"] = np.zeros(npts, dtype=float)
+        self.peaks["Ierr"] = np.zeros(npts, dtype=float)
+        self.peaks["Ibgr"] = np.zeros(npts, dtype=float)
         #
-        self.peaks["I_c"] = num.zeros(npts, dtype=float)
-        self.peaks["Ierr_c"] = num.zeros(npts, dtype=float)
-        self.peaks["Ibgr_c"] = num.zeros(npts, dtype=float)
+        self.peaks["I_c"] = np.zeros(npts, dtype=float)
+        self.peaks["Ierr_c"] = np.zeros(npts, dtype=float)
+        self.peaks["Ibgr_c"] = np.zeros(npts, dtype=float)
         #
-        self.peaks["I_r"] = num.zeros(npts, dtype=float)
-        self.peaks["Ierr_r"] = num.zeros(npts, dtype=float)
-        self.peaks["Ibgr_r"] = num.zeros(npts, dtype=float)
+        self.peaks["I_r"] = np.zeros(npts, dtype=float)
+        self.peaks["Ierr_r"] = np.zeros(npts, dtype=float)
+        self.peaks["Ibgr_r"] = np.zeros(npts, dtype=float)
         #
         self._is_integrated = False
 
@@ -1234,15 +1227,15 @@ class ImageScan:
           be updated here or pass as None to use existing values.
         """
         # make sure arrays exist:
-        if self._is_init() == False:
+        if not self._is_init():
             self._init_image()
         # idx of images to integrate
         if len(idx) == 0:
-            idx = num.arange(len(self.image))
+            idx = np.arange(len(self.image))
         # update roi
-        if roi != None:
+        if roi is not None:
             if len(roi) == 4:
-                if type(roi[0]) == list:
+                if type(roi[0]) is list:
                     for j in idx:
                         self.rois[j] = roi[j]
                 else:
@@ -1252,16 +1245,16 @@ class ImageScan:
                 for j in idx:
                     self.rois[j] = roi[j]
         # update rot angles
-        if rotangle != None:
-            if type(rotangle) == float:
+        if rotangle is not None:
+            if type(rotangle) is float:
                 for j in idx:
                     self.rotangle[j] = rotangle
             elif len(rotangle) == len(idx):
                 for j in idx:
                     self.rotangle[j] = rotangle[j]
         # update bgr
-        if bgr_params != None:
-            if type(bgr_params) == dict:
+        if bgr_params is not None:
+            if type(bgr_params) is dict:
                 for j in idx:
                     self.bgrpar[j] = copy.copy(bgr_params)
             elif len(bgr_params) == len(idx):
@@ -1321,8 +1314,8 @@ class _ImageList:
     Keep images in a hdf file using pytables
 
     Note an alternative is to use:
-       num.savez(fname,image)
-       im = num.read(fname)
+       np.savez(fname,image)
+       im = np.read(fname)
     """
 
     ################################################################
@@ -1331,11 +1324,11 @@ class _ImageList:
         self.file = file
         self.setname = setname
         #
-        if images != None:
+        if images is not None:
             self.nimages = len(images)
             try:
                 self._write_image_tables(images, setname, descr)
-            except:
+            except Exception:
                 self._cleanup()
                 print("Unable to write images:")
                 print("   Setname %s, hdf file %s" % (file, setname))
@@ -1346,7 +1339,7 @@ class _ImageList:
             import tables
 
             tables.file.close_open_files()
-        except:
+        except Exception:
             pass
 
     ################################################################
@@ -1372,7 +1365,7 @@ class _ImageList:
 
     ################################################################
     def _make_fname(self):
-        if self.path != None:
+        if self.path is not None:
             fname = os.path.join(self.path, self.file)
             fname = os.path.abspath(fname)
         else:
@@ -1386,7 +1379,7 @@ class _ImageList:
         """
         import tables
 
-        images = num.array(images)
+        images = np.array(images)
         fname = self._make_fname()
         if os.path.exists(fname):
             h = tables.openFile(fname, mode="a")
@@ -1394,7 +1387,6 @@ class _ImageList:
                 h.createGroup(h.root, "image_data", "Image Data")
         else:
             h = tables.openFile(fname, mode="w", title="Scan Data Archive")
-            root = h.createGroup(h.root, "image_data", "Image Data")
         # if setname == None:
         #   look under '/images for 'SXXX'
         # find the highest one and
@@ -1426,21 +1418,7 @@ class _ImageList:
             im = n.read()
             h.close()
             return im
-        except:
+        except Exception:
             self._cleanup()
             print("Error reading image tables: %s" % grp)
             return None
-
-
-################################################################################
-################################################################################
-if __name__ == "__main__":
-    import sys
-
-    try:
-        fname = sys.argv[1]
-    except:
-        print("read_pilatus  tiff file")
-        sys.exit()
-    a = read(fname)
-    image_show(a)

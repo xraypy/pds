@@ -3,7 +3,7 @@ Filter Tools
 """
 
 import h5py
-import numpy
+import numpy as np
 
 
 # Given two dates, checks that the first comes before the second
@@ -106,7 +106,7 @@ def cases(in_here, of_this, such_that, this_level="scan"):
             elif isinstance(this_value, str):
                 if eval('"' + this_value + '" ' + such_that):
                     return_this.append(scan)
-            elif isinstance(this_value, (int, float, bool, numpy.bool_)):
+            elif isinstance(this_value, (int, float, bool, np.bool_)):
                 if eval(str(this_value) + " " + such_that):
                     return_this.append(scan)
             else:
@@ -125,7 +125,7 @@ def cases(in_here, of_this, such_that, this_level="scan"):
                     if eval('"' + this_value + '" ' + such_that):
                         for i in range(len(in_here[scan]["point_data"])):
                             return_this.append((scan, i))
-                elif isinstance(this_value, (int, float, bool, numpy.bool_)):
+                elif isinstance(this_value, (int, float, bool, np.bool_)):
                     if eval(str(this_value) + " " + such_that):
                         for i in range(len(in_here[scan]["point_data"])):
                             return_this.append((scan, i))
@@ -140,7 +140,7 @@ def cases(in_here, of_this, such_that, this_level="scan"):
                     if isinstance(this_value, str):
                         if eval('"' + this_value + '" ' + such_that):
                             return_this.append((scan, i))
-                    elif isinstance(this_value, (int, float, bool, numpy.bool_)):
+                    elif isinstance(this_value, (int, float, bool, np.bool_)):
                         if eval(str(this_value) + " " + such_that):
                             return_this.append((scan, i))
                     else:
@@ -154,7 +154,7 @@ def cases(in_here, of_this, such_that, this_level="scan"):
                     if eval('"' + this_value + '" ' + such_that):
                         for i in range(len(in_here[scan]["point_data"])):
                             return_this.append((scan, i))
-                elif isinstance(this_value, (int, float, bool, numpy.bool_)):
+                elif isinstance(this_value, (int, float, bool, np.bool_)):
                     if eval(str(this_value) + " " + such_that):
                         for i in range(len(in_here[scan]["point_data"])):
                             return_this.append((scan, i))

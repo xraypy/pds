@@ -20,19 +20,21 @@ that return lists of point numbers
 """
 
 ##############################################################################
-import numpy
 import h5py
+import numpy
 
-import file_locker
-import image_data
+from pds.utils.file_locker import FileLock
+from pds.utils.image_data import correct_image, read_pixel_map
 
 ##############################################################################
+
 
 def bytes_to_str(value):
     """Convert bytes to string for Python 3 compatibility with h5py"""
     if isinstance(value, bytes):
-        return value.decode('utf-8')
+        return value.decode("utf-8")
     return value
+
 
 ##############################################################################
 
@@ -203,7 +205,7 @@ class HdfDataFile:
         self.file = None
         self.all_items = None
 
-        self.lock_file = file_locker.FileLock(self.fname)
+        self.lock_file = FileLock(self.fname)
         print("Attempting to lock file...")
         self.lock_file.acquire()
         print("Lock acquired")
@@ -292,14 +294,14 @@ class HdfDataFile:
             self.lock_file.release()
             print("Lock released")
 
-        except:
+        except Exception:
             print("Error: file may not have closed cleanly,")
             print("though it may have already been closed.")
         # Try releasing the lock again, in the event
         # that closing the file threw an error
         try:
             self.lock_file.release()
-        except:
+        except Exception:
             pass
 
     def delete(self, item):
@@ -338,7 +340,7 @@ class HdfDataFile:
         # if self.point != 0 and self.point_dict != {}:
         #    self.write_point(self.point_dict, self.point)
 
-        if points == None:
+        if points is None:
             points = []
             for item in self.all_items:
                 points.append(item[0])
@@ -367,8 +369,8 @@ class HdfDataFile:
                     all_results[self.point] = self.point_dict[key]
             else:
                 for point in points:
-                    if key == 'L':
-                        key = b'L'
+                    if key == "L":
+                        key = b"L"
                     if key in self.file[point]["position_labels"]:
                         key_loc = list(self.file[point]["position_labels"]).index(key)
                         all_results[point] = self.file[point]["position_values"][key_loc]
@@ -408,7 +410,7 @@ class HdfDataFile:
                 for point in points:
                     try:
                         all_results[point] = self.file[point][det_name][key]
-                    except:
+                    except Exception:
                         pass
             elif key.startswith("corrected_image"):
                 for point in points:
@@ -418,9 +420,9 @@ class HdfDataFile:
                         current_corr = bpm_loc[0].split("/")[1] % self.version
                         point_mask = str(self.file[point][det_name][current_corr][bpm_loc[1]])
                         if not point_mask.startswith("(") and not point_mask.startswith("["):
-                            point_mask = str(image_data.read_pixel_map(point_mask))
-                        all_results[point] = image_data.correct_image(point_image, point_mask)
-                    except:
+                            point_mask = str(read_pixel_map(point_mask))
+                        all_results[point] = correct_image(point_image, point_mask)
+                    except Exception:
                         pass
                 if self.point in points:
                     all_results[self.point] = self.point_dict[det_name][key]
@@ -464,7 +466,6 @@ class HdfDataFile:
         while True:
             try:
                 det_str = "det_%i" % current_det_num
-                current_det = self.file[num][det_str]
                 self.point_dict[det_str] = {}
                 for key in DET_KEYS:
                     key_loc = DET_KEYS[key]
@@ -475,19 +476,19 @@ class HdfDataFile:
                 try:
                     point_image = numpy.array(self.file[num][det_str]["image_data"])
                     self.point_dict[det_str]["image_data"] = point_image
-                    point_mask = self.point_dict[det_str]["bad_pixel_map"].decode('utf-8')
+                    point_mask = self.point_dict[det_str]["bad_pixel_map"].decode("utf-8")
                     # if isinstance(point_mask, bytes):
                     #     point_mask = point_mask.decode('utf-8')
                     # point_mask = eval(point_mask)
                     if not point_mask.startswith("(") and not point_mask.startswith("["):
-                        point_mask = str(image_data.read_pixel_map(point_mask))
+                        point_mask = str(read_pixel_map(point_mask))
                         self.point_dict[det_str]["bad_pixel_map"] = point_mask
-                    corrected_image = image_data.correct_image(point_image, point_mask)
+                    corrected_image = correct_image(point_image, point_mask)
                     self.point_dict[det_str]["corrected_image"] = corrected_image
-                except:
+                except Exception:
                     pass
                 current_det_num += 1
-            except:
+            except Exception:
                 break
 
     '''def set(self, num, key, value):
@@ -510,7 +511,7 @@ class HdfDataFile:
         # if self.point != 0 and self.point_dict != {}:
         #    self.write_point(self.point_dict, self.point)
 
-        if points == None:
+        if points is None:
             points = []
             for item in self.all_items:
                 points.append(item[0])
@@ -596,33 +597,31 @@ class HdfDataFile:
 
     def write_point(self, data, num=None):
         """
-        write data to file 
-        
-        data is a dictionary 
+        write data to file
+
+        data is a dictionary
         """
-        #self._check_file()
+        # self._check_file()
         #
         if num is None:
             num = self.point
         for key in data:
             if isinstance(key, str):
-                key = key.encode('utf-8')
-            if key.startswith(b'hist'):
-                key = key + b'.' + str(self.version).encode('utf-8')
-                self.file[num].attrs[key] = data['hist']
-            elif key.startswith(b'det_'):
+                key = key.encode("utf-8")
+            if key.startswith(b"hist"):
+                key = key + b"." + str(self.version).encode("utf-8")
+                self.file[num].attrs[key] = data["hist"]
+            elif key.startswith(b"det_"):
                 if key in data:
                     det_dict = data[key]
                     for det_key in det_dict:
                         try:
                             key_loc = DET_KEYS[det_key]
-                            key_loc_path = key_loc[0].split('/')[1] % self.version
+                            key_loc_path = key_loc[0].split("/")[1] % self.version
                             try:
-                                self.file[num][key][key_loc_path][key_loc[1]] = \
-                                                                  data[key][det_key]
+                                self.file[num][key][key_loc_path][key_loc[1]] = data[key][det_key]
                             except IOError:
-                                self.file[num][key][key_loc_path][key_loc[1]] = \
-                                                     numpy.float(data[key][det_key])
+                                self.file[num][key][key_loc_path][key_loc[1]] = numpy.float(data[key][det_key])
                         except KeyError:
                             pass
             else:

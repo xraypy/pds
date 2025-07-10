@@ -8,10 +8,10 @@ Author: Jaswitha (jaswithareddy@uchicago.edu)
 Last modified: 2/5/2025
 """
 
-import h5py
-import numpy
 import re
-import sys
+
+import h5py
+import numpy as np
 
 INTEGRATION_PARAMETERS = {
     "bgrflag": 1,
@@ -73,7 +73,7 @@ def read_pixel_map(fname):
             pp = p.split(",")
             good_pixels.append(map(int, pp))
         return bad_pixels, good_pixels
-    except:
+    except Exception:
         print("Error reading file: %s" % fname)
         return []
 
@@ -322,7 +322,7 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
                     # Image, if it exists
                     try:
                         det_group.create_dataset("image_data", data=read_head["image_data"][i], compression="szip")
-                    except:
+                    except Exception:
                         pass
                     # Integration parameters
                     int_labels = [
@@ -385,7 +385,7 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
                     res_labels = ["alpha", "beta", "ctot", "F", "F_changed", "Ferr", "I", "I_c", "I_r", "Ibgr", "Ibgr_c", "Ibgr_r", "Ierr", "Ierr_c", "Ierr_r"]
                     res_values = [0, 0, 0, 0, True, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                     det_group.create_dataset("result_labels", data=res_labels)
-                    det_group.create_dataset("result_values.1", data=res_values, dtype=numpy.float64)
+                    det_group.create_dataset("result_values.1", data=res_values, dtype=np.float64)
 
                     if gui:
                         project_progress += 1

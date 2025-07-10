@@ -1,46 +1,22 @@
-"""
-Specfile Integrator
-Author: Craig Biwer (cbiwer@uchicago.edu)
-J. Stubbs added transmission, filter mask, corrdet April 2015
-
-Python 2.x to Python 3.12.3
-Author: Jaswitha (jaswithareddy@uchicago.edu)
-Last modified: 2/5/2025
-"""
-
-import os
 import math
-import sys
-import time
-import copy
+import os
 
-import wx
 import matplotlib
+import wx
 
 matplotlib.use("WXAgg")
-from matplotlib import pyplot
+import wx.lib.inspection
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
-from matplotlib.widgets import Cursor
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
-from wx.lib.splitter import MultiSplitterWindow
 
-# from wx.tools.Editra.src.eclib import pstatbar
-
-import file_locker
-import image_data
-import ctr_data
-import hdf_data
-import gonio_psic
-import wxHDFToTree
-
-import wx.lib.inspection
+from pds.gui.hdf_to_tree import HDFToTree, myTreeCtrl
+from pds.utils import CtrCorrectionPsic, FileLockException, HdfDataFile, ImageAna, image_point_F, psic_from_spec
 
 
 # This class is the interface for integrating data
 # class Integrator(wx.Frame, wx.Notebook, wxUtil):
 class Integrator(wx.Frame, wx.Notebook):
-
     def __init__(self, *args, **kwargs):
         self.newFile = True
         self.firstOpen = True
@@ -88,8 +64,9 @@ class Integrator(wx.Frame, wx.Notebook):
         self.integrateCancel.Bind(wx.EVT_BUTTON, self.integrateStop)
         self.integrateCancel.Hide()
 
-        # Window layout
-        self.splitWindow = wx.lib.splitter.MultiSplitterWindow(self)
+        # Window layout - Use nested SplitterWindows instead of MultiSplitterWindow
+        self.splitWindow = wx.SplitterWindow(self, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
+        self.rightSplitter = wx.SplitterWindow(self.splitWindow, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
 
         self.treeBook = wx.Notebook(self.splitWindow, style=wx.SUNKEN_BORDER)
         self.treePanel = wx.Panel(self.treeBook)
@@ -97,15 +74,19 @@ class Integrator(wx.Frame, wx.Notebook):
         self.treeBook.AddPage(self.treePanel, "All")
         self.treeBook.AddPage(self.treeInfo, "Info")
 
-        self.dataWindow = wx.SplitterWindow(self.splitWindow)
+        self.dataWindow = wx.SplitterWindow(self.rightSplitter)
         self.graphPanel = wx.Panel(self.dataWindow, style=wx.SUNKEN_BORDER)
         self.rodPanel = wx.Panel(self.dataWindow, style=wx.SUNKEN_BORDER)
-        self.infoPanel = wx.Panel(self.splitWindow, style=wx.SUNKEN_BORDER)
-        self.splitWindow.SetOrientation(wx.HORIZONTAL)
-        self.splitWindow.AppendWindow(self.treeBook, 180)
-        self.splitWindow.AppendWindow(self.dataWindow, 500)
-        self.splitWindow.AppendWindow(self.infoPanel)
+        self.infoPanel = wx.Panel(self.rightSplitter, style=wx.SUNKEN_BORDER)
+
+        # Split the main window: left (tree) and right (data + info)
+        self.splitWindow.SplitVertically(self.treeBook, self.rightSplitter, 180)
         self.splitWindow.SetMinimumPaneSize(32)
+
+        # Split the right side: middle (data) and right (info)
+        self.rightSplitter.SplitVertically(self.dataWindow, self.infoPanel, 500)
+        self.rightSplitter.SetMinimumPaneSize(32)
+
         self.dataWindow.SetMinimumPaneSize(32)
         self.dataWindow.SplitHorizontally(self.graphPanel, self.rodPanel, 391)
 
@@ -116,7 +97,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.paramBook.AddPage(self.morePage, "More")
 
         # Initialize the data tree structure
-        self.hdfTree = wxHDFToTree.myTreeCtrl(self.treePanel)
+        self.hdfTree = myTreeCtrl(self.treePanel)
 
         # Make the custom selector window
         self.customSelection = customSelector(self)
@@ -798,7 +779,6 @@ class Integrator(wx.Frame, wx.Notebook):
         self.statusSizer.Add(self.statusBar, proportion=31, flag=wx.EXPAND)
         self.SetSizer(self.statusSizer)
         self.CenterOnScreen()
-        time3 = time.time()
         self.Show()
         # wx.lib.inspection.InspectionTool().Show()
         # self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -820,7 +800,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.hdfObject.close()
                 self.lockFile.release()
                 print("Lock released")
-            except:
+            except Exception:
                 pass
 
             # Since hdfObject is now closed, clear all variables
@@ -830,7 +810,7 @@ class Integrator(wx.Frame, wx.Notebook):
             self.hdfTree.DeleteAllItems()
             try:
                 self.customSelection.customTree.DeleteAllItems()
-            except:
+            except Exception:
                 pass
             del self.hdfRoot
             del self.hdfObject
@@ -849,20 +829,20 @@ class Integrator(wx.Frame, wx.Notebook):
     # it into a tree.
     def loadFile(self, fileName):
         try:
-            self.hdfObject = hdf_data.HdfDataFile(fileName)
-        except file_locker.FileLockException as e:
+            self.hdfObject = HdfDataFile(fileName)
+        except FileLockException as e:
             print("Error: " + str(e))
             return
-        except:
+        except Exception:
             return
         # self.set_data('hdfObject', self.hdfObject)
-        self.hdfTreeObject = wxHDFToTree.hdfToTree()
+        self.hdfTreeObject = HDFToTree()
         self.hdfTreeObject.populateTree(self.hdfTree, self.hdfObject)
         self.hdfRoot = self.hdfTree.GetRootItem()
         self.hdfTree.Expand(self.hdfRoot)
         self.hdfTree.SelectItem(self.hdfRoot)
 
-        self.customTreeObject = wxHDFToTree.hdfToTree()
+        self.customTreeObject = HDFToTree()
         self.customTreeObject.populateTree(self.customSelection.customTree, self.hdfObject)
         self.customSelection.customRoot = self.customSelection.customTree.GetRootItem()
 
@@ -880,10 +860,12 @@ class Integrator(wx.Frame, wx.Notebook):
             if not self.FindFocus() == self.hdfTree:
                 return
             thisItem = self.hdfTree.GetSelection()
-            thisParent = self.hdfTree.GetItemParent(thisItem)
             itemText = self.hdfTree.GetItemText(thisItem)  # .split()[1][:-1]
             confirmation = wx.MessageDialog(
-                self, message="Are you sure you " + "want to delete " + itemText + "?", caption="Warning!", style=wx.YES_NO | wx.NO_DEFAULT  #'scan ' + \
+                self,
+                message="Are you sure you " + "want to delete " + itemText + "?",
+                caption="Warning!",
+                style=wx.YES_NO | wx.NO_DEFAULT,  #'scan ' + \
             )
             if confirmation.ShowModal() == wx.ID_NO:
                 confirmation.Destroy()
@@ -910,10 +892,12 @@ class Integrator(wx.Frame, wx.Notebook):
         else:
             self.statusBar.SetStatusText("", 1)
 
+    def closestL(a, l_values):
+        return min(l_values, key=lambda x: abs(x - a))
+
     # Selects the point nearest the location of the click
     def clickToSelect(self, event):
         if event.inaxes:
-            closestL = lambda a, l: min(l, key=lambda x: abs(x - a))
             ofMe = self.hdfTree.GetSelection()
             myParent = self.hdfTree.GetItemParent(ofMe)
             childrenList = []
@@ -934,7 +918,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 allLs = self.hdfObject.get_all(b"L", childrenList)
 
             allLs = dict([L, child] for child, L in allLs.items())
-            thisPoint = closestL(event.xdata, allLs.keys())
+            thisPoint = self.closestL(event.xdata, allLs.keys())
 
             # item, cookie = self.hdfTree.GetFirstChild(myParent)
             # while item and \
@@ -942,13 +926,12 @@ class Integrator(wx.Frame, wx.Notebook):
             #    item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             try:
                 self.hdfTree.SelectItem(dataLookup[allLs[thisPoint]])
-            except:
+            except Exception:
                 print("Error: can't locate point.")
             self.hdfTree.SetFocus()
 
     # Copy parameters from one set of points to another by closest L value
     def copyFromTo(self, event):
-        closestL = lambda a, l: min(l, key=lambda x: abs(x - a))
         self.customSelection.customTree.Expand(self.customSelection.customRoot)
         self.customSelection.CenterOnParent()
         self.customSelection.SetTitle("Copy from...")
@@ -984,7 +967,7 @@ class Integrator(wx.Frame, wx.Notebook):
         for itemData in toThese:
             toL = self.hdfObject.get_all("L", [itemData])
             toL = toL[itemData]
-            copyFrom = closestL(toL, possibleLs)
+            copyFrom = self.closestL(toL, possibleLs)
             copyData = fromDict[copyFrom]
             self.hdfObject.set_all(("det_0", "image_changed"), "True", [itemData])
             self.hdfObject.set_all(("det_0", "F_changed"), True, [itemData])
@@ -1075,7 +1058,7 @@ class Integrator(wx.Frame, wx.Notebook):
         # the appropriate data structures to pass to gonio_psic
         psicG = self.buildPsicG(itemData)
 
-        psic = gonio_psic.psic_from_spec(psicG, preparsed=True)
+        psic = psic_from_spec(psicG, preparsed=True)
         angles = self.hdfObject[itemData]
         # test = angles.keys()
         # test.sort()
@@ -1102,7 +1085,7 @@ class Integrator(wx.Frame, wx.Notebook):
             "angles": eval(self.hdfObject[itemData]["det_0"]["sample_angles"]),
             "polygon": eval(self.hdfObject[itemData]["det_0"]["sample_polygon"]),
         }
-        cor = ctr_data.CtrCorrectionPsic(gonio=psic, beam_slits=beam_slits, det_slits=det_slits, sample=sample)
+        cor = CtrCorrectionPsic(gonio=psic, beam_slits=beam_slits, det_slits=det_slits, sample=sample)
         cor.ctot_stationary(plot=True)
         # pyplot.show()
 
@@ -1114,12 +1097,12 @@ class Integrator(wx.Frame, wx.Notebook):
                 return
             else:
                 self.badPointToggle.SetValue(not self.badPointToggle.GetValue())
-        except:
+        except Exception:
             pass
         try:
             ofMe = self.hdfTree.GetSelection()
             itemData = self.hdfTree.GetItemData(ofMe)
-        except:
+        except Exception:
             print("Error getting tree selection")
             self.badPointToggle.SetValue(False)
             return
@@ -1160,7 +1143,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.hdfObject[itemData]["det_0"]["image_max"] = str(int(newValue))
                 self.updateFourPlot(myParent, itemData)
                 self.imageMaxValue.SetLabel("ROI Max: " + str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
-        except:
+        except Exception:
             self.imageMaxField.SetValue(str(currentValue))
 
     # When a text field loses focus, this function is
@@ -1178,7 +1161,7 @@ class Integrator(wx.Frame, wx.Notebook):
         try:
             ofMe = self.hdfTree.GetSelection()
             itemData = self.hdfTree.GetItemData(ofMe)
-        except:
+        except Exception:
             print("Error getting tree selection")
             self.clearFields()
             return
@@ -1196,11 +1179,7 @@ class Integrator(wx.Frame, wx.Notebook):
             self.roiField: ("roi", list),
             self.rotateField: ("rotangle", float),
         }
-        myText = self.hdfTree.GetItemText(ofMe)
-        myNumber = myText.split()[1]
         myParent = self.hdfTree.GetItemParent(ofMe)
-        parentText = self.hdfTree.GetItemText(myParent)
-        parentNumber = parentText.split()[1][:-1]
         # print possibilities[event.GetEventObject()]
         whatField = event.GetEventObject()
         if whatField == self.histBox:
@@ -1219,7 +1198,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.updateFourPlot(myParent, itemData)
                 self.updateRodPlot(myParent, itemData)
                 self.updateLabels(itemData)
-        except:
+        except Exception:
             whatField.SetValue(self.hdfObject[itemData]["det_0"][updateThis])
 
     # Apply a given parameter or all parameters
@@ -1308,7 +1287,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 if not fOnly:
                     self.hdfObject.set_all(("det_0", "image_changed"), "True", justThese)
                 self.hdfObject.set_all(("det_0", "F_changed"), True, justThese)
-            except:
+            except Exception:
                 whatField.SetValue(str(self.hdfObject[itemData]["det_0"][updateThis]))
         if fOnly:
             self.updateF(itemData)
@@ -1607,7 +1586,7 @@ class Integrator(wx.Frame, wx.Notebook):
             "del": float(self.hdfObject[itemData].get(b"del")),
             "G": psicG,
         }
-        fDict = ctr_data.image_point_F(scan=scan_dict, point=0, corr_params=corr_params, preparsed=True)
+        fDict = image_point_F(scan=scan_dict, point=0, corr_params=corr_params, preparsed=True)
         self.hdfObject[itemData]["det_0"]["F"] = fDict["F"]
         self.hdfObject[itemData]["det_0"]["Ferr"] = fDict["Ferr"]
         self.hdfObject[itemData]["det_0"]["ctot"] = fDict["ctot"]
@@ -1624,7 +1603,7 @@ class Integrator(wx.Frame, wx.Notebook):
             self.hdfObject.read_point(itemData)
         self.hdfObject[itemData]["det_0"]["image_changed"] = "False"
         self.hdfObject[itemData]["det_0"]["F_changed"] = True
-        imageAna = image_data.ImageAna(
+        imageAna = ImageAna(
             self.hdfObject[itemData]["det_0"]["corrected_image"],
             eval(self.hdfObject[itemData]["det_0"]["roi"]),
             eval(self.hdfObject[itemData]["det_0"]["rotangle"]),
@@ -1706,12 +1685,12 @@ class Integrator(wx.Frame, wx.Notebook):
         rodPlot.plot(pendingLList, pendingFList, "0.8", marker=".", linestyle="")
         try:
             rodPlot.errorbar(pendingLList, pendingFList, pendingFerrList, fmt="0.8", linestyle="")
-        except:
+        except Exception:
             pass
         rodPlot.plot(doneLList, doneFList, "b.")
         try:
             rodPlot.errorbar(doneLList, doneFList, doneFerrList, fmt="b", linestyle="")
-        except:
+        except Exception:
             pass
         if self.hdfObject[itemData]["type"].startswith(b"Escan"):
             rodPlot.plot(self.hdfObject[itemData]["Energy"], self.hdfObject[itemData]["det_0"]["F"], "ro")
@@ -1722,7 +1701,7 @@ class Integrator(wx.Frame, wx.Notebook):
         try:
             if not self.hdfObject[itemData]["type"].startswith(b"Escan") and not self.hdfObject[itemData]["type"].startswith(b"ascan"):
                 rodPlot.semilogy()
-        except:
+        except Exception:
             pass
         doneLList.extend(pendingLList)
         doneFList.extend(pendingFList)
@@ -1730,7 +1709,7 @@ class Integrator(wx.Frame, wx.Notebook):
         maxL = math.ceil(max(doneLList))
         try:
             minF = min([f for f in doneFList if f > 0]) / 10.0**0.1
-        except:
+        except Exception:
             minF = 0
         maxF = max(doneFList) * (10**0.1)
         if minF == 0 and maxF == 0:
@@ -1770,7 +1749,7 @@ class Integrator(wx.Frame, wx.Notebook):
             self.hdfObject.read_point(itemData)
         self.fig4.clear()
         if not eval(self.hdfObject[itemData]["det_0"]["image_changed"]):
-            imageAna = image_data.ImageAna(
+            imageAna = ImageAna(
                 self.hdfObject[itemData]["det_0"]["corrected_image"],
                 eval(self.hdfObject[itemData]["det_0"]["roi"]),
                 eval(self.hdfObject[itemData]["det_0"]["rotangle"]),
@@ -1806,7 +1785,7 @@ class Integrator(wx.Frame, wx.Notebook):
         else:
             self.hdfObject[itemData]["det_0"]["image_changed"] = "False"
             self.hdfObject[itemData]["det_0"]["F_changed"] = True
-            imageAna = image_data.ImageAna(
+            imageAna = ImageAna(
                 self.hdfObject[itemData]["det_0"]["corrected_image"],
                 eval(self.hdfObject[itemData]["det_0"]["roi"]),
                 eval(self.hdfObject[itemData]["det_0"]["rotangle"]),
@@ -1967,7 +1946,7 @@ class Integrator(wx.Frame, wx.Notebook):
         try:
             ofMe = self.hdfTree.GetSelection()
             itemData = self.hdfTree.GetItemData(ofMe)
-        except:
+        except Exception:
             print("Error getting tree selection")
             return
         if itemData is None:
@@ -1985,7 +1964,7 @@ class Integrator(wx.Frame, wx.Notebook):
             print("Saving attribute file to" + saveDialog.GetPath())
             try:
                 attributeFile = open(saveDialog.GetPath(), "w")
-            except:
+            except Exception:
                 print("Error opening attribute file")
                 saveDialog.Destroy()
                 raise
@@ -2015,7 +1994,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     attributeFile.write(key + "\t" + value + "\n")
                 attributeFile.write("geom\t" + self.hdfObject[itemData]["geom"])
                 print("Attribute file saved to" + saveDialog.GetPath())
-            except:
+            except Exception:
                 print("Error writing to file")
                 attributeFile.close()
                 saveDialog.Destroy()
@@ -2302,8 +2281,6 @@ class Integrator(wx.Frame, wx.Notebook):
                 allSecs = self.hdfObject.get_all("Seconds", saveThese)
                 allFs = self.hdfObject.get_all(("det_0", "F"), saveThese)
                 allFerrs = self.hdfObject.get_all(("det_0", "Ferr"), saveThese)
-                allAlphas = self.hdfObject.get_all(("det_0", "alpha"), saveThese)
-                allBetas = self.hdfObject.get_all(("det_0", "beta"), saveThese)
                 f = open(fname, "w")
                 header = "#%5s %5s %5s %7s %7s %7s %7s %7s %7s\n" % ("H", "K", "L", "F", "Ferr", "I", "Io", "Ibgr", "Seconds")
                 f.write(header)
@@ -2332,8 +2309,15 @@ class Integrator(wx.Frame, wx.Notebook):
 
     # Resize the cancel button in the status bar
     def onSize(self, event):
-        self.splitWindow.SetSashPosition(1, self.GetSize()[0] - 180 - 344)
-        if event != None:
+        # Phoenix-compatible approach for nested splitters
+        total_width = self.GetSize()[0]
+        # Set the main split position (tree vs rest)
+        self.splitWindow.SetSashPosition(180)
+        # Set the right split position (data vs info)
+        remaining_width = total_width - 180
+        self.rightSplitter.SetSashPosition(remaining_width - 344)
+
+        if event is not None:
             event.Skip()
         rect = self.statusBar.GetFieldRect(self.statusBar.GetFieldsCount() - 2)
         self.integrateCancel.SetPosition((rect.x + 2, rect.y + 2))
@@ -2364,7 +2348,7 @@ class customSelector(wx.Dialog):
     def __init__(self, *args, **kwargs):
         wx.Dialog.__init__(self, args[0], -1, title="Choose points...", size=(200, 800), style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 
-        self.customTree = wxHDFToTree.myTreeCtrl(self, style=wx.TR_MULTIPLE | wx.TR_HAS_BUTTONS)
+        self.customTree = myTreeCtrl(self, style=wx.TR_MULTIPLE | wx.TR_HAS_BUTTONS)
         # self.customRoot = self.customTree.AddRoot(\
         #        os.path.split(self.GetParent().filename)[1])
 
@@ -2493,9 +2477,3 @@ labelTips = {
         Enter only the file name, not the entire directory path. The file must be in the 
         current directory.""",
 }
-
-
-if __name__ == "__main__":
-    app = wx.App()
-    myIntegrator = Integrator(None)
-    app.MainLoop()

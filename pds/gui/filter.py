@@ -1,28 +1,39 @@
-"""
-Filter GUI
-"""
-
-import h5py
+import datetime
 import os
 import time
-import datetime
+
+import h5py
 import wx
 import wx.lib.agw.customtreectrl as treemix
-import wx.lib.mixins.listctrl as listmix
 import wx.lib.agw.ultimatelistctrl as ULC
+import wx.lib.mixins.listctrl as listmix
 
-import file_locker
-import filtertools as ft
-import mastertoproject as mtp
-
+from pds.utils import FileLock, FileLockException, list_intersect, list_union, master_to_project
 
 POSSIBLE_ATTRIBUTES = [
-    "bad_pixel_map", "beam_slits", "bgrflag", "cnbgr", "cpow", "ctan", "cwidth", "det_slits", "geom", "rnbgr",
-    "roi", "rotangle", "rpow", "rtan", "rwidth", "sample_angles", "sample_diameter", "sample_polygon", "scale",
+    "bad_pixel_map",
+    "beam_slits",
+    "bgrflag",
+    "cnbgr",
+    "cpow",
+    "ctan",
+    "cwidth",
+    "det_slits",
+    "geom",
+    "rnbgr",
+    "roi",
+    "rotangle",
+    "rpow",
+    "rtan",
+    "rwidth",
+    "sample_angles",
+    "sample_diameter",
+    "sample_polygon",
+    "scale",
 ]
 
 
-class filterGUI(wx.Frame):
+class Filter(wx.Frame):
     # class filterGUI(wx.Frame, wxUtil):
     """The GUI window for filtering."""
 
@@ -453,7 +464,7 @@ class filterGUI(wx.Frame):
             print("Loading " + loadDialog.GetPath())
             self.filterFile = loadDialog.GetPath()
             self.filterFileName = loadDialog.GetPath()
-            self.filterLock = file_locker.FileLock(self.filterFileName)
+            self.filterLock = FileLock(self.filterFileName)
 
             self.readFile(None)
 
@@ -489,7 +500,7 @@ class filterGUI(wx.Frame):
             print("Lock acquired")
             while wx.GetApp().HasPendingEvents():
                 wx.GetApp().Yield(True)
-        except file_locker.FileLockException as e:
+        except FileLockException as e:
             print("Error: " + str(e))
             return
         try:
@@ -525,10 +536,10 @@ class filterGUI(wx.Frame):
                 elif sAbort == 1:
                     sAbort = "True"
                 toShow = (
-                    f"Command: {scanAttrs.get("cmd", "N/A")}\n\n"
-                    + f"Attenuators: {scanAttrs.get("atten", "N/A")}\n\n"
-                    + f"Energy: {scanAttrs.get("energy", "N/A")}\n\n"
-                    + f"Data points: {scanAttrs.get("nl_dat", "N/A")}"
+                    f"Command: {scanAttrs.get('cmd', 'N/A')}\n\n"
+                    + f"Attenuators: {scanAttrs.get('atten', 'N/A')}\n\n"
+                    + f"Energy: {scanAttrs.get('energy', 'N/A')}\n\n"
+                    + f"Data points: {scanAttrs.get('nl_dat', 'N/A')}"
                 )
                 self.scanItems.append(
                     [
@@ -579,12 +590,12 @@ class filterGUI(wx.Frame):
             try:
                 # if float(scan[4]) < self.LMin: self.LMin = float(scan[4])
                 self.LMin = min(float(scan[4]), self.LMin)
-            except:
+            except Exception:
                 pass
             try:
                 # if float(scan[5]) > self.LMax: self.LMax = float(scan[5])
                 self.LMax = max(float(scan[5]), self.LMax)
-            except:
+            except Exception:
                 pass
             # Make a list of all the years involved in the scans
             if scan[8].split()[-1] not in self.possibleYears:
@@ -592,11 +603,11 @@ class filterGUI(wx.Frame):
             # Establish the min and max date epochs:
             try:
                 self.dateMin = min(time.mktime(time.strptime(scan[8])), self.dateMin)
-            except:
+            except Exception:
                 pass
             try:
                 self.dateMax = max(time.mktime(time.strptime(scan[8])), self.dateMax)
-            except:
+            except Exception:
                 pass
             # Make a dictionary of {(Specname, scan number): information
             # to be displayed when the scan is selected
@@ -613,12 +624,12 @@ class filterGUI(wx.Frame):
             self.filterFile.close()
             self.filterLock.release()
             print("Lock released")
-        except:
+        except Exception:
             print("Error closing file")
 
     # Delete everything in the table, then add the appropriate scans
     def updateTable(self):
-        """ Delete all the scans from the filter list,
+        """Delete all the scans from the filter list,
         then repopulate it with the scans that pass
         all of the active filters.
 
@@ -630,7 +641,7 @@ class filterGUI(wx.Frame):
             if filter is not None:
                 self.activeFilters.append(filter)
         if self.activeFilters != []:
-            self.activeFilters = ft.list_intersect(*self.activeFilters)
+            self.activeFilters = list_intersect(*self.activeFilters)
             for entry in self.scanItems:
                 if entry[10] in self.activeFilters:
                     # Slices the entry to only show the first 9 columns of the entry
@@ -639,7 +650,7 @@ class filterGUI(wx.Frame):
                         if self.projectDict[entry[0]][entry[1]] is not None:
                             item = self.dataTable.GetItemCount() - 1
                             self.dataTable.SetItemTextColour(item, wx.Colour(128, 128, 128))
-                    except Exception as e:
+                    except Exception:
                         pass
         else:
             for entry in self.scanItems:
@@ -650,7 +661,7 @@ class filterGUI(wx.Frame):
                     if self.projectDict[entry[0]][entry[1]] is not None:
                         item = self.dataTable.GetItemCount() - 1
                         self.dataTable.SetItemTextColour(item, wx.Colour(128, 128, 128))
-                except Exception as e:
+                except Exception:
                     pass
         return
 
@@ -660,8 +671,6 @@ class filterGUI(wx.Frame):
         update the 'More Info:' panel with relevant information.
 
         """
-
-        tableSelection = event.GetItem()
         itemId = event.GetIndex()
 
         specName = self.dataTable.GetItem(itemId, 0).Text
@@ -781,7 +790,7 @@ class filterGUI(wx.Frame):
     # Convert a dictionary to a tree
     def dictToTree(self, thisDict, thisTree, thisRoot):
         for key, value in thisDict.items():
-            if type(value) == dict:
+            if type(value) is dict:
                 parentItem = thisTree.AppendItem(thisRoot, key)
                 self.dictToTree(value, thisTree, parentItem)
             else:
@@ -794,7 +803,7 @@ class filterGUI(wx.Frame):
             self.projectNameBox.SetValue(self.projectNameBox.GetValue() + ".ph5")
         try:
             self.newProjectTree.SetItemText(self.newProjectTree.GetRootItem(), self.projectNameBox.GetValue())
-        except:
+        except Exception:
             pass
 
     # Move the selected scans to the project tree
@@ -853,7 +862,7 @@ class filterGUI(wx.Frame):
         for selection in allSelected:
             try:
                 selectionLevel = self.newProjectTree.getLevel(selection)
-            except:
+            except Exception:
                 selectionLevel = -1
             if selectionLevel == 0:
                 self.moveAllLeft(event)
@@ -925,8 +934,8 @@ class filterGUI(wx.Frame):
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if save_dialog.ShowModal() == wx.ID_OK:
-            mlockFile = file_locker.FileLock(self.filterFileName)
-            plockFile = file_locker.FileLock(save_dialog.GetPath())
+            mlockFile = FileLock(self.filterFileName)
+            plockFile = FileLock(save_dialog.GetPath())
             try:
                 print("Attempting to lock files...")
                 while wx.GetApp().HasPendingEvents():
@@ -935,13 +944,13 @@ class filterGUI(wx.Frame):
                 plockFile.acquire()
                 print("Locks acquired")
                 wx.GetApp().Yield(True)
-            except file_locker.FileLockException as e:
+            except FileLockException as e:
                 print("Error: " + str(e))
                 return
             print("Start: ", time.ctime(time.time()))
             out_file = save_dialog.GetPath()
             try:
-                mtp.master_to_project(self.filterFileName, self.projectDict, out_file, append=False, gui=True)
+                master_to_project(self.filterFileName, self.projectDict, out_file, append=False, gui=True)
             except Exception as e:
                 print(f"Error generating project file: {e}")
                 mlockFile.release()
@@ -964,8 +973,8 @@ class filterGUI(wx.Frame):
             self, message="Append to...", defaultDir=self.fileDirectory, defaultFile=self.projectNameBox.GetValue(), wildcard=file_types, style=wx.FD_SAVE
         )
         if save_dialog.ShowModal() == wx.ID_OK:
-            mlockFile = file_locker.FileLock(self.filterFileName)
-            plockFile = file_locker.FileLock(save_dialog.GetPath())
+            mlockFile = FileLock(self.filterFileName)
+            plockFile = FileLock(save_dialog.GetPath())
             try:
                 print("Attempting to lock files...")
                 while wx.GetApp().HasPendingEvents():
@@ -973,13 +982,13 @@ class filterGUI(wx.Frame):
                 mlockFile.acquire()
                 plockFile.acquire()
                 print("Locks acquired")
-            except file_locker.FileLockException as e:
+            except FileLockException as e:
                 print("Error: " + str(e))
                 return
             print("Start: ", time.ctime(time.time()))
             out_file = save_dialog.GetPath()
             try:
-                mtp.master_to_project(self.filterFileName, self.projectDict, out_file, append=True, gui=True)
+                master_to_project(self.filterFileName, self.projectDict, out_file, append=True, gui=True)
             except Exception as e:
                 print("Error saving to project file:", e)
                 mlockFile.release()
@@ -1018,33 +1027,33 @@ class filterGUI(wx.Frame):
                 if self.specResult[spec] != []:
                     thisCase = [scan[10] for scan in self.scanItems if scan[0].startswith(spec)]
                     thatCase = [scan[10] for scan in self.scanItems if int(scan[1]) in self.specResult[spec]]
-                    bothCases = ft.list_intersect(thisCase, thatCase)
-                    self.specCases = ft.list_union(bothCases, self.specCases)
+                    bothCases = list_intersect(thisCase, thatCase)
+                    self.specCases = list_union(bothCases, self.specCases)
         self.updateTable()
 
     # Filter by specfile and scan number
     def filterSpec(self, event):
-        filterWindow = SpecWindow(self, self.allSpecs, self.specResult).ShowModal()
+        # filterWindow = SpecWindow(self, self.allSpecs, self.specResult).ShowModal()
         return
 
     # Filter by HK pair
     def filterHK(self, event):
-        filterWindow = HKWindow(self, self.allHK, self.hkResult).ShowModal()
+        # filterWindow = HKWindow(self, self.allHK, self.hkResult).ShowModal()
         return
 
     # Filter by L range
     def filterL(self, event):
-        filterWindow = LWindow(self, (self.LMin, self.LMax), self.LResult).ShowModal()
+        # filterWindow = LWindow(self, (self.LMin, self.LMax), self.LResult).ShowModal()
         return
 
     # Filter by scan type
     def filterType(self, event):
-        filterWindow = TypeWindow(self, self.allTypes, self.typeResult).ShowModal()
+        # filterWindow = TypeWindow(self, self.allTypes, self.typeResult).ShowModal()
         return
 
     # Filter by date range
     def filterDate(self, event):
-        filterWindow = DateWindow(self, self.possibleYears, (self.dateMin, self.dateMax), self.dateResult).ShowModal()
+        # filterWindow = DateWindow(self, self.possibleYears, (self.dateMin, self.dateMax), self.dateResult).ShowModal()
         return
 
     # Reset all the filters
@@ -1068,17 +1077,15 @@ class filterGUI(wx.Frame):
             self.filterFile.close()
             self.filterLock.release()
             print("Lock released")
-        except:
+        except Exception:
             pass
         self.Destroy()
-        del self
 
 
 class SpecWindow(wx.Dialog):
     """The GUI for filtering by specfile."""
 
     def __init__(self, parent=None, allSpec={}, currentSpec=None):
-
         # Make the window
         wx.Dialog.__init__(self, parent, -1, title="Specfiles", size=(240, 400))
 
@@ -1161,24 +1168,21 @@ class SpecWindow(wx.Dialog):
                     # thatCase = ft.cases(self.GetParent().filterFile, 'index',
                     #                    'in ' + str(selectedSpec[spec]))
                     thatCase = [scan[10] for scan in self.GetParent().scanItems if int(scan[1]) in selectedSpec[spec]]
-                    bothCases = ft.list_intersect(thisCase, thatCase)
-                    self.GetParent().specCases = ft.list_union(bothCases, self.GetParent().specCases)
+                    bothCases = list_intersect(thisCase, thatCase)
+                    self.GetParent().specCases = list_union(bothCases, self.GetParent().specCases)
         self.GetParent().updateTable()
         self.Destroy()
-        del self
 
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
         self.Enable(True)
         self.Destroy()
-        del self
 
 
 class HKWindow(wx.Dialog):
     """The GUI for filtering by HK pair."""
 
     def __init__(self, parent=None, allHK={}, currentHK=None):
-
         # Make the window
         wx.Dialog.__init__(self, parent, -1, title="HK Pairs", size=(400, 400))
 
@@ -1271,24 +1275,21 @@ class HKWindow(wx.Dialog):
                     #                     'spec_name',
                     #                     'in ' + str(selectedHK[hk].keys()))
                     otherCase = [scan[10] for scan in self.GetParent().scanItems if scan[0] in str(selectedHK[hk].keys())]
-                    bothCases = ft.list_intersect(thisCase, thatCase, otherCase)
-                    self.GetParent().hkCases = ft.list_union(bothCases, self.GetParent().hkCases)
+                    bothCases = list_intersect(thisCase, thatCase, otherCase)
+                    self.GetParent().hkCases = list_union(bothCases, self.GetParent().hkCases)
         self.GetParent().updateTable()
         self.Destroy()
-        del self
 
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
         self.Enable(True)
         self.Destroy()
-        del self
 
 
 class LWindow(wx.Dialog):
     """The GUI for filtering by L value."""
 
     def __init__(self, parent=None, allL=(-100, 100), currentL=None):
-
         # Make the window
         wx.Dialog.__init__(self, parent, -1, title="L Range", size=(232, 120))
 
@@ -1348,12 +1349,12 @@ class LWindow(wx.Dialog):
         self.Enable(True)
         try:
             fromL = float(self.fromValue.GetValue())
-        except:
+        except Exception:
             print("Error: Invalid minimum L; setting to -100")
             fromL = -100.0
         try:
             toL = float(self.toValue.GetValue())
-        except:
+        except Exception:
             print("Error: Invalid maximum L; setting to 100")
             toL = 100.0
         self.GetParent().LCases = None
@@ -1376,24 +1377,21 @@ class LWindow(wx.Dialog):
             # otherCase = ft.cases(self.GetParent().filterFile,
             #                     's_type',
             #                     '.startswith("rodscan")')
-            bothCases = ft.list_intersect(thisCase, thatCase)  # , otherCase)
+            bothCases = list_intersect(thisCase, thatCase)  # , otherCase)
             self.GetParent().LCases = bothCases
         self.GetParent().updateTable()
         self.Destroy()
-        del self
 
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
         self.Enable(True)
         self.Destroy()
-        del self
 
 
 class TypeWindow(wx.Dialog):
     """The GUI for filtering by scan type."""
 
     def __init__(self, parent=None, allTypes={}, currentTypes=None):
-
         # Make the window
         wx.Dialog.__init__(self, parent, -1, title="Scan Types", size=(200, 400))
 
@@ -1515,13 +1513,11 @@ class TypeWindow(wx.Dialog):
             self.GetParent().typeCases = thisCase
         self.GetParent().updateTable()
         self.Destroy()
-        del self
 
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
         self.Enable(True)
         self.Destroy()
-        del self
 
 
 class DateWindow(wx.Dialog):
@@ -1656,13 +1652,11 @@ class DateWindow(wx.Dialog):
         except ValueError as e:
             print(f"Error: {e}")
             self.Destroy()
-            del self
             return
 
         if fromDate > toDate:
             print("Error: 'To' date precedes 'From' date")
             self.Destroy()
-            del self
             return
 
         self.GetParent().dateCases = None
@@ -1672,17 +1666,15 @@ class DateWindow(wx.Dialog):
             self.GetParent().dateResult = (fromDate, toDate)
             thisCase = [scan[10] for scan in self.GetParent().scanItems if datetime.datetime.strptime(scan[8], "%a %b %d %H:%M:%S %Y").timestamp() >= fromDate]
             thatCase = [scan[10] for scan in self.GetParent().scanItems if datetime.datetime.strptime(scan[8], "%a %b %d %H:%M:%S %Y").timestamp() <= toDate]
-            bothCases = ft.list_intersect(thisCase, thatCase)
+            bothCases = list_intersect(thisCase, thatCase)
             self.GetParent().dateCases = bothCases
         self.GetParent().updateTable()
         self.Destroy()
-        del self
 
     # Release the focus and close the window, making no changes
     def onCancel(self, event):
         self.Enable(True)
         self.Destroy()
-        del self
 
 
 class TableDataCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
@@ -1741,9 +1733,3 @@ class myTreeCtrl(wx.TreeCtrl):
         except ValueError:
             # If conversion fails, compare as strings
             return (text1 > text2) - (text1 < text2)
-
-
-if __name__ == "__main__":
-    app = wx.App()
-    myFilter = filterGUI(None)
-    app.MainLoop()

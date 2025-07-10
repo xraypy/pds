@@ -21,11 +21,10 @@ Todo:
 
 ##########################################################################
 
-import numpy as num
+import numpy as np
 from matplotlib import pyplot
 
-from mathutil import cosd, sind
-from mathutil import cartesian_mag, cartesian_angle
+from pds.utils.mathutil import cartesian_angle, cosd, sind
 
 
 #########################################################################
@@ -90,9 +89,9 @@ def inner_polygon(poly1, poly2):
         # check against poly1
         inner = is_inner(p, poly1)
         # check against poly2
-        if inner == True:
+        if inner:
             inner = is_inner(p, poly2)
-        if inner == True:
+        if inner:
             inner_points.append(p)
     # sort the inner points
     (inner_points, angles) = sort_points(*inner_points)
@@ -114,7 +113,7 @@ def is_inner(point, poly):
     p2 = point
     inner = True
     k = 0
-    while inner == True and k < npts:
+    while inner and k < npts:
         p3 = poly[k]
         if k == npts - 1:
             p4 = poly[0]
@@ -153,16 +152,16 @@ def line_intercept(p1, p2, p3, p4):
     # Note if vertical line m = None and b holds x-val
     (m1, b1) = line_param(p1, p2)
     (m2, b2) = line_param(p3, p4)
-    if (m1 != None) and (m2 != None):
+    if (m1 is not None) and (m2 is not None):
         if (m1 - m2) != 0.0:
             x = (b2 - b1) / (m1 - m2)
             y = m1 * x + b1
         else:
             return (None, 0)
-    elif (m1 == None) and (m2 != None):
+    elif (m1 is None) and (m2 is not None):
         x = b1
         y = m2 * x + b2
-    elif (m1 != None) and (m2 == None):
+    elif (m1 is not None) and (m2 is None):
         x = b2
         y = m1 * x + b1
     else:
@@ -188,13 +187,13 @@ def line_intercept(p1, p2, p3, p4):
     elif y > max_y2 or y < min_y2:
         flag = 0
     # check if the intersection point corresponds to an end point
-    intercept = num.array([x, y])
+    intercept = np.array([x, y])
 
     def _same(p1, p2, prec=0.0001):
         """are two points the same"""
-        # return num.all(num.equal(p1,p2))
-        t1 = num.fabs(p1[0] - p2[0]) < prec
-        t2 = num.fabs(p1[1] - p2[1]) < prec
+        # return np.all(np.equal(p1,p2))
+        t1 = np.fabs(p1[0] - p2[0]) < prec
+        t2 = np.fabs(p1[1] - p2[1]) < prec
         if t1 and t2:
             # print "same", p1,p2
             return True
@@ -236,7 +235,7 @@ def line_param(v1, v2):
     if v1[0] - v2[0] != 0.0:
         m = (v1[1] - v2[1]) / (v1[0] - v2[0])
         b = -m * v1[0] + v1[1]
-        if num.fabs(m) > 1.0e6:
+        if np.fabs(m) > 1.0e6:
             m = None
             b = v1[0]
     else:
@@ -273,7 +272,7 @@ def poly_area(polygon, sort=True):
     npts = len(polygon)
     if npts < 3:
         return 0.0
-    if sort == True:
+    if sort:
         (points, angles) = sort_points(*polygon)
     else:
         points = polygon
@@ -290,7 +289,7 @@ def poly_area(polygon, sort=True):
             p2 = points[j + 1]
         a = segment_area(p1, p2)
         A.append(a)
-    return num.sum(A)
+    return np.sum(A)
 
 
 ##################################################################
@@ -320,7 +319,7 @@ def sort_points(*pts):
             return angle
 
     for v in pts:
-        v = num.array(v[0:2])
+        v = np.array(v[0:2])
         an = _angle(v)
         j = 0
         while j < npts - 1:
@@ -346,15 +345,15 @@ def segment_area(p1, p2):
     # the parrallogram formed by the
     # two vectors.  The polygon area
     # is half this value.
-    # p1 = num.array([p1[0],p1[1],0.])
-    # p2 = num.array([p2[0],p2[1],0.])
-    # a = 0.5*cartesian_mag(num.cross(p1,p2))
+    # p1 = np.array([p1[0],p1[1],0.])
+    # p2 = np.array([p2[0],p2[1],0.])
+    # a = 0.5*cartesian_mag(np.cross(p1,p2))
     # This is the result of the cross product operation:
     a = (p1[0] * p2[1]) ** 2.0 + (p2[0] * p1[1]) ** 2.0 - (2.0 * p1[0] * p2[0] * p1[1] * p2[1])
     if a < 0:
         a = 0
     else:
-        a = 0.5 * num.sqrt(a)
+        a = 0.5 * np.sqrt(a)
     return a
 
 
@@ -373,15 +372,15 @@ def poly_area_num(polygon, diameter=None, num_int=100, plot=False):
     npts = len(polygon)
     if npts < 3:
         return 0.0
-    polygon = num.array(polygon)
+    polygon = np.array(polygon)
     min_y = min(polygon[:, 1])
     max_y = max(polygon[:, 1])
     min_x = min(polygon[:, 0])
     max_x = max(polygon[:, 0])
 
     # compute x-values for integration
-    dx = num.fabs((max_x - min_x) / float(num_int + 1))
-    x = num.arange(min_x - 0.5 * dx, max_x + 1.5 * dx, dx)
+    dx = np.fabs((max_x - min_x) / float(num_int + 1))
+    x = np.arange(min_x - 0.5 * dx, max_x + 1.5 * dx, dx)
     # loop through all x-vals and compute segment area
     A = 0.0
     if plot:
@@ -410,21 +409,21 @@ def poly_area_num(polygon, diameter=None, num_int=100, plot=False):
                 else:
                     y.append(inter[1])
             numy = len(y)
-            if num.mod(numy, 2.0) != 0 or numy == 1:
+            if np.mod(numy, 2.0) != 0 or numy == 1:
                 print("Error, wrong number of intercepts!")
                 return 0.0
-            y = num.array(y)
-            y = y[num.argsort(y)]
+            y = np.array(y)
+            y = y[np.argsort(y)]
             # now figure length of y inside the polynomial.
             # each pair (sorted wrt y) is an inside segment.
             j = 0
             while j < numy:
                 ytop = y[j + 1]
                 ybot = y[j]
-                if diameter != None:
+                if diameter is not None:
                     cy = (diameter / 2.0) ** 2.0 - xx**2.0
                     if cy > 0.0:
-                        cy_max = num.sqrt(cy)
+                        cy_max = np.sqrt(cy)
                         cy_min = -1.0 * cy_max
                         if ytop <= cy_min or ybot >= cy_max:
                             ytop = 0.0
@@ -444,7 +443,7 @@ def poly_area_num(polygon, diameter=None, num_int=100, plot=False):
                     pline[1].append([ybot, ytop])
                 j = j + 2
     # make plot of integration lines for debugging
-    if plot == True:
+    if plot:
         for j in range(len(pline[0])):
             pyplot.plot(pline[0][j], pline[1][j], "k-")
     return A
@@ -456,11 +455,11 @@ def poly_y_intercepts(polygon):
     find all the y-axis intercepts of the polygon
     """
     npts = len(polygon)
-    polygon = num.array(polygon)
+    polygon = np.array(polygon)
     min_x = min(polygon[:, 0])
     max_x = max(polygon[:, 0])
-    p1 = num.array([min_x, 0.0])
-    p2 = num.array([max_x, 0.0])
+    p1 = np.array([min_x, 0.0])
+    p2 = np.array([max_x, 0.0])
     intercepts = []
     for j in range(npts):
         p3 = polygon[j]
@@ -479,8 +478,8 @@ def trans_point(p, theta=0.0, scale=1.0):
     """
     simple in-plane rotation of points
     """
-    M = num.array([[cosd(theta), -sind(theta)], [sind(theta), cosd(theta)]])
-    pp = scale * num.dot(M, p)
+    M = np.array([[cosd(theta), -sind(theta)], [sind(theta), cosd(theta)]])
+    pp = scale * np.dot(M, p)
     return pp
 
 
@@ -491,11 +490,11 @@ def plot_polygon(polygon, **kw):
     """
     try:
         fmt = kw.pop("fmt")
-    except:
+    except Exception:
         fmt = "k"
     try:
         label = kw.pop("label")
-    except:
+    except Exception:
         label = None
     (points, angles) = sort_points(*polygon)
     npts = len(points)
@@ -524,21 +523,21 @@ def plot_points(points, **kw):
     """
     try:
         fmt = kw.pop("fmt")
-    except:
+    except Exception:
         fmt = "k"
     try:
         label = kw.pop("label")
-    except:
+    except Exception:
         label = None
     npts = len(points)
     if npts == 0:
         return
-    xy = num.zeros((npts, 2))
+    xy = np.zeros((npts, 2))
     for j in range(npts):
         v = points[j]
         xy[j, 0] = v[0]
         xy[j, 1] = v[1]
-    idx = num.argsort(xy[:, 0])
+    idx = np.argsort(xy[:, 0])
     xy = xy[idx]
     for j in range(len(xy)):
         if j < npts - 1:
@@ -554,14 +553,14 @@ def plot_circle(r, **kw):
     """
     try:
         fmt = kw.pop("fmt")
-    except:
+    except Exception:
         fmt = "k"
     try:
         label = kw.pop("label")
-    except:
+    except Exception:
         label = None
-    x = num.arange(-r, r + 0.01, 0.01)
-    y = num.sqrt(num.fabs(r**2.0 - x**2.0))
+    x = np.arange(-r, r + 0.01, 0.01)
+    y = np.sqrt(np.fabs(r**2.0 - x**2.0))
     pyplot.plot(x, y, fmt, **kw)
     pyplot.plot(x, -y, fmt, label=label, **kw)
 
