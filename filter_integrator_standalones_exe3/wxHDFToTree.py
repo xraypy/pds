@@ -106,8 +106,9 @@ class hdfToTree:
         thisData = thisTree.GetItemData(thisItem)
         if thisData is not None:
             thisName = thisObject[thisData]["name"]
-            #thisName = thisName.decode("utf-8")
-            thisSpec, thisScan, thisPoint, thisTime = thisName.split(":")
+            if isinstance(thisName, bytes):
+                thisName = thisName.decode("utf-8")
+            thisSpec, thisScan, thisPoint, thisTime =  thisName.split(":")
             thisScan = thisScan[1:]
             thisPoint = thisPoint.split("/")[0][1:]
             return "Scan " + thisScan + ", Point " + thisPoint

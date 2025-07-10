@@ -1682,9 +1682,9 @@ class Integrator(wx.Frame, wx.Notebook):
             item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
         iterImageChanged = self.hdfObject.get_all(("det_0", "image_changed"), iterList)
         iterFChanged = self.hdfObject.get_all(("det_0", "F_changed"), iterList)
-        if self.hdfObject[itemData]["type"].startswith("Escan"):
+        if self.hdfObject[itemData]["type"].startswith(b"Escan"):
             iterLList = self.hdfObject.get_all("energy", iterList)
-        elif self.hdfObject[itemData]["type"].startswith("ascan"):
+        elif self.hdfObject[itemData]["type"].startswith(b"ascan"):
             get_this = self.hdfObject[itemData]["info"].split()[1]
             iterLList = self.hdfObject.get_all(get_this, iterList)
         else:
@@ -1713,14 +1713,14 @@ class Integrator(wx.Frame, wx.Notebook):
             rodPlot.errorbar(doneLList, doneFList, doneFerrList, fmt="b", linestyle="")
         except:
             pass
-        if self.hdfObject[itemData]["type"].startswith("Escan"):
+        if self.hdfObject[itemData]["type"].startswith(b"Escan"):
             rodPlot.plot(self.hdfObject[itemData]["Energy"], self.hdfObject[itemData]["det_0"]["F"], "ro")
-        elif self.hdfObject[itemData]["type"].startswith("ascan"):
+        elif self.hdfObject[itemData]["type"].startswith(b"ascan"):
             rodPlot.plot(self.hdfObject[itemData][get_this], self.hdfObject[itemData]["det_0"]["F"], "ro")
         else:
             rodPlot.plot(self.hdfObject[itemData][b"L"], self.hdfObject[itemData]["det_0"]["F"], "ro")
         try:
-            if not self.hdfObject[itemData]["type"].startswith("Escan") and not self.hdfObject[itemData]["type"].startswith("ascan"):
+            if not self.hdfObject[itemData]["type"].startswith(b"Escan") and not self.hdfObject[itemData]["type"].startswith(b"ascan"):
                 rodPlot.semilogy()
         except:
             pass

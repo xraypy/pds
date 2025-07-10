@@ -28,6 +28,14 @@ import image_data
 
 ##############################################################################
 
+def bytes_to_str(value):
+    """Convert bytes to string for Python 3 compatibility with h5py"""
+    if isinstance(value, bytes):
+        return value.decode('utf-8')
+    return value
+
+##############################################################################
+
 # Standard data attributes for a point (ie read returns, write requires)
 '''DEFAULT_DETECTOR = {'name':'default',
                     'detector_params':{},
@@ -226,8 +234,8 @@ class HdfDataFile:
             self.file.flush()
             self.file.close()
             self.lock_file.release()
-            print 'Lock released??'
-            print 'Why?'
+            print('Lock released??')
+            print('Why?')
         except:
             pass
         del self.file
@@ -378,12 +386,22 @@ class HdfDataFile:
                 key_loc = DET_KEYS[key]
                 key_loc_path = key_loc[0].split("/")[1] % self.version
                 for point in points:
-                    all_results[point] = self.file[point][det_name][key_loc_path][key_loc[1]]
+                    try:
+                        all_results[point] = self.file[point][det_name][key_loc_path][key_loc[1]]
+                    except (OSError, IOError) as e:
+                        print(f"Error reading {key} for point {point}: {e}")
+                        # Try to use a default value or skip this point
+                        all_results[point] = None
                 if self.point in points:
                     all_results[self.point] = self.point_dict[det_name][key]
             elif key in DET_ATT_KEYS:
                 for point in points:
-                    all_results[point] = self.file[point][det_name].attrs[key]
+                    try:
+                        value = self.file[point][det_name].attrs[key]
+                        all_results[point] = bytes_to_str(value)
+                    except (OSError, IOError) as e:
+                        print(f"Error reading attribute {key} for point {point}: {e}")
+                        all_results[point] = None
                 if self.point in points:
                     all_results[self.point] = self.point_dict[det_name][key]
             elif key.startswith("image_data"):
