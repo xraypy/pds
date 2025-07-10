@@ -4,11 +4,11 @@ Methods to handle generic background determination
 The polynomial background model follows closely the XRF background code by Mark Rivers
 """
 
-import numpy as num
-from matplotlib import pyplot
-
-from scipy.stats import linregress
 import time
+
+import numpy as np
+from matplotlib import pyplot
+from scipy.stats import linregress
 
 
 def linear_background(data, nbgr=0):
@@ -28,16 +28,16 @@ def linear_background(data, nbgr=0):
     """
     ndat = len(data)
     if nbgr <= 0:
-        return num.zeros(ndat)
+        return np.zeros(ndat)
     if ndat < 2 * nbgr + 1:
-        return num.zeros(ndat)
+        return np.zeros(ndat)
     # calc linear bgr from end points
-    xlin = num.arange(0, nbgr, 1, dtype=float)
-    xlin = num.append(xlin, num.arange(ndat - nbgr, ndat, 1))
-    ylin = num.array(data[0:nbgr], dtype=float)
-    ylin = num.append(ylin, data[ndat - nbgr :])
+    xlin = np.arange(0, nbgr, 1, dtype=float)
+    xlin = np.append(xlin, np.arange(ndat - nbgr, ndat, 1))
+    ylin = np.array(data[0:nbgr], dtype=float)
+    ylin = np.append(ylin, data[ndat - nbgr :])
     m, b, rval, pval, stderr = linregress(xlin, ylin)
-    return m * num.arange(ndat) + b
+    return m * np.arange(ndat) + b
 
 
 def background(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=False):
@@ -126,7 +126,7 @@ def background(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=
 
     # create bgr array
     ndat = len(y)
-    bgr = num.zeros(ndat)
+    bgr = np.zeros(ndat)
 
     # calc polynomial (old)
     """
@@ -165,7 +165,7 @@ def background(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=
     else:
         npoly = min(10 * int(width / 2) + 1, 2 * int(ndat / 2) + 1)
     #
-    pdelx = num.array(range(npoly), dtype=float) - (npoly - 1.0) / 2.0
+    pdelx = np.array(range(npoly), dtype=float) - (npoly - 1.0) / 2.0
     """
     pdelx = range(-npoly,-1)
     pdelx.append(1)
@@ -202,17 +202,17 @@ def background(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=
                 lyave = 0.0
                 lxave = 0.0
             else:
-                lyave = num.sum(y[dlidx:j]) / nl
-                lxave = num.sum(num.arange(dlidx, j))
+                lyave = np.sum(y[dlidx:j]) / nl
+                lxave = np.sum(np.arange(dlidx, j))
             nr = len(y[j + 1 : dridx])
             if nr == 0:
                 ryave = 0.0
                 rxave = 0.0
             else:
-                ryave = num.sum(y[j + 1 : dridx]) / nr
-                rxave = num.sum(num.arange(j + 1, dridx))
-            slope = (ryave - lyave) / num.abs(rxave - lxave)
-            delta = delta - slope * num.arange(-1 * nl, nr + 1)
+                ryave = np.sum(y[j + 1 : dridx]) / nr
+                rxave = np.sum(np.arange(j + 1, dridx))
+            slope = (ryave - lyave) / np.abs(rxave - lxave)
+            delta = delta - slope * np.arange(-1 * nl, nr + 1)
 
         bgr[j] = min(0, delta.min())
         # debug arrays
@@ -233,8 +233,8 @@ def background(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=
     if compress > 1:
         bgr = expand_array(bgr, compress)
         if rem > 0:
-            temp = bgr[-1] * num.ones(rem, dtype=bgr.dtype)
-            bgr = num.append(bgr, temp)
+            temp = bgr[-1] * np.ones(rem, dtype=bgr.dtype)
+            bgr = np.append(bgr, temp)
 
     # Add back the original linear background / slope
     bgr = bgr + linbgr
@@ -265,7 +265,7 @@ def plot_bgr(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=Fa
     """
     #
     if debug:
-        (bgr, p, d, l) = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress, debug=debug)
+        (bgr, p, d, linbgr) = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress, debug=debug)
     else:
         bgr = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress, debug=debug)
 
@@ -277,24 +277,24 @@ def plot_bgr(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=Fa
     pyplot.plot(data, "k-o", label="data")
     pyplot.plot(bgr, "r-*", label="bgr")
     pyplot.plot(data - bgr, "g-", label="data-bgr")
-    pyplot.plot(num.zeros(npts), "k-")
+    pyplot.plot(np.zeros(npts), "k-")
     pyplot.legend(loc=2)
 
     # plot data and polynomials
     # and for each polynomial
     # plot the diff between data
     # and the polynomial
-    if debug == False:
+    if not debug:
         return
 
     pyplot.figure(2)
     pyplot.clf()
     pyplot.subplot(2, 1, 1)
-    pyplot.plot(data - l, "k-o")
+    pyplot.plot(data - linbgr, "k-o")
     pyplot.subplot(2, 1, 2)
-    pyplot.plot(data - l, "k-o")
-    pyplot.plot(num.zeros(npts), "k-")
-    pyplot.plot(bgr - l, "k--")
+    pyplot.plot(data - linbgr, "k-o")
+    pyplot.plot(np.zeros(npts), "k-")
+    pyplot.plot(bgr - linbgr, "k--")
 
     for j in range(len(p)):
         n = len(p[j])
@@ -307,16 +307,16 @@ def plot_bgr(data, nbgr=0, width=0, pow=0.5, tangent=False, compress=1, debug=Fa
         pyplot.plot(xx, p[j], "*-")
         pyplot.subplot(2, 1, 2)
         # pyplot.plot(xx,d[j],'*-')
-        dd = num.min((0, num.min(d[j])))
+        dd = np.min((0, np.min(d[j])))
         pyplot.plot(xx, p[j] + dd, "*-")
-    dma = num.max(data)
+    dma = np.max(data)
     pyplot.subplot(2, 1, 1)
     mi, ma = pyplot.ylim()
-    mi = num.max((mi, -dma))
+    mi = np.max((mi, -dma))
     pyplot.ylim(mi, 1.1 * dma)
     pyplot.subplot(2, 1, 2)
     mi, ma = pyplot.ylim()
-    mi = num.max((mi, -dma))
+    mi = np.max((mi, -dma))
     pyplot.ylim(mi, 1.1 * dma)
     pyplot.show()
 
@@ -343,8 +343,8 @@ def compress_array(array, compress):
     nlen = int(len(array) / compress)
     rem = alen % compress
 
-    temp = num.resize(array, (nlen, compress))
-    newarray = num.sum(temp, 1) / compress
+    temp = np.resize(array, (nlen, compress))
+    newarray = np.sum(temp, 1) / compress
     # ra = array[alen-rem:]
     return (newarray, rem)
 
@@ -363,21 +363,20 @@ def expand_array(array, expand, sample=0, rem=0):
     * rem is not used...
     """
 
-    alen = len(array)
     if expand == 1:
         return array
     if sample == 1:
-        return num.repeat(array, expand)
+        return np.repeat(array, expand)
 
-    kernel = num.ones(expand) / float(expand)
-    temp = num.convolve(num.repeat(array, expand), kernel, mode=2)
+    kernel = np.ones(expand) / float(expand)
+    temp = np.convolve(np.repeat(array, expand), kernel, mode=2)
     # Discard the first "expand-1" entries
     temp = temp[expand - 1 :]
     # Replace the last "expand" entries with the last entry of original
     for i in range(1, expand):
         temp[-i] = array[-1]
     if temp.dtype != array.dtype:
-        temp = num.array(temp, dtype=array.dtype)
+        temp = np.array(temp, dtype=array.dtype)
     return temp
 
 
@@ -386,13 +385,13 @@ if __name__ == "__main__":
 
     # generate a curve
     def gauss(x, cen, sigma):
-        return num.exp(-((x - cen) ** 2) / (2 * sigma**2))
+        return np.exp(-((x - cen) ** 2) / (2 * sigma**2))
 
     npts = 2000
-    x = 1.0 * num.arange(npts)
+    x = 1.0 * np.arange(npts)
     g1 = 40 * gauss(x, 0.6 * npts, 8.0)
     g2 = 20 * gauss(x, 0.5 * npts, 270)
-    r = 2 * num.random.normal(size=npts)
+    r = 2 * np.random.normal(size=npts)
     y = r + x / 25 + g1 + g2
 
     show_bgr(y, nbgr=3, width=100, pow=1, tangent=False, compress=1)
