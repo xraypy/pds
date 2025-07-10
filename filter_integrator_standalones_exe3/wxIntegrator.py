@@ -925,9 +925,9 @@ class Integrator(wx.Frame, wx.Notebook):
                 dataLookup[iterData] = item
                 item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             allLs = {}
-            if self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith("Escan"):
+            if self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith(b"Escan"):
                 allLs = self.hdfObject.get_all("Energy", childrenList)
-            elif self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith("ascan"):
+            elif self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith(b"ascan"):
                 get_this = self.hdfObject.get_all("info", [childrenList[0]])[childrenList[0]].split()[1]
                 allLs = self.hdfObject.get_all(get_this, childrenList)
             else:
