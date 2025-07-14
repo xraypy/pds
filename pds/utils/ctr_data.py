@@ -66,12 +66,18 @@ def _update_psic_angles(gonio, scan, point, verbose=True):
     """Updates the goniometer angles for a specific scan point using values from the scan data."""
 
     try:
-        npts = int(scan.dims[0])
+        if hasattr(scan, "dims"):
+            npts = int(scan.dims[0])
+        else:
+            npts = int(scan.get("dims", (1, 0))[0])
     except Exception as e:
         print("Error getting scan dims:", e)
         npts = scan.get("dims", (1, 0))[0]
     try:
-        scan_name = scan.name
+        if hasattr(scan, "name"):
+            scan_name = scan.name
+        else:
+            scan_name = scan.get("name", "")
     except Exception as e:
         print("Error getting scan name:", e)
         scan_name = ""

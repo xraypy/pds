@@ -450,10 +450,20 @@ class HdfDataFile:
             self.point_dict[key] = self.file[num][key_loc[0]][key_loc[1]]
         for key in self.file[num]["position_labels"]:
             key_loc = list(self.file[num]["position_labels"]).index(key)
-            self.point_dict[key] = self.file[num]["position_values"][key_loc]
+            dict_key = bytes_to_str(key)
+            self.point_dict[dict_key] = self.file[num]["position_values"][key_loc]
+            if isinstance(key, str):
+                self.point_dict[key.encode("utf-8")] = self.file[num]["position_values"][key_loc]
+            else:
+                self.point_dict[key] = self.file[num]["position_values"][key_loc]
         for key in self.file[num]["scaler_labels"]:
             key_loc = list(self.file[num]["scaler_labels"]).index(key)
-            self.point_dict[key] = self.file[num]["scaler_values"][key_loc]
+            dict_key = bytes_to_str(key)
+            self.point_dict[dict_key] = self.file[num]["scaler_values"][key_loc]
+            if isinstance(key, str):
+                self.point_dict[key.encode("utf-8")] = self.file[num]["scaler_values"][key_loc]
+            else:
+                self.point_dict[key] = self.file[num]["scaler_values"][key_loc]
         for key in ATT_KEYS:
             if key.startswith("hist"):
                 key = key + "." + str(self.version)

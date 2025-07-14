@@ -11,7 +11,24 @@ from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
 
 from pds.gui.hdf_to_tree import HDFToTree, myTreeCtrl
-from pds.utils import CtrCorrectionPsic, FileLockException, HdfDataFile, ImageAna, image_point_F, psic_from_spec
+from pds.utils import CtrCorrectionPsic, FileLockException, HdfDataFile, ImageAna, bytes_to_str, image_point_F, psic_from_spec
+
+
+# Safe eval function for HDF object values
+def safe_eval_hdf(value):
+    """Safely evaluate HDF object values, converting bytes to strings first."""
+    try:
+        # Handle the case where value is already a numpy array or similar object
+        if hasattr(value, "shape") or hasattr(value, "__array__"):
+            return value
+        result = eval(bytes_to_str(value))
+        # Handle empty list case which often indicates missing/default data
+        if result == []:
+            return None
+        return result
+    except Exception as e:
+        print(f"Error evaluating HDF value: {value}, error: {e}")
+        return value
 
 
 # This class is the interface for integrating data
@@ -892,6 +909,7 @@ class Integrator(wx.Frame, wx.Notebook):
         else:
             self.statusBar.SetStatusText("", 1)
 
+    @staticmethod
     def closestL(a, l_values):
         return min(l_values, key=lambda x: abs(x - a))
 
@@ -909,17 +927,16 @@ class Integrator(wx.Frame, wx.Notebook):
                 dataLookup[iterData] = item
                 item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             allLs = {}
-            if self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith(b"Escan"):
+            if bytes_to_str(self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]]).startswith("Escan"):
                 allLs = self.hdfObject.get_all("Energy", childrenList)
-            elif self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]].startswith(b"ascan"):
+            elif bytes_to_str(self.hdfObject.get_all("type", [childrenList[0]])[childrenList[0]]).startswith("ascan"):
                 get_this = self.hdfObject.get_all("info", [childrenList[0]])[childrenList[0]].split()[1]
                 allLs = self.hdfObject.get_all(get_this, childrenList)
             else:
-                allLs = self.hdfObject.get_all(b"L", childrenList)
+                allLs = self.hdfObject.get_all("L", childrenList)
 
             allLs = dict([L, child] for child, L in allLs.items())
             thisPoint = self.closestL(event.xdata, allLs.keys())
-
             # item, cookie = self.hdfTree.GetFirstChild(myParent)
             # while item and \
             #        self.hdfTree.GetItemPyData(item) != allLs[thisPoint]:
@@ -1076,14 +1093,14 @@ class Integrator(wx.Frame, wx.Notebook):
             delta=angles.get("del", None),
         )
         # print psic
-        beam_slits = eval(self.hdfObject[itemData]["det_0"]["beam_slits"])
-        det_slits = eval(self.hdfObject[itemData]["det_0"]["det_slits"])
+        beam_slits = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["beam_slits"])
+        det_slits = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["det_slits"])
         if det_slits == {}:
             det_slits = None
         sample = {
-            "dia": eval(self.hdfObject[itemData]["det_0"]["sample_diameter"]),
-            "angles": eval(self.hdfObject[itemData]["det_0"]["sample_angles"]),
-            "polygon": eval(self.hdfObject[itemData]["det_0"]["sample_polygon"]),
+            "dia": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_diameter"]),
+            "angles": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_angles"]),
+            "polygon": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_polygon"]),
         }
         cor = CtrCorrectionPsic(gonio=psic, beam_slits=beam_slits, det_slits=det_slits, sample=sample)
         cor.ctot_stationary(plot=True)
@@ -1188,7 +1205,7 @@ class Integrator(wx.Frame, wx.Notebook):
         updateThis, ofType = possibilities[whatField]
         # print event.GetEventObject()#.GetValue()
         try:
-            if eval(self.hdfObject[itemData]["det_0"][updateThis]) == ofType(eval(whatField.GetValue())):
+            if safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis]) == ofType(eval(whatField.GetValue())):
                 pass
             else:
                 self.hdfObject[itemData]["det_0"][updateThis] = str(ofType(eval(whatField.GetValue())))
@@ -1351,7 +1368,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     print("Integration aborted on " + iterString.lower())
                     break
                 try:
-                    if eval(self.hdfObject[iterData]["det_0"]["image_changed"]):
+                    if safe_eval_hdf(self.hdfObject[iterData]["det_0"]["image_changed"]):
                         self.integratePoint(iterData)
                     if self.hdfObject[iterData]["det_0"]["F_changed"]:
                         self.updateF(iterData)
@@ -1469,7 +1486,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 print("Integration aborted on " + iterString.lower())
                 break
             try:
-                if eval(self.hdfObject[iterData]["det_0"]["image_changed"]):
+                if safe_eval_hdf(self.hdfObject[iterData]["det_0"]["image_changed"]):
                     self.integratePoint(iterData)
                 if self.hdfObject[iterData]["det_0"]["F_changed"]:
                     self.updateF(iterData)
@@ -1495,7 +1512,7 @@ class Integrator(wx.Frame, wx.Notebook):
     # entry fields.
     def updateFields(self, itemData):
         # print 'Updating fields'
-        self.badPointToggle.SetValue(eval(self.hdfObject[itemData]["det_0"]["bad_point"]))
+        self.badPointToggle.SetValue(safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_point"]))
         self.imageMaxField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"]))
         self.imageMaxValue.SetLabel("ROI Max: " + bytes_to_str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
         self.colNbgrField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["cnbgr"]))
@@ -1524,9 +1541,9 @@ class Integrator(wx.Frame, wx.Notebook):
     # transmission,etc. added April 2015, JES
     def updateLabels(self, itemData):
         # print 'Updating labels'
-        self.hLbl.SetLabel("H: " + str(self.hdfObject[itemData][b"H"]))
-        self.kLbl.SetLabel("K: " + str(self.hdfObject[itemData][b"K"]))
-        self.lLbl.SetLabel("L: " + str(self.hdfObject[itemData][b"L"]))
+        self.hLbl.SetLabel("H: " + str(self.hdfObject[itemData]["H"]))
+        self.kLbl.SetLabel("K: " + str(self.hdfObject[itemData]["K"]))
+        self.lLbl.SetLabel("L: " + str(self.hdfObject[itemData]["L"]))
         self.iLbl.SetLabel("I: " + str(round(self.hdfObject[itemData]["det_0"]["I"], 2)))
         self.iErrLbl.SetLabel("Ierr: " + str(round(self.hdfObject[itemData]["det_0"]["Ierr"], 2)))
         self.iBgrLbl.SetLabel("Ibgr: " + str(round(self.hdfObject[itemData]["det_0"]["Ibgr"], 2)))
@@ -1535,10 +1552,10 @@ class Integrator(wx.Frame, wx.Notebook):
         self.ctotLbl.SetLabel("Ctot: " + str(round(self.hdfObject[itemData]["det_0"]["ctot"], 2)))
         self.aLbl.SetLabel("Alpha: " + str(round(self.hdfObject[itemData]["det_0"]["alpha"], 2)))
         self.bLbl.SetLabel("Beta: " + str(round(self.hdfObject[itemData]["det_0"]["beta"], 2)))
-        self.secLbl.SetLabel("Seconds: " + str(round(self.hdfObject[itemData][b"Seconds"], 2)))
-        self.transmLbl.SetLabel("transm: " + str(round(self.hdfObject[itemData][b"transm"], 4)))
-        self.filtersLbl.SetLabel("filters: " + str(round(self.hdfObject[itemData][b"filters"], 2)))
-        self.corrdetLbl.SetLabel("corrdet: " + str(round(self.hdfObject[itemData][b"corrdet"], 2)))
+        self.secLbl.SetLabel("Seconds: " + str(round(self.hdfObject[itemData]["Seconds"], 2)))
+        self.transmLbl.SetLabel("transm: " + str(round(self.hdfObject[itemData]["transm"], 4)))
+        self.filtersLbl.SetLabel("filters: " + str(round(self.hdfObject[itemData]["filters"], 2)))
+        self.corrdetLbl.SetLabel("corrdet: " + str(round(self.hdfObject[itemData]["corrdet"], 2)))
 
     # How to (re)calculate the F value for a point
     # Since the rod plot may need to update regardless
@@ -1548,21 +1565,21 @@ class Integrator(wx.Frame, wx.Notebook):
     # this function does not call updateRodPlot, leaving
     # that to whichever function initially called updateF
     def updateF(self, itemData):
-        if eval(self.hdfObject[itemData]["det_0"]["bad_point"]):
+        if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_point"]):
             self.hdfObject[itemData]["det_0"]["F"] = 0
             self.hdfObject[itemData]["det_0"]["Ferr"] = 0
             self.hdfObject[itemData]["det_0"]["F_changed"] = False
             return
         sample_params = {
-            "dia": eval(self.hdfObject[itemData]["det_0"]["sample_diameter"]),
-            "angles": eval(self.hdfObject[itemData]["det_0"]["sample_angles"]),
-            "polygon": eval(self.hdfObject[itemData]["det_0"]["sample_polygon"]),
+            "dia": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_diameter"]),
+            "angles": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_angles"]),
+            "polygon": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_polygon"]),
         }
         corr_params = {
-            "scale": eval(self.hdfObject[itemData]["det_0"]["scale"]),
+            "scale": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["scale"]),
             "geom": self.hdfObject[itemData]["geom"],
-            "beam_slits": eval(self.hdfObject[itemData]["det_0"]["beam_slits"]),
-            "det_slits": eval(self.hdfObject[itemData]["det_0"]["det_slits"]),
+            "beam_slits": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["beam_slits"]),
+            "det_slits": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["det_slits"]),
             "sample": sample_params,
         }
         if corr_params["det_slits"] == {}:
@@ -1573,17 +1590,17 @@ class Integrator(wx.Frame, wx.Notebook):
         # print("\nitem_data", self.hdfObject[itemData], "\n")
         scan_dict = {
             "I": [self.hdfObject[itemData]["det_0"]["I"]],
-            "io": [self.hdfObject[itemData][b"io"]],
+            "io": [self.hdfObject[itemData]["io"]],
             "Ierr": [self.hdfObject[itemData]["det_0"]["Ierr"]],
             "Ibgr": [self.hdfObject[itemData]["det_0"]["Ibgr"]],
             "dims": (1, 0),
-            "transm": [self.hdfObject[itemData][b"transm"]],
-            "phi": float(self.hdfObject[itemData].get(b"phi")),
-            "chi": float(self.hdfObject[itemData].get(b"chi")),
-            "eta": float(self.hdfObject[itemData].get(b"eta")),
-            "mu": float(self.hdfObject[itemData].get(b"mu")),
-            "nu": float(self.hdfObject[itemData].get(b"nu")),
-            "del": float(self.hdfObject[itemData].get(b"del")),
+            "transm": [self.hdfObject[itemData]["transm"]],
+            "phi": float(self.hdfObject[itemData].get("phi")),
+            "chi": float(self.hdfObject[itemData].get("chi")),
+            "eta": float(self.hdfObject[itemData].get("eta")),
+            "mu": float(self.hdfObject[itemData].get("mu")),
+            "nu": float(self.hdfObject[itemData].get("nu")),
+            "del": float(self.hdfObject[itemData].get("del")),
             "G": psicG,
         }
         fDict = image_point_F(scan=scan_dict, point=0, corr_params=corr_params, preparsed=True)
@@ -1597,32 +1614,61 @@ class Integrator(wx.Frame, wx.Notebook):
     # Integrate a point without updating the GUI
     def integratePoint(self, itemData):
         # print 'Integrating scan ' + parentNumber + ' point ' + myNumber
-        if eval(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
+        if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
             self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
             self.hdfObject.write_point(self.hdfObject[itemData])
             self.hdfObject.read_point(itemData)
         self.hdfObject[itemData]["det_0"]["image_changed"] = "False"
         self.hdfObject[itemData]["det_0"]["F_changed"] = True
+
+        # Get the corrected image data - this is already image data, not a filename
+        corrected_image = self.hdfObject[itemData]["det_0"]["corrected_image"]
+        if corrected_image is None:
+            print(f"Warning: No corrected image data available for point {itemData}")
+            # Set default values and return early
+            self.hdfObject[itemData]["det_0"]["I"] = 0.0
+            self.hdfObject[itemData]["det_0"]["Ierr"] = 0.0
+            self.hdfObject[itemData]["det_0"]["Ibgr"] = 0.0
+            return
+
+        # Check if corrected_image is bytes literal like b'[]' which indicates missing data
+        if isinstance(corrected_image, bytes) or (isinstance(corrected_image, str) and corrected_image.startswith("b'")):
+            print(f"Warning: corrected_image contains bytes literal {corrected_image} for point {itemData}")
+            # Set default values and return early
+            self.hdfObject[itemData]["det_0"]["I"] = 0.0
+            self.hdfObject[itemData]["det_0"]["Ierr"] = 0.0
+            self.hdfObject[itemData]["det_0"]["Ibgr"] = 0.0
+            return
+
+        # Check if corrected_image has the expected shape attribute for numpy arrays
+        if not hasattr(corrected_image, "shape"):
+            print(f"Warning: corrected_image is not a numpy array for point {itemData}, type: {type(corrected_image)}")
+            # Set default values and return early
+            self.hdfObject[itemData]["det_0"]["I"] = 0.0
+            self.hdfObject[itemData]["det_0"]["Ierr"] = 0.0
+            self.hdfObject[itemData]["det_0"]["Ibgr"] = 0.0
+            return
+
         imageAna = ImageAna(
-            self.hdfObject[itemData]["det_0"]["corrected_image"],
-            eval(self.hdfObject[itemData]["det_0"]["roi"]),
-            eval(self.hdfObject[itemData]["det_0"]["rotangle"]),
-            eval(self.hdfObject[itemData]["det_0"]["bgrflag"]),
-            eval(self.hdfObject[itemData]["det_0"]["cnbgr"]),
-            eval(self.hdfObject[itemData]["det_0"]["cwidth"]),
-            eval(self.hdfObject[itemData]["det_0"]["cpow"]),
-            eval(self.hdfObject[itemData]["det_0"]["ctan"]),
-            eval(self.hdfObject[itemData]["det_0"]["rnbgr"]),
-            eval(self.hdfObject[itemData]["det_0"]["rwidth"]),
-            eval(self.hdfObject[itemData]["det_0"]["rpow"]),
-            eval(self.hdfObject[itemData]["det_0"]["rtan"]),
-            eval(self.hdfObject[itemData]["det_0"]["nline"]),
-            eval(self.hdfObject[itemData]["det_0"]["filter"]),
-            eval(self.hdfObject[itemData]["det_0"]["compress"]),
+            corrected_image,
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["roi"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rotangle"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bgrflag"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cnbgr"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cwidth"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cpow"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["ctan"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rnbgr"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rwidth"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rpow"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rtan"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["nline"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["filter"]),
+            safe_eval_hdf(self.hdfObject[itemData]["det_0"]["compress"]),
             False,  # 'plot'
             None,  # 'fig'
             "",  # 'figtitle'
-            im_max=eval(self.hdfObject[itemData]["det_0"]["image_max"]),
+            im_max=safe_eval_hdf(self.hdfObject[itemData]["det_0"]["image_max"]),
         )
         # TPT changed getVars to get_vars
         (
@@ -1661,18 +1707,18 @@ class Integrator(wx.Frame, wx.Notebook):
             item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
         iterImageChanged = self.hdfObject.get_all(("det_0", "image_changed"), iterList)
         iterFChanged = self.hdfObject.get_all(("det_0", "F_changed"), iterList)
-        if self.hdfObject[itemData]["type"].startswith(b"Escan"):
+        if bytes_to_str(self.hdfObject[itemData]["type"]).startswith("Escan"):
             iterLList = self.hdfObject.get_all("energy", iterList)
-        elif self.hdfObject[itemData]["type"].startswith(b"ascan"):
+        elif bytes_to_str(self.hdfObject[itemData]["type"]).startswith("ascan"):
             get_this = self.hdfObject[itemData]["info"].split()[1]
             iterLList = self.hdfObject.get_all(get_this, iterList)
         else:
-            iterLList = self.hdfObject.get_all(b"L", iterList)
+            iterLList = self.hdfObject.get_all("L", iterList)
 
         iterFList = self.hdfObject.get_all(("det_0", "F"), iterList)
         iterFerrList = self.hdfObject.get_all(("det_0", "Ferr"), iterList)
         for key in iterImageChanged.keys():
-            if not (eval(iterImageChanged[key]) or iterFChanged[key]):
+            if not (safe_eval_hdf(iterImageChanged[key]) or iterFChanged[key]):
                 doneLList.append(iterLList[key])
                 doneFList.append(iterFList[key])
                 doneFerrList.append(iterFerrList[key])
@@ -1692,14 +1738,16 @@ class Integrator(wx.Frame, wx.Notebook):
             rodPlot.errorbar(doneLList, doneFList, doneFerrList, fmt="b", linestyle="")
         except Exception:
             pass
-        if self.hdfObject[itemData]["type"].startswith(b"Escan"):
+        if bytes_to_str(self.hdfObject[itemData]["type"]).startswith("Escan"):
             rodPlot.plot(self.hdfObject[itemData]["Energy"], self.hdfObject[itemData]["det_0"]["F"], "ro")
-        elif self.hdfObject[itemData]["type"].startswith(b"ascan"):
+        elif bytes_to_str(self.hdfObject[itemData]["type"]).startswith("ascan"):
             rodPlot.plot(self.hdfObject[itemData][get_this], self.hdfObject[itemData]["det_0"]["F"], "ro")
         else:
-            rodPlot.plot(self.hdfObject[itemData][b"L"], self.hdfObject[itemData]["det_0"]["F"], "ro")
+            rodPlot.plot(self.hdfObject[itemData]["L"], self.hdfObject[itemData]["det_0"]["F"], "ro")
         try:
-            if not self.hdfObject[itemData]["type"].startswith(b"Escan") and not self.hdfObject[itemData]["type"].startswith(b"ascan"):
+            if not bytes_to_str(self.hdfObject[itemData]["type"]).startswith("Escan") and not bytes_to_str(self.hdfObject[itemData]["type"]).startswith(
+                "ascan"
+            ):
                 rodPlot.semilogy()
         except Exception:
             pass
@@ -1743,28 +1791,44 @@ class Integrator(wx.Frame, wx.Notebook):
             self.updateLabels(itemData)
             self.hdfTree.SetFocus()
 
-        if eval(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
+        if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
             self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
             self.hdfObject.write_point(self.hdfObject[itemData])
             self.hdfObject.read_point(itemData)
         self.fig4.clear()
-        if not eval(self.hdfObject[itemData]["det_0"]["image_changed"]):
+        if not safe_eval_hdf(self.hdfObject[itemData]["det_0"]["image_changed"]):
+            # Get the corrected image data - this is already image data, not a filename
+            corrected_image = self.hdfObject[itemData]["det_0"]["corrected_image"]
+            if corrected_image is None:
+                print(f"Warning: No corrected image data available for point {itemData}")
+                return
+
+            # Check if corrected_image is bytes literal like b'[]' which indicates missing data
+            if isinstance(corrected_image, bytes) or (isinstance(corrected_image, str) and corrected_image.startswith("b'")):
+                print(f"Warning: corrected_image contains bytes literal {corrected_image} for point {itemData}")
+                return
+
+            # Check if corrected_image has the expected shape attribute for numpy arrays
+            if not hasattr(corrected_image, "shape"):
+                print(f"Warning: corrected_image is not a numpy array for point {itemData}, type: {type(corrected_image)}")
+                return
+
             imageAna = ImageAna(
-                self.hdfObject[itemData]["det_0"]["corrected_image"],
-                eval(self.hdfObject[itemData]["det_0"]["roi"]),
-                eval(self.hdfObject[itemData]["det_0"]["rotangle"]),
-                eval(self.hdfObject[itemData]["det_0"]["bgrflag"]),
-                eval(self.hdfObject[itemData]["det_0"]["cnbgr"]),
-                eval(self.hdfObject[itemData]["det_0"]["cwidth"]),
-                eval(self.hdfObject[itemData]["det_0"]["cpow"]),
-                eval(self.hdfObject[itemData]["det_0"]["ctan"]),
-                eval(self.hdfObject[itemData]["det_0"]["rnbgr"]),
-                eval(self.hdfObject[itemData]["det_0"]["rwidth"]),
-                eval(self.hdfObject[itemData]["det_0"]["rpow"]),
-                eval(self.hdfObject[itemData]["det_0"]["rtan"]),
-                eval(self.hdfObject[itemData]["det_0"]["nline"]),
-                eval(self.hdfObject[itemData]["det_0"]["filter"]),
-                eval(self.hdfObject[itemData]["det_0"]["compress"]),
+                corrected_image,
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["roi"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rotangle"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bgrflag"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cnbgr"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cwidth"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cpow"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["ctan"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rnbgr"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rwidth"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rpow"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rtan"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["nline"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["filter"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["compress"]),
                 False,  # 'plot'
                 None,  # 'fig'
                 "",  # 'figtitle'
@@ -1780,31 +1844,48 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.hdfObject[itemData]["det_0"]["Ibgr_r"],
                 self.hdfObject[itemData]["det_0"]["Ierr_c"],
                 self.hdfObject[itemData]["det_0"]["Ierr_r"],
-                eval(self.hdfObject[itemData]["det_0"]["image_max"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["image_max"]),
             )
         else:
             self.hdfObject[itemData]["det_0"]["image_changed"] = "False"
             self.hdfObject[itemData]["det_0"]["F_changed"] = True
+
+            # Get the corrected image data - this is already image data, not a filename
+            corrected_image = self.hdfObject[itemData]["det_0"]["corrected_image"]
+            if corrected_image is None:
+                print(f"Warning: No corrected image data available for point {itemData}")
+                return
+
+            # Check if corrected_image is bytes literal like b'[]' which indicates missing data
+            if isinstance(corrected_image, bytes) or (isinstance(corrected_image, str) and corrected_image.startswith("b'")):
+                print(f"Warning: corrected_image contains bytes literal {corrected_image} for point {itemData}")
+                return
+
+            # Check if corrected_image has the expected shape attribute for numpy arrays
+            if not hasattr(corrected_image, "shape"):
+                print(f"Warning: corrected_image is not a numpy array for point {itemData}, type: {type(corrected_image)}")
+                return
+
             imageAna = ImageAna(
-                self.hdfObject[itemData]["det_0"]["corrected_image"],
-                eval(self.hdfObject[itemData]["det_0"]["roi"]),
-                eval(self.hdfObject[itemData]["det_0"]["rotangle"]),
-                eval(self.hdfObject[itemData]["det_0"]["bgrflag"]),
-                eval(self.hdfObject[itemData]["det_0"]["cnbgr"]),
-                eval(self.hdfObject[itemData]["det_0"]["cwidth"]),
-                eval(self.hdfObject[itemData]["det_0"]["cpow"]),
-                eval(self.hdfObject[itemData]["det_0"]["ctan"]),
-                eval(self.hdfObject[itemData]["det_0"]["rnbgr"]),
-                eval(self.hdfObject[itemData]["det_0"]["rwidth"]),
-                eval(self.hdfObject[itemData]["det_0"]["rpow"]),
-                eval(self.hdfObject[itemData]["det_0"]["rtan"]),
-                eval(self.hdfObject[itemData]["det_0"]["nline"]),
-                eval(self.hdfObject[itemData]["det_0"]["filter"]),
-                eval(self.hdfObject[itemData]["det_0"]["compress"]),
+                corrected_image,
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["roi"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rotangle"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bgrflag"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cnbgr"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cwidth"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cpow"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["ctan"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rnbgr"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rwidth"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rpow"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rtan"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["nline"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["filter"]),
+                safe_eval_hdf(self.hdfObject[itemData]["det_0"]["compress"]),
                 False,  # 'plot'
                 None,  # 'fig'
                 "",  # 'figtitle'
-                im_max=eval(bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"])),
+                im_max=safe_eval_hdf(self.hdfObject[itemData]["det_0"]["image_max"]),
             )
             # TPT changed getVars to get_vars
             (
@@ -1908,7 +1989,7 @@ class Integrator(wx.Frame, wx.Notebook):
             self.clearFields()
             self.statusBar.SetStatusText(self.hdfTree.GetItemText(ofMe))
         else:
-            if eval(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
+            if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
                 self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
                 # self.hdfObject.write_point(self.hdfObject[itemData])
                 # self.hdfObject.read_point(itemData)
@@ -2031,16 +2112,16 @@ class Integrator(wx.Frame, wx.Notebook):
             print("Saving H, K, L, F, and Ferr values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
-                allHs = self.hdfObject.get_all(b"H", saveThese)
-                allKs = self.hdfObject.get_all(b"K", saveThese)
-                allLs = self.hdfObject.get_all(b"L", saveThese)
+                allHs = self.hdfObject.get_all("H", saveThese)
+                allKs = self.hdfObject.get_all("K", saveThese)
+                allLs = self.hdfObject.get_all("L", saveThese)
                 allFs = self.hdfObject.get_all(("det_0", "F"), saveThese)
                 allFerrs = self.hdfObject.get_all(("det_0", "Ferr"), saveThese)
                 f = open(fname, "w")
                 header = "  #idx %5s %5s %5s %7s %7s\n" % ("H", "K", "L", "F", "Ferr")
                 f.write(header)
                 for iterData in saveThese:
-                    if not eval(allBadPs[iterData]):
+                    if not safe_eval_hdf(allBadPs[iterData]):
                         line = "%6s %3.2f %3.2f %6.3f %6.6g %6.6g\n" % (
                             iterData,
                             allHs[iterData],
@@ -2088,9 +2169,9 @@ class Integrator(wx.Frame, wx.Notebook):
             print("Saving H, K, L, E, F, and Ferr values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
-                allHs = self.hdfObject.get_all(b"H", saveThese)
-                allKs = self.hdfObject.get_all(b"K", saveThese)
-                allLs = self.hdfObject.get_all(b"L", saveThese)
+                allHs = self.hdfObject.get_all("H", saveThese)
+                allKs = self.hdfObject.get_all("K", saveThese)
+                allLs = self.hdfObject.get_all("L", saveThese)
                 allEs = self.hdfObject.get_all("Energy", saveThese)
                 allFs = self.hdfObject.get_all(("det_0", "F"), saveThese)
                 allFerrs = self.hdfObject.get_all(("det_0", "Ferr"), saveThese)
@@ -2098,7 +2179,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 header = "  #idx %5s %5s %5s %5s %7s %7s\n" % ("H", "K", "L", "E", "F", "Ferr")
                 f.write(header)
                 for iterData in saveThese:
-                    if not eval(allBadPs[iterData]):
+                    if not safe_eval_hdf(allBadPs[iterData]):
                         line = "%6s %3.2f %3.2f %6.3f %6.5f %6.6g %6.6g\n" % (
                             iterData,
                             allHs[iterData],
@@ -2148,9 +2229,9 @@ class Integrator(wx.Frame, wx.Notebook):
             print("Saving RIDS to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
-                allHs = self.hdfObject.get_all(b"H", saveThese)
-                allKs = self.hdfObject.get_all(b"K", saveThese)
-                allLs = self.hdfObject.get_all(b"L", saveThese)
+                allHs = self.hdfObject.get_all("H", saveThese)
+                allKs = self.hdfObject.get_all("K", saveThese)
+                allLs = self.hdfObject.get_all("L", saveThese)
                 allEs = self.hdfObject.get_all("Energy", saveThese)
                 allFs = self.hdfObject.get_all(("det_0", "F"), saveThese)
                 allFerrs = self.hdfObject.get_all(("det_0", "Ferr"), saveThese)
@@ -2160,7 +2241,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 header = "#%5s %5s %5s %5s %7s %7s %7s %7s\n" % ("E", "H", "K", "L", "F", "Ferr", "alpha", "beta")
                 f.write(header)
                 for iterData in saveThese:
-                    if not eval(allBadPs[iterData]):
+                    if not safe_eval_hdf(allBadPs[iterData]):
                         line = "%6.5f %3.2f %3.2f %6.2f %6.6g %6.6g %6.6g %6.6g\n" % (
                             allEs[iterData],
                             allHs[iterData],
@@ -2211,9 +2292,9 @@ class Integrator(wx.Frame, wx.Notebook):
             print("Saving CTR, Alpha, and Beta values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
-                allHs = self.hdfObject.get_all(b"H", saveThese)
-                allKs = self.hdfObject.get_all(b"K", saveThese)
-                allLs = self.hdfObject.get_all(b"L", saveThese)
+                allHs = self.hdfObject.get_all("H", saveThese)
+                allKs = self.hdfObject.get_all("K", saveThese)
+                allLs = self.hdfObject.get_all("L", saveThese)
                 allFs = self.hdfObject.get_all(("det_0", "F"), saveThese)
                 allFerrs = self.hdfObject.get_all(("det_0", "Ferr"), saveThese)
                 allAlphas = self.hdfObject.get_all(("det_0", "alpha"), saveThese)
@@ -2222,7 +2303,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 header = "#%5s %5s %5s %7s %7s %7s %7s\n" % ("H", "K", "L", "F", "Ferr", "alpha", "beta")
                 f.write(header)
                 for iterData in saveThese:
-                    if not eval(allBadPs[iterData]):
+                    if not safe_eval_hdf(allBadPs[iterData]):
                         line = "%3.2f %3.2f %6.2f %6.6g %6.6g %6.6g %6.6g\n" % (
                             allHs[iterData],
                             allKs[iterData],
@@ -2272,9 +2353,9 @@ class Integrator(wx.Frame, wx.Notebook):
             print("Saving Intesity data to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
-                allHs = self.hdfObject.get_all(b"H", saveThese)
-                allKs = self.hdfObject.get_all(b"K", saveThese)
-                allLs = self.hdfObject.get_all(b"L", saveThese)
+                allHs = self.hdfObject.get_all("H", saveThese)
+                allKs = self.hdfObject.get_all("K", saveThese)
+                allLs = self.hdfObject.get_all("L", saveThese)
                 allIs = self.hdfObject.get_all(("det_0", "I"), saveThese)
                 allIos = self.hdfObject.get_all("io", saveThese)
                 allIbgrs = self.hdfObject.get_all(("det_0", "Ibgr"), saveThese)
@@ -2285,7 +2366,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 header = "#%5s %5s %5s %7s %7s %7s %7s %7s %7s\n" % ("H", "K", "L", "F", "Ferr", "I", "Io", "Ibgr", "Seconds")
                 f.write(header)
                 for iterData in saveThese:
-                    if not eval(allBadPs[iterData]):
+                    if not safe_eval_hdf(allBadPs[iterData]):
                         line = "%3.2f %3.2f %6.2f %6.6g %6.6g %6.6g %6.6g %6.6g %6.6g\n" % (
                             allHs[iterData],
                             allKs[iterData],
@@ -2365,14 +2446,6 @@ class customSelector(wx.Dialog):
         self.choosingSizer1.Add(self.choosingSizer2, flag=wx.EXPAND)
 
         self.SetSizer(self.choosingSizer1)
-
-
-# Converts bytes to str for entry field values
-def bytes_to_str(value):
-    if isinstance(value, bytes):
-        return value.decode("utf-8")
-    else:
-        return str(value)
 
 
 # Holds the RectangleSelector used to pick an ROI
