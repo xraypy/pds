@@ -1,11 +1,3 @@
-"""
-Tests for filtertools module.
-
-This test suite ensures that the filtertools functions work correctly
-with date operations, list operations, and HDF5 filtering including
-Python 2/3 compatibility for bytes/strings.
-"""
-
 import os
 import tempfile
 
