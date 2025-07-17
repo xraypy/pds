@@ -1,120 +1,66 @@
-"""
-Simple math addons and wrappers
-
-Authors/Modifications:
-----------------------
-* T. Trainor (tptrainor@alaska.edu)
-  M. Newville (newville@cars.uchicago.edu)
-* minimize and random from original tdl
-
-* Python 2.x to Python 3.12.3
-  Author: Jaswitha (jaswithareddy@uchicago.edu)
-  Last modified: 2/5/2025
-
-Todo:
------
-* peak fit
-
-"""
-
-#######################################################################
+from typing import Any, Callable
 
 import numpy as np
+from scipy.optimize import leastsq
 
 
-#######################################################################
-def ave(x):
-    """
-    average of an array
-    """
-    # return (sum(x)/float(len(x)))
-    return np.ave(x)
+def ave(x: np.ndarray) -> np.floating[Any]:
+    """Average of an array."""
+    return np.mean(x)
 
 
-def std(x):
-    """
-    standard deviation of an array
-    """
-    # x_ave = self.ave(x)
-    # return( np.sqrt( sum( (x-x_ave)**2 ) / float(len(x)) ) )
+def std(x: np.ndarray) -> np.floating[Any]:
+    """Standard deviation of an array."""
     return np.std(x)
 
 
-def line(x, offset, slope):
-    """
-    calculation of a line
-    """
-    y = slope * x + offset
-    return y
+def line(x: np.ndarray | float, offset: float, slope: float) -> np.ndarray | float:
+    """Calculation of a line."""
+    return slope * x + offset
 
 
-def square(a):
-    """
-    square of two numbers
-    """
+def square(a: float) -> float:
+    """Square of a number."""
     return a * a
 
 
-def cosd(x):
-    """
-    np.cos(x), x in degrees
-    """
+def cosd(x: float) -> float:
+    """np.cos(x), x in degrees."""
     return np.cos(np.radians(x))
 
 
-def sind(x):
-    """
-    np.sin(x), x in degrees
-    """
+def sind(x: float) -> float:
+    """np.sin(x), x in degrees."""
     return np.sin(np.radians(x))
 
 
-def tand(x):
-    """
-    np.tan(x), x in degrees
-    """
+def tand(x: float) -> float:
+    """np.tan(x), x in degrees."""
     return np.tan(np.radians(x))
 
 
-def arccosd(x):
-    """
-    np.arccos(x), result returned in degrees
-    """
+def arccosd(x: float) -> float:
+    """np.arccos(x), result returned in degrees."""
     return np.degrees(np.arccos(x))
 
 
-def arcsind(x):
-    """
-    np.arcsin(x), result returned in degrees
-    """
+def arcsind(x: float) -> float:
+    """np.arcsin(x), result returned in degrees."""
     return np.degrees(np.arcsin(x))
 
 
-def arctand(x):
-    """
-    np.arctan(x), result returned in degrees
-    """
+def arctand(x: float) -> float:
+    """np.arctan(x), result returned in degrees."""
     return np.degrees(np.arctan(x))
 
 
-def cartesian_mag(v):
-    """
-    Calculate the norm of a vector defined in
-    a cartesian basis.
-
-    This should give same as np.linalg.norm
-    """
-    m = np.sqrt(np.dot(v, v))
-    return m
+def cartesian_mag(v: np.ndarray) -> float:
+    """Calculate the norm of a vector defined in a cartesian basis."""
+    return float(np.sqrt(np.dot(v, v)))
 
 
-def cartesian_angle(u, v):
-    """
-    Calculate angle between two vectors defined in
-    a cartesian basis.
-
-    Result is always between 0 and 180 degrees
-    """
+def cartesian_angle(u: np.ndarray, v: np.ndarray) -> float:
+    """Calculate angle between two vectors defined in a cartesian basis."""
     uv = np.dot(u, v)
     um = cartesian_mag(u)
     vm = cartesian_mag(v)
@@ -128,49 +74,14 @@ def cartesian_angle(u, v):
     return alpha
 
 
-#######################################################################
-def minimize(f, x, y, params, *args, **kws):
-    """
-    Simple wrapper around scipy.optimize.leastsq
-
-    Parameters:
-    -----------
-    * f is the function to be optimized
-    * x is a vector of independant varibles (floats) - the abscissa
-    * y is the corresponding vector of known/dependant values - the ordinate
-    * params is a tuple of doubles which are to be optimized.
-    * args and kws are additional arguments for f
-
-    Notes:
-    ------
-    >>params = minimize(f,x,y,params,*args,**kw)
-
-    where
-        ycalc = f(x,*args,**kw)
-    and
-        args should be all single valued (floats)
-
-    Examples:
-    ---------
-    # Define a function and optimize (a,b)
-    >>def fun(x,a,b,c,d=1):
-    >>   ...calc y...
-    >>   return y
-    >>(a,b) = minimize(f,x,yobs,(a,b),c,d=10)
-
-    """
-    from scipy.optimize import leastsq
-
+def minimize(f: Callable, x: np.ndarray, y: np.ndarray, params: tuple[float, ...], *args: Any, **kws: Any) -> tuple[float, ...]:
+    """Simple wrapper around scipy.optimize.leastsq."""
     XX = x
     YY = y
     FUNC = f
 
-    ###########################################
-    def _residual(parameters, *arguments):
-        """
-        if the last arg is a dictionary assume
-        its the kw args for the function
-        """
+    def _residual(parameters: tuple, *arguments: Any) -> np.ndarray:
+        """If the last arg is a dictionary assume it's the kw args for the function."""
         kw = {}
         if len(arguments) > 0:
             if type(arguments[-1]) is dict:
@@ -178,111 +89,119 @@ def minimize(f, x, y, params, *args, **kws):
                 arguments = arguments[0:-1]
         # Now combine all parameters into a single tuple
         parameters = tuple(parameters) + tuple(arguments)
-        # calculate theory
+        # Calculate theory
         yc = FUNC(XX, *parameters, **kw)
-        # return residual
+        # Return residual
         return YY - yc
 
-    ###########################################
-    # make sure params is a tuple
+    # Ensure params is a tuple
     params = tuple(params)
     args = args + (kws,)
-    test = _residual(params, *args)
-    if len(test) != len(x):
-        print("cannot minimize function ")
+
+    try:
+        test = _residual(params, *args)
+        if len(test) != len(x):
+            print("cannot minimize function")
+            # Return original params if function is incompatible
+            return params
+    except Exception:
+        print("cannot minimize function")
+        # Return original params on any error
+        return params
 
     result = leastsq(_residual, params, args=args)
     return result[0]
 
 
-#######################################################################
-def random_seed(x=None):
-    """
-    wrapper for numpy random seed
-    Seeds the random number generator
-    """
+def random_seed(x: int | None = None) -> None:
+    """Wrapper for numpy random seed. Seeds the random number generator."""
     if x is None:
-        return np.random.seed()
+        np.random.seed()
     else:
         try:
-            return np.random.seed([x])
+            np.random.seed([x])
         except Exception:
-            return np.random.seed()
+            np.random.seed()
 
 
-def random(a=1, b=1, c=1, npts=1, distribution="normal", **kw):
+def random(a: float = 1, b: float = 1, c: float = 1, npts: int = 1, distribution: str = "normal", **kw: Any) -> np.ndarray | float:
     """
-    wrapper for numpy random distributions
+    Wrapper for numpy random distributions
 
     Parameters:
     -----------
-    * a,b,c are default arguments for the dist functions
-      e.g. NR.normal a = mean, b = stdev of the distrobution
-    * npts is the number of points
+    * a,b,c: default arguments for the dist functions
+      e.g. NR.normal a = mean, b = stdev of the distribution
+    * npts: number of points
 
     Outputs:
     --------
-    returns npts random numbers.
+    Returns npts random numbers. If npts=1, returns a scalar.
     """
     NR = np.random
     if distribution == "binomial":
-        return NR.binomial(a, b, size=npts)
+        result = NR.binomial(a, b, size=npts)
     elif distribution == "geometric":
-        return NR.geometric(a, size=npts)
+        result = NR.geometric(a, size=npts)
     elif distribution == "poisson":
-        return NR.poisson(a, size=npts)
+        result = NR.poisson(a, size=npts)
     elif distribution == "zipf":
-        return NR.zipf(a, size=npts)
+        result = NR.zipf(a, size=npts)
     elif distribution == "beta":
-        return NR.beta(a, b, size=npts)
+        result = NR.beta(a, b, size=npts)
     elif distribution == "chisquare":
-        return NR.chisquare(a, size=npts)
+        result = NR.chisquare(a, size=npts)
     elif distribution == "exponential":
-        return NR.exponential(a, size=npts)
+        result = NR.exponential(a, size=npts)
     elif distribution == "gamma":
-        return NR.gamma(a, b, size=npts)
+        result = NR.gamma(a, b, size=npts)
     elif distribution == "gumbel":
-        return NR.gumbel(a, b, size=npts)
+        result = NR.gumbel(a, b, size=npts)
     elif distribution == "laplace":
-        return NR.laplace(a, b, size=npts)
+        result = NR.laplace(a, b, size=npts)
     elif distribution == "lognormal":
-        return NR.lognormal(a, b, size=npts)
+        result = NR.lognormal(a, b, size=npts)
     elif distribution == "logistic":
-        return NR.logistic(a, b, size=npts)
+        result = NR.logistic(a, b, size=npts)
     elif distribution == "multivariate_normal":
-        return NR.multivariate_normal(a, b, size=npts)
+        result = NR.multivariate_normal(a, b, size=npts)
     elif distribution == "noncentral_chisquare":
-        return NR.noncentral_chisquare(a, b, size=npts)
+        result = NR.noncentral_chisquare(a, b, size=npts)
     elif distribution == "noncentral_f":
-        return NR.noncentral_f(a, b, c, size=npts)
+        result = NR.noncentral_f(a, b, c, size=npts)
     elif distribution == "normal":
-        return NR.normal(a, b, size=npts)
+        result = NR.normal(a, b, size=npts)
     elif distribution == "pareto":
-        return NR.pareto(a, size=npts)
+        result = NR.pareto(a, size=npts)
     elif distribution == "power":
-        return NR.power(a, size=npts)
+        result = NR.power(a, size=npts)
     elif distribution == "randint":
-        return NR.randint(a, b, size=npts)
+        result = NR.randint(a, b, size=npts)
     elif distribution == "random_integers":
-        return NR.random_integers(a, b, size=npts)
+        result = NR.random_integers(a, b, size=npts)
     elif distribution == "rayleigh":
-        return NR.rayleigh(a, size=npts)
+        result = NR.rayleigh(a, size=npts)
     elif distribution == "standard_cauchy":
-        return NR.standard_cauchy(size=npts)
+        result = NR.standard_cauchy(size=npts)
     elif distribution == "standard_exponential":
-        return NR.standard_exponential(size=npts)
+        result = NR.standard_exponential(size=npts)
     elif distribution == "standard_gamma":
-        return NR.standard_gamma(a, size=npts)
+        result = NR.standard_gamma(a, size=npts)
     elif distribution == "standard_normal":
-        return NR.standard_normal(size=npts)
+        result = NR.standard_normal(size=npts)
     elif distribution == "standard_t":
-        return NR.standard_t(a, size=npts)
+        result = NR.standard_t(a, size=npts)
     elif distribution == "uniform":
-        return NR.uniform(a, b, size=npts)
+        result = NR.uniform(a, b, size=npts)
     elif distribution == "wald":
-        return NR.wald(a, b, size=npts)
+        result = NR.wald(a, b, size=npts)
     elif distribution == "weibull":
-        return NR.weibull(a, b, size=npts)
+        result = NR.weibull(a, b, size=npts)
+    else:
+        # Default to normal distribution
+        result = NR.normal(a, b, size=npts)
 
-
-#######################################################################
+    # Return scalar if single point requested
+    if npts == 1:
+        return float(result.item()) if hasattr(result, "item") else float(result)
+    return result

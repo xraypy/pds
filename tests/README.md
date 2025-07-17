@@ -8,6 +8,7 @@ This directory contains pytest-based tests for the PDS codebase.
 - `test_file_locker.py` - Tests for the cross-platform file locking module  
 - `test_image_data.py` - Tests for the image data handling module
 - `test_filtertools.py` - Tests for the HDF5 filtering and date/list operations module
+- `test_mathutil.py` - Tests for mathematical utility functions and numpy/scipy wrappers
 
 ## Running Tests
 
@@ -22,6 +23,7 @@ pytest tests/test_background.py
 pytest tests/test_file_locker.py
 pytest tests/test_image_data.py
 pytest tests/test_filtertools.py
+pytest tests/test_mathutil.py
 ```
 
 To run with verbose output:
@@ -31,15 +33,30 @@ pytest tests/ -v
 
 ## Test Categories
 
-- **Compatibility Tests**: Ensure Python 2/3 compatibility (especially in `test_image_data.py`)
+- **Compatibility Tests**: Ensure Python 2/3 compatibility across all modules
 - **Functional Tests**: Test core functionality across all modules
 - **Edge Case Tests**: Test boundary conditions and error handling
+- **Mathematical Precision**: Validate numerical accuracy and algorithm behavior
 - **Integration Tests**: Test module interactions
 - **Concurrency Tests**: Test thread-safe operations (in `test_file_locker.py`)
 - **Cross-platform Tests**: Test OS-specific functionality (file locking, path handling)
 - **Performance Tests**: Basic performance benchmarks
 
 ## Special Test Features
+
+### Mathematical Utilities (`test_mathutil.py`)
+- **Numpy Wrappers**: Tests for `ave()`, `std()` with deprecated `numpy.ave()` replacement
+- **Trigonometric Functions**: Degree-based trig functions with precise validation
+- **Vector Operations**: Cartesian magnitude and angle calculations
+- **Optimization Wrapper**: scipy.optimize.leastsq wrapper with error handling
+- **Random Distributions**: Comprehensive random number generation testing
+- **Python 2 Compatibility**: Validates modernized code against original behavior
+
+### Polynomial Background (`test_background.py`)
+- **Kajfosz-Kwiatek Algorithm**: Comprehensive background determination testing
+- **Array Operations**: Compression and expansion with various factors
+- **Mathematical Precision**: Numerical accuracy validation
+- **Edge Cases**: Boundary conditions and error handling
 
 ### HDF5 Compatibility (`test_image_data.py`)
 - Tests for Python 2→3 migration string/bytes compatibility
