@@ -25,8 +25,8 @@ Desktop.ini
 *.code-workspace
 
 # Tools
-*.mypy_cache/
 .ruff_cache/
+.pytest_cache/
 
 # Data files
 data/
