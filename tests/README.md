@@ -10,6 +10,7 @@ This directory contains pytest-based tests for the PDS codebase and is structure
 - `test_file_locker.py` - Tests for the cross-platform file locking module  
 - `test_image_data.py` - Tests for the image data handling module
 - `test_filtertools.py` - Tests for the HDF5 filtering and date/list operations module
+- `test_lattice.py` - Tests for the crystallographic lattice calculations module
 - `test_mathutil.py` - Tests for mathematical utility functions and numpy/scipy wrappers
 - `test_polygon.py` - Tests for generalized polygon computations and geometric operations
 
@@ -37,6 +38,7 @@ pytest tests/test_background.py
 pytest tests/test_file_locker.py
 pytest tests/test_image_data.py
 pytest tests/test_filtertools.py
+pytest tests/test_lattice.py
 pytest tests/test_mathutil.py
 pytest tests/test_polygon.py
 ```
@@ -113,3 +115,17 @@ pytest tests/ -v
 - Numeric type compatibility (numpy integers, floats)
 - Original Python 2 eval() expression compatibility
 - Timeout and error condition handling
+
+### Crystallographic Lattice (`test_lattice.py`)
+- **Unit Cell Parameters**: Lattice parameter initialization and updates
+- **Metric Tensor Calculations**: Real and reciprocal space metric tensors
+- **Volume Calculations**: Unit cell volume in real and reciprocal space
+- **Vector Operations**: Dot products, magnitudes, and angles using metric tensors
+- **Diffraction Calculations**: d-spacing and 2θ angle calculations
+- **Coordinate Transformations**: Real ↔ reciprocal space transformations
+- **Lattice Transforms**: Basis rotations, shifts, and coordinate system changes
+- **Original Test Functions**: Exact reproduction of Python 2 test_lattice() and test_transform()
+- **Crystallographic Systems**: Cubic, hexagonal, and rhombohedral lattice testing
+- **Mathematical Precision**: High-precision validation of crystallographic calculations
+- **Type Annotations**: Full Python 3.13 type hint compatibility
+- **Edge Cases**: Zero parameters, extreme angles, and numerical stability

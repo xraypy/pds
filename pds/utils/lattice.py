@@ -1,191 +1,47 @@
-"""
-Lattice calcs
-
-Authors/Modifications:
------------------------
-* Tom Trainor (tptrainor@alaska.edu)
-* convert matlab to python, Kunal Tanwar
-* Convert classes, TPT
-
-* Python 2.x to Python 3.12.3
-  Author: Jaswitha (jaswithareddy@uchicago.edu)
-  Last modified: 2/5/2025
-
-Notes on Convention and Generalized Transforms
-----------------------------------------------
-The set of basis vectors that defines the real lattice are
-covarient quantities, while the set of indicies that define
-real space vectors are contravarient:
-                 |a|
-    v = (x,y,z)* |b| = x*a + y*b + z*c
-                 |c|
-If A is an arbitrary matrix that transforms the contravarient
-vector indicies, its assumed that the indicies left multiply
-    (x',y',z') = (x,y,z) * A
-
-Note that the usual convention is to express covarient quantities
-as column vectors and contravarient quantities as row vectors
-(subscripts and superscripts respectivley in tensor notation)
-However, in the notes below we'll just take 1-D arrays to be
-column vectors to simplify the notation.  Therefore, if A is defined
-as above, the matrix vector multiplications will need to be changed to:
-    |x'|                 |x|
-    |y'| = transpose(A)* |y|
-    |z'|                 |z|
-We can express the same in numpy given a vector v and matrix A
-    dot(v,A) = dot(transpose(A),v)
-where v is multiplied as a row vector on the lhs and a column
-vector on the rhs; ie the transpose of v bewteen column and
-row vecor is implied by its position.
-
-Assume there is a matrix that transforms the covarient basis
-(via rotation and/or dilation) to a new set of basis vectors:
-    |a'|      |a|        a' = (F11*a + F12*b + F13*c)
-    |b'| = F* |b|   or   b' = (F21*a + F22*b + F23*c)
-    |c'|      |c|        c' = (F31*a + F32*b + F33*c)
-with a well defined inverse:
-    |a|           |a'|
-    |b| = inv(F)* |b'|
-    |c|           |c'|
-
-The covarient/contravarient relationship bewteen basis vectors
-and the vector indicies implies that the indicies of a (stationary)
-vector in the new (') basis are obtained via the inverse of the
-F matrix:
-    |x'|      |x|
-    |y'| = M* |y|
-    |z'|      |z|
-where
-    M = transpose(inv(F)) = inv(transpose(F))
-
-The reciprocal relation is:
-    |x|      |x'|
-    |y| = N* |y'|
-    |z|      |z'|
-where
-    N = inv(M) = transpose(F)
-
-With respect to the real lattice the recip lattice basis vectors
-are contravarient and the vector indicies are covarient:
-                     |h|
-    vr = (ar,br,cr)* |k| = h*ar + k*br + l*cr
-                     |l|
-
-Given the generalized basis transform F above, the covarient recip
-lattice indicies transform in the same way as the lattice.
-Therefore:
-     |h'|      |h|
-     |k'| = F* |k|
-     |l'|      |l|
-
-The reciprocal relation is:
-    |h|      |k'|
-    |k| = G* |k'|
-    |l|      |l'|
-where
-    G = inv(F) = transpose(M)
-
-
-The metric tensor
-------------------
-The metric tensor is defined in terms of the vector dot product
-for a general real space system
-  dot(u,v) = u*g*v
-where
-       |a*a, a*b, a*c|
-  g =  |b*a, b*b, b*c|
-       |c*a, c*b, c*c|
-
-Therefore, (with a,b,c, correspoding to vectors magnitudes):
-
-g = [ [ a*a, a*b*cosd(gam), a*c*cosd(bet) ],
-      [ b*a*cosd(gam), b*b, b*c*cosd(alp) ],
-      [ c*a*cosd(bet), c*b*cosd(alp), c*c ] ]
-
-The metric tensor may also be defined in terms of a lattice transform
-ie the real space basis vectors can be expressed in terms of the
-recip space basis vectors via
-      |a|      |ar|
-      |b| = g* |br|
-      |c|      |cr|
-therefore
-      |ar|       |a|
-      |br| = gr* |b|
-      |cr|       |c|
-where gr = inv(g).  Hence the recip lattice vectors
-can be plotted in the real lattice via
-      ar = gr11*a + gr12*b + gr13*c
-      br = gr21*a + gr22*b + gr23*c
-      cr = gr31*a + gr32*b + gr33*c
-and visa versa
-
-Using the above relations for lattice transforms the
-indicies of real lattice vectors can be calc in the recip
-lattice and visa-versa via:
-   |h|                             |x|      |x|
-   |k| = (x,y,z)*g = transpose(g)* |y| = M* |y|
-   |l|                             |z|      |z|
-and
-   |x|                      |h|      |h|
-   |y| = inv(transpose(g))* |k| = N* |k|
-   |z|                      |l|      |l|
-
-e.g. in above we take recip lattice as primed basis and
-real lattice as the unprimed basis, therefore equate:
-  F = gr
-  G = inv(F) = inv(gr) = g
-  M = transpose(inv(F)) = transpose(g)
-  N = inv(M) = transpose(F) = inv(transpose(g)) = transpose(gr)
-
-Note that g and gr are always symmetric, therefore
-  g = transpose(g) and gr = transpose(gr).
-  F = N = gr
-  G = M = g
-
-"""
-
-##########################################################################
+from typing import Optional
 
 import numpy as np
 
 from pds.utils.mathutil import arccosd, arcsind, cosd, sind, tand
 
 
-##########################################################################
 class Lattice:
-    """
-    Class that defines a lattice and various
-    operations within the lattice
+    """Crystal lattice for metric tensor calculations and coordinate transformations."""
 
-    """
-
-    def __init__(self, a=10.0, b=10.0, c=10.0, alpha=90.0, beta=90.0, gamma=90.0, lam=1.5406):
-        """
-        Initialize
-
-        Parameters:
-        -----------
-        * a,b,c in angstroms
-        * alpha, beta, gamma in degrees,
-        * lambda in angstroms (default lambda is Cu Ka1)
-        """
+    def __init__(
+        self,
+        a: float = 10.0,
+        b: float = 10.0,
+        c: float = 10.0,
+        alpha: float = 90.0,
+        beta: float = 90.0,
+        gamma: float = 90.0,
+        lam: float = 1.5406,
+    ) -> None:
+        """Initialize lattice with unit cell parameters."""
         self.update(a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma, lam=lam)
 
-    def __repr__(
-        self,
-    ):
-        """display"""
-        lout = "a=%6.5f, b=%6.5f, c=%6.5f" % (self.a, self.b, self.c)
-        lout = "%s, alpha=%6.5f,beta=%6.5f,gamma=%6.5f\n" % (lout, self.alpha, self.beta, self.gamma)
-        lout = "%sar=%6.5f, br=%6.5f, cr=%6.5f" % (lout, self.ar, self.br, self.cr)
-        lout = "%s, alphar=%6.5f,betar=%6.5f,gammar=%6.5f\n" % (lout, self.alphar, self.betar, self.gammar)
-        lout = "%sDefault wavelength for angle calculations=%6.5f\n" % (lout, self.lam)
+    def __repr__(self) -> str:
+        """Display lattice parameters in readable format."""
+        lout = f"a={self.a:6.5f}, b={self.b:6.5f}, c={self.c:6.5f}"
+        lout += f", alpha={self.alpha:6.5f}, beta={self.beta:6.5f}, gamma={self.gamma:6.5f}\n"
+        lout += f"ar={self.ar:6.5f}, br={self.br:6.5f}, cr={self.cr:6.5f}"
+        lout += f", alphar={self.alphar:6.5f}, betar={self.betar:6.5f}, gammar={self.gammar:6.5f}\n"
+        lout += f"Default wavelength for angle calculations={self.lam:6.5f}\n"
+
         return lout
 
-    def update(self, a=None, b=None, c=None, alpha=None, beta=None, gamma=None, lam=None):
-        """
-        Update lattice parameters
-        """
+    def update(
+        self,
+        a: Optional[float] = None,
+        b: Optional[float] = None,
+        c: Optional[float] = None,
+        alpha: Optional[float] = None,
+        beta: Optional[float] = None,
+        gamma: Optional[float] = None,
+        lam: Optional[float] = None,
+    ) -> None:
+        """Update lattice parameters and recalculate derived quantities."""
         if a is not None:
             self.a = float(a)
         if b is not None:
@@ -203,31 +59,22 @@ class Lattice:
         # update calc quantities
         self._calc_g()
 
-    def cell(self):
-        """
-        Return array of real lattice cell parameters
-        """
+    def cell(self) -> np.ndarray:
+        """Return array of real lattice cell parameters."""
         return np.array([self.a, self.b, self.c, self.alpha, self.beta, self.gamma], dtype=float)
 
-    def rcell(self):
-        """
-        Return array of reciprocal lattice cell parameters
-        """
+    def rcell(self) -> np.ndarray:
+        """Return array of reciprocal lattice cell parameters."""
         return np.array([self.ar, self.br, self.cr, self.alphar, self.betar, self.gammar], dtype=float)
 
-    def _calc_g(self):
-        """
-        Calculate the metric tensors and recip lattice params
-        self.g  = real space metric tensor
-        self.gr = recip space metric tensor
-        """
+    def _calc_g(self) -> None:
+        """Calculate metric tensors and reciprocal lattice parameters."""
         (a, b, c, alp, bet, gam) = self.cell()
         # real metric tensor
         self.g = np.array(
             [[a * a, a * b * cosd(gam), a * c * cosd(bet)], [b * a * cosd(gam), b * b, b * c * cosd(alp)], [c * a * cosd(bet), c * b * cosd(alp), c * c]]
         )
-        # recip lattice metric tensor
-        # and recip lattice params
+        # recip lattice metric tensor and recip lattice params
         self.gr = np.linalg.inv(self.g)
         self.ar = np.sqrt(self.gr[0, 0])
         self.br = np.sqrt(self.gr[1, 1])
@@ -236,200 +83,96 @@ class Lattice:
         self.betar = arccosd(self.gr[0, 2] / (self.ar * self.cr))
         self.gammar = arccosd(self.gr[0, 1] / (self.ar * self.br))
 
-    def vol(self, recip=False):
-        """
-        Calculate the cell volume.
-
-        Parameters:
-        -----------
-        * If recip == False, this is the real space vol in ang**3
-          If recip == True, this is the recip space vol in ang**-3
-
-        Notes:
-        ------
-        V_real  = sqrt(determiant(g))
-        V_recip = sqrt(determiant(inv(g)))
-
-        """
-        if recip:
-            g = self.gr
-        else:
-            g = self.g
+    def vol(self, recip: bool = False) -> float:
+        """Calculate cell volume in real (ang³) or reciprocal (ang⁻³) space."""
+        g = self.gr if recip else self.g
         det = np.linalg.det(g)
-        if det > 0:
-            return np.sqrt(det)
-        else:
-            return 0.0
+        return np.sqrt(det) if det > 0 else 0.0
 
-    def dot(self, u, v, recip=False):
-        """
-        Calculate dot product of two vectors (u,v)
+    def dot(self, u: np.ndarray | list[float], v: np.ndarray | list[float], recip: bool = False) -> float:
+        """Calculate generalized dot product using metric tensor."""
+        g = self.gr if recip else self.g
+        u_arr = np.array(u, dtype=float)
+        v_arr = np.array(v, dtype=float)
+        return np.dot(u_arr, np.dot(g, v_arr))
 
-        Notes:
-        ------
-        * If u and v are real space vectors, use recip = False
-        * If u and v are recip space vectors, use recip = True
+    def mag(self, v: np.ndarray | list[float], recip: bool = False) -> float:
+        """Calculate vector magnitude using metric tensor."""
+        return np.sqrt(self.dot(v, v, recip=recip))
 
-        Note u and v are assumed to be normal numpy arrays
-        (ie not matrix objects)
-
-        The generalized dot product for real space vectors
-        may be defined in terms of the metric tensor (g):
-           dot(u,v) = u*g*v
-        If u and v are recip lattice vectors replace g with
-        gr = inv(g)
-        """
-        if recip:
-            g = self.gr
-        else:
-            g = self.g
-        u = np.array(u, dtype=float)
-        v = np.array(v, dtype=float)
-        return np.dot(u, np.dot(g, v))
-
-    def mag(self, v, recip=False):
-        """
-        Calculate the norm of a vector (v)
-
-        Notes:
-        ------
-        * If v is real space vector, use recip = False
-        * If v is recip space vector, use recip = True
-
-        Note v is assumed to be normal numpy array
-        (ie not matrix objects)
-        """
-        m = np.sqrt(self.dot(v, v, recip=recip))
-        return m
-
-    def angle(self, u, v, recip=False):
-        """
-        Calculate the angle between two vectors (u,v)
-
-        Notes:
-        ------
-        * If u and v are real space vectors, use recip = False
-        * If u and v are recip space vectors, use recip = True
-
-        Note u and v are assumed to be normal numpy arrays
-        (ie not matrix objects)
-        """
+    def angle(self, u: np.ndarray | list[float], v: np.ndarray | list[float], recip: bool = False) -> float:
+        """Calculate angle between two vectors in degrees."""
         uv = self.dot(u, v, recip=recip)
         um = self.mag(u, recip=recip)
         vm = self.mag(v, recip=recip)
         arg = uv / (um * vm)
-        if np.fabs(arg) > 1.0:
-            arg = arg / np.fabs(arg)
-        alpha = arccosd(arg)
-        return alpha
+        if np.abs(arg) > 1.0:
+            arg = arg / np.abs(arg)
+        return arccosd(arg)
 
-    def angle_rr(self, x, h):
-        """
-        Calculate the angle between a real vector x = [x,y,z]
-        and a recip vector h = [h,k,l]
-        """
-        x = np.array(x, dtype=float)
-        h = np.array(h, dtype=float)
-        hx = np.sum(x * h)
-        xm = self.mag(x, recip=False)
-        hm = self.mag(h, recip=True)
+    def angle_rr(self, x: np.ndarray | list[float], h: np.ndarray | list[float]) -> float:
+        """Calculate angle between real space vector and reciprocal space vector."""
+        x_arr = np.array(x, dtype=float)
+        h_arr = np.array(h, dtype=float)
+        hx = np.sum(x_arr * h_arr)
+        xm = self.mag(x_arr, recip=False)
+        hm = self.mag(h_arr, recip=True)
         arg = hx / (hm * xm)
-        if np.fabs(arg) > 1.0:
-            arg = arg / np.fabs(arg)
-        alpha = arccosd(arg)
-        return alpha
+        if np.abs(arg) > 1.0:
+            arg = arg / np.abs(arg)
+        return arccosd(arg)
 
-    def d(self, hkl):
-        """
-        Calculate d space for given [h,k,l]
-        """
+    def d(self, hkl: np.ndarray | list[float]) -> float:
+        """Calculate d-spacing for given Miller indices [h,k,l]."""
         if len(hkl) != 3:
             print("Error need an array of [h,k,l]")
             return 0.0
         h = self.mag(hkl, recip=True)
-        if h == 0.0:
-            # print "Error [h,k,l] magnitude is zero:", hkl
-            return 0.0
-        d = 1.0 / h
-        return d
+        return 1.0 / h if h != 0.0 else 0.0
 
-    def tth(self, hkl, lam=None):
-        """
-        Calculate 2Theta for given [h,k,l] and wavelength
-
-        Notes:
-        ------
-        If lam is None the default lambda will be used (Cu Ka1)
-        If you pass in lam, this will change the default for
-        subsequent calls
-        """
+    def tth(self, hkl: np.ndarray | list[float], lam: Optional[float] = None) -> float:
+        """Calculate 2θ diffraction angle for given Miller indices and wavelength."""
         if lam is not None:
             self.lam = float(lam)
         d = self.d(hkl)
         if d == 0.0:
             return 0.0
         r = self.lam / (2.0 * d)
-        if np.fabs(r) > 1.0:
-            r = r / np.fabs(r)
-        tth = 2.0 * arcsind(r)
-        return tth
+        if np.abs(r) > 1.0:
+            r = r / np.abs(r)
+        return 2.0 * arcsind(r)
 
-    def dvec(self, hkl):
-        """
-        Calculate the real space vector d
-        which has a magnitude of the d spacing
-        and is normal to the plane hkl = [h,k,l]
-        """
-        # convert hkl vector to real space indicies
-        # hkl  = np.array(hkl,dtype=float)
-        # dvec = np.dot(self.gr,hkl)
+    def dvec(self, hkl: np.ndarray | list[float]) -> np.ndarray:
+        """Calculate real space vector normal to plane with magnitude equal to d-spacing."""
         dvec = self.recip_to_real(hkl)
         dspc = self.d(hkl)
         if dspc == 0:
             return np.array([0.0, 0.0, 0.0])
-        dvec = (dspc**2.0) * dvec
-        return dvec
+        return (dspc**2.0) * dvec
 
-    def recip_to_real(self, hkl):
-        """
-        Given recip vector hkl = [h,k,l] calculate the
-        vectors indicies in the real lattice
-        """
-        hkl = np.array(hkl, dtype=float)
-        # v   = np.dot(self.gr.transpose(),hkl)
-        v = np.dot(self.gr, hkl)
-        return v
+    def recip_to_real(self, hkl: np.ndarray | list[float]) -> np.ndarray:
+        """Transform reciprocal lattice vector to real lattice indices."""
+        hkl_arr = np.array(hkl, dtype=float)
+        return np.dot(self.gr, hkl_arr)
 
-    def real_to_recip(self, v):
-        """
-        Given real vector v = [x,y,z] calculate the
-        vectors indicies in the reciprocal lattice
-        """
-        v = np.array(v, dtype=float)
-        hkl = np.dot(v, self.g)
-        return hkl
+    def real_to_recip(self, v: np.ndarray | list[float]) -> np.ndarray:
+        """Transform real lattice vector to reciprocal lattice indices."""
+        v_arr = np.array(v, dtype=float)
+        return np.dot(v_arr, self.g)
 
 
-##########################################################################
 class LatticeTransform:
-    """
-    Generalized lattice transformations
-    """
+    """Generalized lattice transformations for basis rotations and shifts."""
 
-    def __init__(self, lattice, Va=None, Vb=None, Vc=None, shift=None):
-        """
-        Initialize
-
-        Parameters:
-        ----------
-        * lattice is a Lattice instance.
-          All transforms are defined with respect to this
-          lattice, ie this is the original unprimed lattice
-        * Va, Vb, Vc are the lattice vectors that define the
-          a',b',c' coordinate system (rotation and contraction)
-        * shift is the lattice shift vector
-        * (V's and shift are defined in the unprimed system)
-        """
+    def __init__(
+        self,
+        lattice: Lattice,
+        Va: Optional[np.ndarray | list[float]] = None,
+        Vb: Optional[np.ndarray | list[float]] = None,
+        Vc: Optional[np.ndarray | list[float]] = None,
+        shift: Optional[np.ndarray | list[float]] = None,
+    ) -> None:
+        """Initialize lattice transformation with basis vectors and shift."""
         self.lattice = lattice
         self.Va = np.array([1.0, 0.0, 0.0])
         self.Vb = np.array([0.0, 1.0, 0.0])
@@ -437,37 +180,24 @@ class LatticeTransform:
         self.shift = np.array([0.0, 0.0, 0.0])
         self._update(Va=Va, Vb=Vb, Vc=Vc, shift=shift)
 
-    def basis(self, Va=None, Vb=None, Vc=None, shift=None):
-        """
-        Define new basis vectors.
-
-        Parameters:
-        ----------
-        * Va, Vb and Vc should define the a',b',c' lattice
-          vectors of the new basis (rotation/dialation part).
-
-        * Shift describes an origin shift of the new lattice
-          (ie take the new basis defined by Va,Vb,Vc then
-          apply the shift vector)
-
-        Notes:
-        ------
-        All the vectors should be defined in terms of fractional
-        coordinate indicies in the original basis, for example:
-           a' = x1*a + y1*b + z1*c
-           b' = x2*a + y2*b + z2*c
-           c' = x3*a + y3*b + z3*c
-           shift = x4*a + y4*b + z4*c
-        and
-           Va = [x1,y1,y1]
-           Vb = [x2,y2,y2]
-           Vc = [x3,y3,y3]
-           shift = [x4,y4,z4]
-        """
+    def basis(
+        self,
+        Va: Optional[np.ndarray | list[float]] = None,
+        Vb: Optional[np.ndarray | list[float]] = None,
+        Vc: Optional[np.ndarray | list[float]] = None,
+        shift: Optional[np.ndarray | list[float]] = None,
+    ) -> None:
+        """Define new basis vectors in fractional coordinates of original lattice."""
         self._update(Va=Va, Vb=Vb, Vc=Vc, shift=shift)
 
-    def _update(self, Va=None, Vb=None, Vc=None, shift=None):
-        """update"""
+    def _update(
+        self,
+        Va: Optional[np.ndarray | list[float]] = None,
+        Vb: Optional[np.ndarray | list[float]] = None,
+        Vc: Optional[np.ndarray | list[float]] = None,
+        shift: Optional[np.ndarray | list[float]] = None,
+    ) -> None:
+        """Update transformation matrices from basis vectors."""
         if Va is not None:
             self.Va = np.array(Va, dtype=float)
         if Vb is not None:
@@ -482,17 +212,8 @@ class LatticeTransform:
         self.M = self.G.transpose()
         self.N = self.F.transpose()
 
-    def cartesian(self, shift=[0.0, 0.0, 0.0]):
-        """
-        Calculates a cartesian basis using:
-          Va = a' is parallel to a
-          Vb = b' is perpendicular to a' and in the a/b plane
-          Vc = c' is perpendicular to the a'/c' plane
-        A shift vector may be specified to shift the origin
-        of the cartesian lattice relative to the original lattice
-        origin (specify shift in fractional coordinates of
-        the original lattice)
-        """
+    def cartesian(self, shift: list[float] = [0.0, 0.0, 0.0]) -> None:
+        """Calculate cartesian basis with a parallel to a, b in ab plane."""
         (a, b, c, alp, bet, gam) = self.lattice.cell()
         (ar, br, cr, alpr, betr, gamr) = self.lattice.rcell()
         Va = [1.0 / a, 0.0, 0.0]
@@ -500,52 +221,33 @@ class LatticeTransform:
         Vc = [ar * cosd(betr), br * cosd(alpr), cr]
         self.basis(Va=Va, Vb=Vb, Vc=Vc, shift=shift)
 
-    def xp(self, x):
-        """
-        Given x = [x,y,z] in the original lattice
-        compute the indicies of the vector in the new basis
-           xp = M*(x - shift)
-        """
-        x = np.array(x, dtype=float)
+    def xp(self, x: np.ndarray | list[float]) -> np.ndarray:
+        """Transform vector from original to new basis."""
+        x_arr = np.array(x, dtype=float)
         if self.shift.sum() != 0.0:
-            x = x - self.shift
-        xp = np.dot(self.M, x)
-        return xp
+            x_arr = x_arr - self.shift
+        return np.dot(self.M, x_arr)
 
-    def x(self, xp):
-        """
-        Given xp = [x',y',z'] in the primed basis
-        compute the indicies of the vector in the original basis
-            x = N*(xp + shiftp) = N*xp + shift
-        """
-        xp = np.array(xp, dtype=float)
-        x = np.dot(self.N, xp)
+    def x(self, xp: np.ndarray | list[float]) -> np.ndarray:
+        """Transform vector from new to original basis."""
+        xp_arr = np.array(xp, dtype=float)
+        x = np.dot(self.N, xp_arr)
         if self.shift.sum() != 0.0:
             x = x + self.shift
         return x
 
-    def hp(self, h):
-        """
-        Given h = [h,k,l] in the original (recip) basis
-        compute the indicies of the vector in the primed
-        (recip) basis
-        """
-        h = np.array(h, dtype=float)
-        return np.dot(self.F, h)
+    def hp(self, h: np.ndarray | list[float]) -> np.ndarray:
+        """Transform reciprocal lattice vector from original to new basis."""
+        h_arr = np.array(h, dtype=float)
+        return np.dot(self.F, h_arr)
 
-    def h(self, hp):
-        """
-        Given hp = [h',k',l'] in the primed (recip) basis
-        compute the indicies of the vector in the original
-        (recip) basis
-        """
-        hp = np.array(hp, dtype=float)
-        return np.dot(self.G, hp)
+    def h(self, hp: np.ndarray | list[float]) -> np.ndarray:
+        """Transform reciprocal lattice vector from new to original basis."""
+        hp_arr = np.array(hp, dtype=float)
+        return np.dot(self.G, hp_arr)
 
-    def plat(self):
-        """
-        Return a Lattice instance for the primed basis
-        """
+    def plat(self) -> Lattice:
+        """Return Lattice instance for the transformed basis."""
         a = self.lattice.mag(self.Va)
         b = self.lattice.mag(self.Vb)
         c = self.lattice.mag(self.Vc)
@@ -553,101 +255,3 @@ class LatticeTransform:
         bet = self.lattice.angle(self.Va, self.Vc)
         gam = self.lattice.angle(self.Va, self.Vb)
         return Lattice(a, b, c, alp, bet, gam)
-
-
-##########################################################################
-##########################################################################
-def test_lattice():
-    # create a new lattice instance
-    cell = Lattice(5.6, 5.6, 13, 90, 90, 120)
-
-    # show lattice parameters and real
-    # recip lattice cell volumes
-    print(cell)
-    print(cell.vol())
-    print(cell.vol(recip=True))
-
-    # what the hkl = [0,0,1] dspace
-    # and 2 theta value for lambda = 1 ang.
-    print(cell.d([0, 0, 1]))
-    print(cell.tth([0, 0, 1], lam=1.0))
-
-    # create a real space vector perpendicular
-    # to hkl = [0,0,1], with magnitude = dspace(001)
-    dv = cell.dvec([0, 0, 1])
-    print(dv)
-    print(cell.mag(dv))
-
-    # compute the angle between some vectors
-    # recip lattice [1,0,0] and [0,1,0]
-    print(cell.angle([1, 0, 0], [0, 1, 0], recip=True))
-    # recip lattice [1,0,0] and [0,0,1]
-    print(cell.angle([1, 0, 0], [0, 0, 1], recip=True))
-    # recip lattice [0,0,1] and [1,1,1]
-    print(cell.angle([0, 0, 1], [1, 1, 1], recip=True))
-
-    # real lattice [1,0,0] and [0,1,0]
-    print(cell.angle([1, 0, 0], [0, 1, 0]))
-    # real lattice [1,0,0] and [0,0,1]
-    print(cell.angle([1, 0, 0], [0, 0, 1]))
-    # real lattice [0,0,1] and [1,1,1]
-    print(cell.angle([0, 0, 1], [1, 1, 1]))
-
-    # real [0,0,1] and recip [0,0,1]
-    print(cell.angle_rr([0, 0, 1], [0, 0, 1]))
-    # real [1,1,1] and recip [0,0,1]
-    print(cell.angle_rr([1, 1, 1], [0, 0, 1]))
-    # real dv and recip [0,0,1]
-    print(cell.angle_rr(dv, [0, 0, 1]))
-    # real dv and recip [1,1,0]
-    print(cell.angle_rr(dv, [1, 1, 0]))
-
-    return cell
-
-
-def test_transform():
-    # create a new hexagonal lattice instance
-    cell = Lattice(5.6, 5.6, 13, 90, 90, 120)
-
-    # test lattice transform
-    # below defines rhombohedral basis vectors
-    # in terms of the heaxagonal basis vectors
-    Va_rhom = [0.6667, 0.3333, 0.3333]
-    Vb_rhom = [-0.3333, 0.3333, 0.3333]
-    Vc_rhom = [-0.3333, -0.6667, 0.3333]
-    t = LatticeTransform(cell, Va=Va_rhom, Vb=Vb_rhom, Vc=Vc_rhom)
-
-    # create an instance of the rhombohedral lattice
-    # shows the rhomb lattice params
-    print(t.plat())
-
-    # given the hkl = [001] in hex calc hkl in rhom
-    print(t.hp([0, 0, 1]))
-
-    # given the hkl = [111] in rhom calc hkl in hex
-    print(t.h([1, 1, 1]))
-
-    # create a cartesian representation
-    t.cartesian()
-    cart = t.plat()
-    print(cart)
-
-    # convert a [1,1,0] vector in hex lattice to cartesian
-    vc = t.xp([1, 1, 0])
-    print(vc)
-
-    # check that the vector is the same length
-    print(cell.mag([1, 1, 0]))
-    print(cart.mag(vc))
-
-    return t
-
-
-##########################################################################
-##########################################################################
-if __name__ == "__main__":
-    """
-    test
-    """
-    test_lattice()
-    test_transform()
