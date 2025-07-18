@@ -1,9 +1,11 @@
 # Tests for PDS
 
-This directory contains pytest-based tests for the PDS codebase.
+This directory contains pytest-based tests for the PDS codebase and is structured as a Python package.
 
 ## Structure
 
+- `__init__.py` - Package initialization, shared test utilities, and test runner
+- `test_active_area.py` - Tests for the active area calculation module
 - `test_background.py` - Tests for the background determination module
 - `test_file_locker.py` - Tests for the cross-platform file locking module  
 - `test_image_data.py` - Tests for the image data handling module
@@ -13,13 +15,24 @@ This directory contains pytest-based tests for the PDS codebase.
 
 ## Running Tests
 
-To run all tests:
+To run all tests using the PDS CLI:
+```bash
+python pds.py -t
+```
+
+To run all tests using the test package directly:
+```bash
+python -c "from tests import run_all_tests; run_all_tests()"
+```
+
+To run all tests using pytest directly:
 ```bash
 pytest tests/
 ```
 
 To run specific test files:
 ```bash
+pytest tests/test_active_area.py
 pytest tests/test_background.py
 pytest tests/test_file_locker.py
 pytest tests/test_image_data.py
@@ -45,6 +58,16 @@ pytest tests/ -v
 - **Performance Tests**: Basic performance benchmarks
 
 ## Special Test Features
+
+### Active Area Calculations (`test_active_area.py`)
+- **Surface Coordinate Transformation**: Lab frame to surface frame matrix calculations
+- **Geometric Projections**: Beam, detector, and sample polygon projections onto surface
+- **Area Calculations**: Round and polygon sample area computations
+- **Surface Intercepts**: Vector projection calculations with boundary constraints
+- **Python 2 Compatibility**: Validates updated Python 3 code against original behavior
+- **Error Handling**: Invalid geometry specifications and edge cases
+- **Visualization Testing**: Matplotlib integration for debugging plots
+- **Type Safety**: Comprehensive type annotation validation
 
 ### Mathematical Utilities (`test_mathutil.py`)
 - **Numpy Wrappers**: Tests for `ave()`, `std()` with deprecated `numpy.ave()` replacement

@@ -1,15 +1,4 @@
-"""
-Active area calculations
-
-Notes:
-------
-These area are based on completley geometric projections.  ie we assume
-that the beam is perfectly parrallel (no divergence)
-
-It would be interesting if we could set the detector polygon from an
-arbirary set of pixels (e.g. roi) on image detector... especially if
-shifted off center (or better off center relative to a specific hkl)
-"""
+from typing import Optional
 
 import numpy as np
 from matplotlib import pyplot
@@ -18,140 +7,123 @@ from pds.utils.mathutil import cartesian_angle, cartesian_mag
 from pds.utils.polygon import inner_polygon, plot_circle, plot_points, plot_polygon, poly_area, poly_area_num
 
 
-def active_area(nm, ki=np.array([0.0, 1.0, 0.0]), kr=np.array([0.0, 1.0, 0.0]), beam=[], det=None, sample=1.0, plot=False, fig=None):
+def active_area(
+    nm: np.ndarray,
+    ki: np.ndarray = np.array([0.0, 1.0, 0.0]),
+    kr: np.ndarray = np.array([0.0, 1.0, 0.0]),
+    beam: Optional[list[list[float]]] = None,
+    det: Optional[list[list[float]]] = None,
+    sample: float | list[list[float]] | None = 1.0,
+    plot: bool = False,
+    fig: Optional[int] = None,
+) -> tuple[float, float]:
     """
-    Calc the area of overlap of beam, sample and detector
-    surface polygon projections.
-
-    Parameters:
-    -----------
-    * nm is the surface normal vector, defined in the laboratory frame.
-
-    * ki and kr are vectors defined in the lab frame parallel to the incident beam and diffracted beam directions respectively (magnitudes are arbitrary)
-
-    * beam, det and sample are lists that hold the the lab-frame (3D) vectors defining the beam apperature, detector apperature and sample shape
-
-      If det = None then we ignore it and just compute spill-off correction
-
-      If sample is a single number we take it as the diamter of a round sample mounted flat. Otherwise sample hould be a list of lab frame vectors that
-      describes the sample polygon.
-
-      If sample == None, then we assume the sample is infinite in size
-
-    *  If plot = True then makes plot
-
-    Note:
-    -----
-    The lab frame coordinate systems is defined such that:
-        x is vertical (perpendicular, pointing to the ceiling of the hutch)
-        y is directed along the incident beam path
-        z make the system right handed and lies in the horizontal scattering plane (i.e. z is parallel to the phi axis)
-    The center (0,0,0) of the lab frame is the rotation center of the instrument.
-
-
-    Output:
-    -------
-    * A_beam = total area of the beam projection into the surface plane
-    * A_int = area of sample illuminated within the detector projection
-
-    Use to correct scattering data for area effects, including spilloff, i.e.
-      A_ratio = A_int/A_beam
-      Ic = I/A_ratio,   I = Idet/Io
-    """
-    # Calc surf system transformation matrix
+    Calculate geometric overlap area between beam, sample and detector polygons.
+    Returns beam area and illuminated sample area within detector projection."""
+    # Calculate surface system transformation matrix
     M = calc_surf_transform(nm)
 
-    # calc k vectors in the surf frame (i.e. [xs,ys,zs]) first make them unit vectors, even though no real need to..
+    # Calculate k vectors in surface frame - normalize first for consistency
     ki = ki / cartesian_mag(ki)
     kr = kr / cartesian_mag(kr)
     ki_s = np.dot(M, ki)
     kr_s = np.dot(M, kr)
 
-    # Get the beam, detector and surface polygons.
-    # Convert vectors to surface frame.
-    # Then for beam and det project the vectors onto
-    # the surface along the k vectors.  ie. calc the vector
-    # intercepts with the surface plane
-    # Each of the below polygons is a list of 2D vectors
-    # ie in-plane [x_s, y_s] points
-
-    # beam
-    if type(beam) is list:
+    # Process beam polygon
+    if isinstance(beam, (list, tuple)) and len(beam) >= 3:
         beam_poly = []
-        if len(beam) < 3:
-            print("Error in beam description")
-            return None
         for v in beam:
             vs = np.dot(M, v)
-            int = surface_intercept(ki_s, vs)
-            beam_poly.append(int)
+            intercept = surface_intercept(ki_s, vs)
+            if intercept is not None:
+                beam_poly.append(intercept)
+        if len(beam_poly) < 3:
+            print("Error: insufficient valid beam intercepts")
+            return (0.0, 0.0)
+    elif beam is not None and len(beam) > 0:
+        print("Error: beam is not list or tuple")
+        return (0.0, 0.0)
     else:
+        # beam is None or empty list - both treated the same
         beam_poly = None
-    # det
-    if type(det) is list:
+
+    # Process detector polygon
+    if isinstance(det, (list, tuple)) and len(det) >= 3:
         det_poly = []
-        if len(det) < 3:
-            print("Error in det description")
-            return None
         for v in det:
             vs = np.dot(M, v)
-            int = surface_intercept(kr_s, vs)
-            det_poly.append(int)
+            intercept = surface_intercept(kr_s, vs)
+            if intercept is not None:
+                det_poly.append(intercept)
+        if len(det_poly) < 3:
+            print("Error: insufficient valid detector intercepts")
+            return (0.0, 0.0)
+    elif det is not None:
+        print("Error: detector is not list or tuple")
+        return (0.0, 0.0)
     else:
         det_poly = None
-    # sample
-    if type(sample) is list:
+
+    # Process sample polygon
+    if isinstance(sample, (list, tuple)) and len(sample) >= 3:
         sam_poly = []
-        if len(sample) < 3:
-            print("Error in sample description")
-            return None
         for v in sample:
             vs = np.dot(M, v)
-            if np.fabs(vs[2]) > 0.01:
-                print("Warning sample hieght problem")
+            if np.abs(vs[2]) > 0.01:
+                print("Warning: sample height problem")
             sam_poly.append(vs[:2])
         sample_shape = True
-    else:
+    elif isinstance(sample, (int, float)) or sample is None:
+        # Valid for round sample case - sample should be numeric diameter
         sam_poly = None
         sample_shape = False
-
-    # depending on whether we have a sample shape description or assume a round sample, pass along appropriate
-    # data to compute areas.  Note all the polygons are lists of 2D surface frame vectors (ie in plane vectors)
-    if not sample_shape:
-        (A_beam, A_int) = _area_round(beam_poly, det_poly, diameter=sample, plot=plot, fig=fig)
     else:
-        (A_beam, A_int) = _area_polygon(beam_poly, det_poly, sam_poly, plot=plot, fig=fig)
-    return (A_beam, A_int)
+        print("Error: sample is not list or tuple")
+        return (0.0, 0.0)
+
+    # Compute areas based on sample geometry type
+    # All polygons are lists of 2D surface frame vectors (in-plane vectors)
+    if not sample_shape:
+        return _area_round(beam_poly, det_poly, diameter=sample, plot=plot, fig=fig)
+    else:
+        return _area_polygon(beam_poly, det_poly, sam_poly, plot=plot, fig=fig)
 
 
-def _area_round(beam_poly, det_poly, diameter=None, plot=False, fig=None):
+def _area_round(
+    beam_poly: Optional[list[list[float]]],
+    det_poly: Optional[list[list[float]]],
+    diameter: Optional[float] = None,
+    plot: bool = False,
+    fig: Optional[int] = None,
+) -> tuple[float, float]:
     """
-    Compute areas for round sample of fixed diameter
-
-    Parameters:
-    -----------
-    * beam_pol is the beam polygon
-    * det_poly is the detector polygon
-      if det_poly = None, then just compute the beam and
-      sample overlap ie A_int/A_beam = spill fraction
+    Compute beam and intersection areas for circular sample geometry.
+    Constrains beam polygon to circular sample boundary if diameter specified.
     """
+    if plot and fig is not None:
+        pyplot.figure(fig)
     if plot:
-        if fig is not None:
-            pyplot.figure(fig)
         pyplot.clf()
+
+    if beam_poly is None:
+        return (0.0, 0.0)
+
     A_beam = poly_area(beam_poly)
+
     if det_poly is not None:
         inner_poly = inner_polygon(beam_poly, det_poly)
     else:
         inner_poly = beam_poly
-    if diameter <= 0.0:
+
+    if diameter is not None and diameter <= 0.0:
         diameter = None
+
     if diameter is None:
         A_int = poly_area(inner_poly)
     else:
         A_int = poly_area_num(beam_poly, diameter=diameter, plot=plot)
 
-    # make plots
+    # Generate visualization if requested
     if plot:
         plot_polygon(beam_poly, fmt="ro-", label="Beam")
         if det_poly is not None:
@@ -171,31 +143,36 @@ def _area_round(beam_poly, det_poly, diameter=None, plot=False, fig=None):
     return (A_beam, A_int)
 
 
-def _area_polygon(beam_poly, det_poly, sam_poly, plot=False, fig=None):
-    """
-    Compute areas for polgon sample
-
-    Parameters:
-    -----------
-    * beam_pol is the beam polygon
-    * det_poly is the detector polygon
-      if det_poly = None, then just compute the beam and
-      sample overlap ie A_int/A_beam = spill fraction
-    """
+def _area_polygon(
+    beam_poly: Optional[list[list[float]]],
+    det_poly: Optional[list[list[float]]],
+    sam_poly: Optional[list[list[float]]],
+    plot: bool = False,
+    fig: Optional[int] = None,
+) -> tuple[float, float]:
+    """Compute beam and intersection areas for polygonal sample geometry. Returns area of beam-sample-detector polygon intersection."""
+    if plot and fig is not None:
+        pyplot.figure(fig)
     if plot:
-        if fig is not None:
-            pyplot.figure(fig)
         pyplot.clf()
+
+    if beam_poly is None:
+        return (0.0, 0.0)
+
     A_beam = poly_area(beam_poly)
-    if sam_poly is not None:
+
+    # Start with beam polygon and intersect with sample and detector
+    if sam_poly is None:
         inner_poly = beam_poly
     else:
         inner_poly = inner_polygon(beam_poly, sam_poly)
+
     if det_poly is not None:
         inner_poly = inner_polygon(inner_poly, det_poly)
+
     A_int = poly_area(inner_poly)
 
-    # make plots
+    # Generate visualization if requested
     if plot:
         plot_polygon(beam_poly, fmt="ro-", label="Beam")
         if sam_poly is not None:
@@ -215,40 +192,8 @@ def _area_polygon(beam_poly, det_poly, sam_poly, plot=False, fig=None):
     return (A_beam, A_int)
 
 
-def calc_surf_transform(nm):
-    """
-    This routine calculates the matrix, M, which transforms the indicies of vectors defined in the lab frame basis to the
-    a surface frame defined such that:
-        zs is along the surface normal (parrallel to nm)
-        ys is the projection of the lab frame -y axis onto the surface
-        xs is defined to make it a right handed orthonormal set
-           (and is therefore in the surface plane)
-
-    Parameters:
-    -----------
-    * nm is the surface normal vector, defined in the
-      laboratory m-frame (i.e. pointing in an arbitrary
-      direction for a particular gonio setting)
-      - see gonio_psic.py for more details.
-
-    Notes:
-    ------
-    The surface transform is defined as follows:
-        |e_xs|      |e_x|              |vx|
-        |e_ys| = F* |e_y|    and   F = |vy|
-        |e_zs|      |e_z|              |vz|
-    where e's are the (cartesian) basis vectors.  Given a
-    vector [x,y,z] defined in the lab frame basis [e_x,e_y,e_z],
-    we can compute the indicies of this vector in the surface
-    basis [e_xs,e_ys,e_zs] from:
-        |xs|      |x|
-        |ys| = M* |y|
-        |zs|      |z|
-    where
-        M = transpose(inv(F)) = inv(transpose(F))
-
-    Note see lattice.py for more notes on general transforms, and see gonio_psic.py for notes on calc of the surface normal vector.
-    """
+def calc_surf_transform(nm: np.ndarray) -> np.ndarray:
+    """Calculate transformation matrix from lab frame to surface frame. Surface frame has z along normal, y projected from lab -y axis."""
     v_z = nm / cartesian_mag(nm)
 
     v = np.array([0.0, -1.0, 0.0])
@@ -264,101 +209,52 @@ def calc_surf_transform(nm):
     return M
 
 
-def surface_intercept(k, v):
-    """
-    Find surface coordinates [x,y] when the tip of vector v is projected into the surface plane along k.  ie [x,y] for z=0
-    along k passing through the point defined by v
-    """
-    # if k[2] = 0 then k is parallel to xy plane and no intercept is possible.
+def surface_intercept(k: np.ndarray, v: np.ndarray) -> Optional[np.ndarray]:
+    """Project 3D vector tip onto surface plane along direction k. Returns 2D surface coordinates or None if k parallel to surface."""
+    # If k[2] = 0 then k is parallel to xy plane and no intercept possible
     if k[2] == 0:
         return None
 
     x_int = v[0] - (k[0] / k[2]) * v[2]
     y_int = v[1] - (k[1] / k[2]) * v[2]
 
-    vi = np.array([x_int, y_int])
-
-    return vi
+    return np.array([x_int, y_int])
 
 
-def surface_intercept_bounds(k, v, diameter):
-    """
-    Find z-intercepts within bounds
-
-    We assume that the plane is a circle of fixed diameter, and scale back the intercept to the edge of the circle.
-    This is done along by subtracting a vector that is parrelel to the in-plane projection of the k vector. The magnitude of
-    the subtracted vector is set so the result has magnitude equal to the diameter.
-
-    If that doesnt result in an intercept then just rescale the original intercept vector so its magnitude is the diameter.
-
-    This is an approximate way to handle intercepts for circular samples, not recommended for use(!)
-    """
+def surface_intercept_bounds(k: np.ndarray, v: np.ndarray, diameter: float) -> np.ndarray:
+    """Project vector onto surface plane with circular boundary constraint. Uses quadratic scaling to constrain result within specified diameter."""
     vi = surface_intercept(k, v)
+    if vi is None:
+        return np.array([0.0, 0.0])
+
     r = cartesian_mag(vi)
     if r <= diameter / 2.0:
         return vi
-    # if r>diameter/2 need to scale it back
-    # Therefore solve the following for mag
-    #    vi_new = vi - ks*mag/norm(ks),
-    #    mag(vi_new) = diameter/2
-    # therefore end up with a quadratic:
+
+    # If r > diameter/2, scale back using quadratic solution
+    # Solve: |vi - ks*mag/|ks|| = diameter/2
     ks = np.array(k[0:2])
+    ks_mag = cartesian_mag(ks)
+
+    if ks_mag == 0:
+        # k is vertical, just scale vi directly
+        return vi * (diameter / 2.0) / r
+
     a = 1.0
-    b = -2.0 * (v[0] * ks[0] + vi[1] * ks[1]) / cartesian_mag(ks)
-    c = cartesian_mag(vi) ** 2.0 - (diameter / 2.0) ** 2.0
-    arg = b**2.0 - 4.0 * a * c
-    # make sure this method will result in a solution
-    if arg > 0.0:
-        mag1 = (-b + np.sqrt(arg)) / (2.0 * a)
-        mag2 = (-b - np.sqrt(arg)) / (2.0 * a)
-        vi1 = vi - ks * mag1 / cartesian_mag(ks)
-        vi2 = vi - ks * mag2 / cartesian_mag(ks)
-        # chose soln that makes smallest angle
-        # with the original intercept
-        angle1 = np.fabs(cartesian_angle(vi, vi1))
-        angle2 = np.fabs(cartesian_angle(vi, vi2))
-        if angle1 < angle2:
-            return vi1
-        else:
-            return vi2
-    # otherwise just rescale the original vector
+    b = -2.0 * np.dot(vi, ks) / ks_mag
+    c = r**2.0 - (diameter / 2.0) ** 2.0
+    discriminant = b**2.0 - 4.0 * a * c
+
+    # Choose solution that results in smaller angle change
+    if discriminant > 0.0:
+        mag1 = (-b + np.sqrt(discriminant)) / (2.0 * a)
+        mag2 = (-b - np.sqrt(discriminant)) / (2.0 * a)
+        vi1 = vi - ks * mag1 / ks_mag
+        vi2 = vi - ks * mag2 / ks_mag
+
+        angle1 = np.abs(cartesian_angle(vi, vi1))
+        angle2 = np.abs(cartesian_angle(vi, vi2))
+        return vi1 if angle1 < angle2 else vi2
     else:
-        vi = vi * (diameter / 2.0) / cartesian_mag(vi)
-        return vi
-
-
-def test1():
-    r = 0.5
-    k = [0.0, 1.0, -0.1]
-    v = [0.2, 0.0, 1.0]
-    v1 = surface_intercept(k, v)
-    v2 = surface_intercept_bounds(k, v, 2.0 * r)
-    print(v1, v2)
-    plot_circle(r)
-    plot_points([v1, v2])
-    pyplot.grid()
-
-
-def test2():
-    import gonio_psic
-
-    psic = gonio_psic.test2(show=False)
-    psic.set_angles(phi=42.0, chi=33, eta=20.0, mu=15.0, nu=75.0, delta=20.0)
-    # get beam and detector vectors
-    beam = gonio_psic.beam_vectors(h=1.3, v=0.1)
-    det = gonio_psic.det_vectors(h=2.0, v=1.5, nu=psic.angles["nu"], delta=psic.angles["delta"])
-    # get sample vectors
-    sample = [[1.0, 1.0], [0.5, 1.5], [-1.0, 1.0], [-1.0, -1.0], [0.0, 0.5], [1.0, -1.0]]
-    angles = {"phi": 108.0007, "chi": 0.4831}
-    sample = gonio_psic.sample_vectors(sample, angles=angles, gonio=psic)
-    # sample = 1.5
-    # compute active_area
-    print(active_area(psic.nm, ki=psic.ki, kr=psic.kr, beam=beam, det=det, sample=sample, plot=True))
-
-
-if __name__ == "__main__":
-    """
-    test
-    """
-    # test1()
-    test2()
+        # No solution, just rescale original vector
+        return vi * (diameter / 2.0) / r

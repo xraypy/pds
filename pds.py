@@ -5,6 +5,7 @@ from pathlib import Path
 from pyshortcuts import make_shortcut
 
 from pds import run_filter, run_integrator
+from tests import run_all_tests
 
 
 def main() -> None:
@@ -13,6 +14,7 @@ def main() -> None:
     parser.add_argument("-c", "--convert", nargs=argparse.REMAINDER, help="run the spec_to_hdf CLI tool with arguments")
     parser.add_argument("-i", "--integrator", action="store_true", help="run the integrator GUI")
     parser.add_argument("-f", "--filter", action="store_true", help="run the filter GUI")
+    parser.add_argument("-t", "--test", action="store_true", help="run all tests")
     parser.add_argument("-m", "--make_icon", action="store_true", help="create desktop shortcuts")
     args = parser.parse_args()
 
@@ -22,6 +24,8 @@ def main() -> None:
         run_integrator()
     elif args.filter:
         run_filter()
+    elif args.test:
+        run_all_tests()
     elif args.make_icon:
         python_exe = sys.executable
         pds_script = str(Path(__file__).resolve())
