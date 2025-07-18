@@ -1,61 +1,20 @@
-"""
-Generalized Polygon Computations
-
-Authors/Modifications:
-----------------------
-* Tom Trainor (tptrainor@alaska.edu)
-
-* Python 2.x to Python 3.12.3
-  Author: Jaswitha (jaswithareddy@uchicago.edu)
-  Last modified: 2/5/2025
-
-Todo:
------
-* Make sure this handles polygons with centers off the
-  origin, ie correclty handle arbitrary origin shifts
-
-* Add some more polygon calcs
-  - compute center
-  - determine type (simple, complex etc)
-"""
-
-##########################################################################
-
 import numpy as np
 from matplotlib import pyplot
 
 from pds.utils.mathutil import cartesian_angle, cosd, sind
 
 
-#########################################################################
-def inner_polygon(poly1, poly2):
-    """
-    Given two polygons find the new polygon made up from
-    the inner intersections of the two
+def inner_polygon(poly1: list[list[float]], poly2: list[list[float]]) -> list[list[float]] | None:
+    """Find the new polygon made up from the inner intersections of two polygons."""
 
-    Parameters:
-    -----------
-    * poly1 and poly2 are polygons defined by 3 or more
-      2D vectors (ie points in an xy plane)
-
-    Outputs:
-    --------
-    * The returned polygon is sorted.
-
-    Example:
-    --------
-    >>poly1 = [[1.,1.], [.5,1.5], [-1.,1.], [-1.,-1.],[0.,.5],[1.,-1.]]
-    >>poly2 = [[0.5,2.], [-0.5,2.], [-0.5,-2.],[0.5,-2.]]
-    >>inner = polygon.inner_polygon(poly1,poly2)
-    """
     npts1 = len(poly1)
     npts2 = len(poly2)
     if npts1 < 3 or npts2 < 3:
         return None
     (poly1, angles1) = sort_points(*poly1)
     (poly2, angles2) = sort_points(*poly2)
-    # loop through all possible line combinations
-    # looking for valid line intersections
+
+    # Loop through all possible line combinations looking for valid line intersections
     intercepts = []
     for j in range(npts1):
         p1 = poly1[j]
@@ -72,10 +31,8 @@ def inner_polygon(poly1, poly2):
             (intercept, flag) = line_intercept(p1, p2, p3, p4)
             if flag > 0:
                 intercepts.append(intercept)
-    #############
-    # now determine which points we can get to from
-    # the origin without crossing any poly lines,
-    # ie the inner set of points
+
+    # Determine which points we can get to from the origin without crossing any poly lines
     points = []
     for p in poly1:
         points.append(p)
@@ -86,33 +43,28 @@ def inner_polygon(poly1, poly2):
     (points, angles) = sort_points(*points)
     inner_points = []
     for p in points:
-        # check against poly1
+        # Check against poly1
         inner = is_inner(p, poly1)
-        # check against poly2
+        # Check against poly2
         if inner:
             inner = is_inner(p, poly2)
         if inner:
             inner_points.append(p)
-    # sort the inner points
+
+    # Sort the inner points
     (inner_points, angles) = sort_points(*inner_points)
     return inner_points
 
 
-#######################################################################
-def is_inner(point, poly):
-    """
-    Is the point inside the polygon
+def is_inner(point: list[float], poly: list[list[float]]) -> bool:
+    """Check if a point is inside the polygon."""
 
-    Parameters:
-    -----------
-    * point is a [x,y] pair
-    * poly is a list of 3 or more [x,y] pairs defining a polygon
-    """
     npts = len(poly)
     p1 = [0.0, 0.0]
     p2 = point
     inner = True
     k = 0
+
     while inner and k < npts:
         p3 = poly[k]
         if k == npts - 1:
@@ -123,32 +75,13 @@ def is_inner(point, poly):
         if flag == 1:
             inner = False
         k = k + 1
+
     return inner
 
 
-#######################################################################
-def line_intercept(p1, p2, p3, p4):
-    """
-    Compute the point of intersection of the 2 lines defined
-    by p1-p2 and p3-p4.
+def line_intercept(p1: list[float], p2: list[float], p3: list[float], p4: list[float]) -> tuple[np.ndarray | None, int]:
+    """Compute the point of intersection of two lines defined by p1-p2 and p3-p4."""
 
-    Parameters:
-    -----------
-    * The p's are 2D in-plane vectors (ie [x,y])
-
-    Output: ([x,y],flag)
-    -------
-    * [x,y] is the point of intersection or
-      None if the lines do not intersect.
-    * flag = 0 if the intercept is outside the
-      extent of the 2 lines (or no intercept)
-    * flag = 1 if the intercept is in bounds,
-      i.e. within the limits of the two lines
-    * flag = 2 if the intercept corresponds to the
-      terminus of one of the lines. ie the end
-      of one line is on the other line
-      (inclusive of end points on end points)
-    """
     # Note if vertical line m = None and b holds x-val
     (m1, b1) = line_param(p1, p2)
     (m2, b2) = line_param(p3, p4)
@@ -167,7 +100,7 @@ def line_intercept(p1, p2, p3, p4):
     else:
         return (None, 0)
 
-    # min and max of points.
+    # Min and max of points.
     max_x1 = max(p1[0], p2[0])
     min_x1 = min(p1[0], p2[0])
     max_y1 = max(p1[1], p2[1])
@@ -176,7 +109,8 @@ def line_intercept(p1, p2, p3, p4):
     min_x2 = min(p3[0], p4[0])
     max_y2 = max(p3[1], p4[1])
     min_y2 = min(p3[1], p4[1])
-    # check if the intersection is in bounds
+
+    # Check if the intersection is in bounds
     flag = 1
     if x > max_x1 or x < min_x1:
         flag = 0
@@ -186,17 +120,18 @@ def line_intercept(p1, p2, p3, p4):
         flag = 0
     elif y > max_y2 or y < min_y2:
         flag = 0
-    # check if the intersection point corresponds to an end point
+
+    # Check if the intersection point corresponds to an end point
     intercept = np.array([x, y])
 
     def _same(p1, p2, prec=0.0001):
-        """are two points the same"""
-        # return np.all(np.equal(p1,p2))
+        """Check if two points are the same within precision."""
+
+        # Return np.all(np.equal(p1,p2))
         t1 = np.fabs(p1[0] - p2[0]) < prec
         t2 = np.fabs(p1[1] - p2[1]) < prec
-        if t1 and t2:
-            # print "same", p1,p2
-            return True
+
+        return t1 and t2
 
     if flag == 1:
         if _same(intercept, p1):
@@ -210,28 +145,9 @@ def line_intercept(p1, p2, p3, p4):
     return (intercept, flag)
 
 
-###################################################################
-def line_param(v1, v2):
-    """
-    Calc the params for straight line defined from two vectors
-    (this is defined for the in-plane (2D) case)
+def line_param(v1: list[float], v2: list[float]) -> tuple[float | None, float]:
+    """Calculate line parameters for straight line defined from two vectors."""
 
-    Parameters:
-    -----------
-    * v1 and v2 are 2D vectors ([x,y])
-
-    Outputs: (m,b)
-    --------
-    * m is the line slope
-    * b is the line y-intercept
-
-    Notes:
-    ------
-    This computes the equation of a line, y = m*x + b,
-    that passes through the surface point defined by v1 and v2.
-    This gives back m and b.  If the line is vertical the returned
-    slope (m) = None and b = x-value of the line
-    """
     if v1[0] - v2[0] != 0.0:
         m = (v1[1] - v2[1]) / (v1[0] - v2[0])
         b = -m * v1[0] + v1[1]
@@ -244,31 +160,9 @@ def line_param(v1, v2):
     return (m, b)
 
 
-##################################################################
-def poly_area(polygon, sort=True):
-    """
-    Compute the area of a polygon
+def poly_area(polygon: list[list[float]], sort: bool = True) -> float:
+    """Compute the area of a polygon."""
 
-    Parameters:
-    -----------
-    * polygon is a list of points (xy pairs).
-      This assumes the points define a complete/
-      enclosed polygon (therefore a min of 3 points).
-
-    * sort is a flag to indictate if the points
-      should be sorted by thier angles relative to
-      the x-axis
-
-    Notes:
-    ------
-    The points do not need to be in a particular order,
-    this algorithm sorts them accoding to the angle
-    with respect to the x-axis and then computes the
-    area defined by each segment defined from each pair
-    of points.
-
-    If they are already sorted pass sort=False
-    """
     npts = len(polygon)
     if npts < 3:
         return 0.0
@@ -277,9 +171,7 @@ def poly_area(polygon, sort=True):
     else:
         points = polygon
 
-    # now loop through points cyclically computing
-    # area of each polygon segment defined by the points
-    # [0,0],[x1,y1],[x2,y2]
+    # Loop through points cyclically computing area of each polygon segment
     A = []
     for j in range(npts):
         p1 = points[j]
@@ -289,29 +181,20 @@ def poly_area(polygon, sort=True):
             p2 = points[j + 1]
         a = segment_area(p1, p2)
         A.append(a)
+
     return np.sum(A)
 
 
-##################################################################
-def sort_points(*pts):
-    """
-    Sort points according to angle (ccw w/r/t x-axis)
+def sort_points(*pts: list[float]) -> tuple[list[np.ndarray], list[float]]:
+    """Sort points according to angle (ccw w/r/t x-axis)."""
 
-    Parameters:
-    -----------
-    * a sequence of [x,y] points
-
-    Outputs: (points, angles)
-    --------
-    * return sorted list of points and angles
-    """
     npts = len(pts)
     points = []
     angles = []
 
-    # sort args by angle relative to x, c.c.w
     def _angle(v):
-        # cartesian angle is always btwn 0 and 180
+        """Compute angle of vector w/r/t x-axis in degrees."""
+
         angle = cartesian_angle(v, [1.0, 0.0])
         if v[1] < 0.0:
             return 360.0 - angle
@@ -331,24 +214,13 @@ def sort_points(*pts):
                 j = j + 1
         points.insert(j, v)
         angles.insert(j, an)
+
     return (points, angles)
 
 
-##################################################################
-def segment_area(p1, p2):
-    """
-    Compute the in-plane area of the polygon defined
-    by the origin and two points (p1 and p2).
-    """
-    # this uses cross product
-    # which computes the full area of
-    # the parrallogram formed by the
-    # two vectors.  The polygon area
-    # is half this value.
-    # p1 = np.array([p1[0],p1[1],0.])
-    # p2 = np.array([p2[0],p2[1],0.])
-    # a = 0.5*cartesian_mag(np.cross(p1,p2))
-    # This is the result of the cross product operation:
+def segment_area(p1: list[float], p2: list[float]) -> float:
+    """Compute the in-plane area of polygon defined by origin and two points."""
+
     a = (p1[0] * p2[1]) ** 2.0 + (p2[0] * p1[1]) ** 2.0 - (2.0 * p1[0] * p2[0] * p1[1] * p2[1])
     if a < 0:
         a = 0
@@ -357,18 +229,9 @@ def segment_area(p1, p2):
     return a
 
 
-##################################################################
-def poly_area_num(polygon, diameter=None, num_int=100, plot=False):
-    """
-    Numerically compute the area of a polygon
+def poly_area_num(polygon: list[list[float]], diameter: float | None = None, num_int: int = 100, plot: bool = False) -> float:
+    """Numerically compute the area of a polygon."""
 
-    Parameters:
-    -----------
-    * polygon is a list of [x,y] points defining the shape
-    * if diameter != None the area is that inside the given diameter
-      wrt to the center of the polygon
-    * num_int is the number of divisions to use in the integration
-    """
     npts = len(polygon)
     if npts < 3:
         return 0.0
@@ -378,44 +241,55 @@ def poly_area_num(polygon, diameter=None, num_int=100, plot=False):
     min_x = min(polygon[:, 0])
     max_x = max(polygon[:, 0])
 
-    # compute x-values for integration
+    # Compute x-values for integration
     dx = np.fabs((max_x - min_x) / float(num_int + 1))
     x = np.arange(min_x - 0.5 * dx, max_x + 1.5 * dx, dx)
-    # loop through all x-vals and compute segment area
+    # Loop through all x-vals and compute segment area
     A = 0.0
+
     if plot:
         pline = [[], []]
+
     for xx in x:
-        # find polygon lines that contain x
+        # Find polygon lines that contain x
         lines = []
+
         for j in range(npts):
             p1 = polygon[j]
+
             if j == npts - 1:
                 p2 = polygon[0]
             else:
                 p2 = polygon[j + 1]
+
             if xx >= min(p1[0], p2[0]) and xx <= max(p1[0], p2[0]):
                 lines.append([p1, p2])
+
         if len(lines) > 0:
-            # now get y intercepts with vert line at xx
+            # Get y intercepts with vert line at xx
             p3 = [xx, min_y]
             p4 = [xx, max_y]
             y = []
+
             for p1, p2 in lines:
                 (inter, flag) = line_intercept(p1, p2, p3, p4)
+
                 if flag == 0:
                     print("Error, should always get intercepts here")
                     return 0.0
                 else:
                     y.append(inter[1])
+
             numy = len(y)
+
             if np.mod(numy, 2.0) != 0 or numy == 1:
                 print("Error, wrong number of intercepts!")
                 return 0.0
+
             y = np.array(y)
             y = y[np.argsort(y)]
-            # now figure length of y inside the polynomial.
-            # each pair (sorted wrt y) is an inside segment.
+
+            # Figure the length of y inside the polynomial.
             j = 0
             while j < numy:
                 ytop = y[j + 1]
@@ -442,18 +316,17 @@ def poly_area_num(polygon, diameter=None, num_int=100, plot=False):
                     pline[0].append([xx, xx])
                     pline[1].append([ybot, ytop])
                 j = j + 2
-    # make plot of integration lines for debugging
+
+    # Plot the integration lines for debugging
     if plot:
         for j in range(len(pline[0])):
             pyplot.plot(pline[0][j], pline[1][j], "k-")
     return A
 
 
-##################################################################
-def poly_y_intercepts(polygon):
-    """
-    find all the y-axis intercepts of the polygon
-    """
+def poly_y_intercepts(polygon: list[list[float]]) -> list[np.ndarray]:
+    """Find all the y-axis intercepts of the polygon."""
+
     npts = len(polygon)
     polygon = np.array(polygon)
     min_x = min(polygon[:, 0])
@@ -461,6 +334,7 @@ def poly_y_intercepts(polygon):
     p1 = np.array([min_x, 0.0])
     p2 = np.array([max_x, 0.0])
     intercepts = []
+
     for j in range(npts):
         p3 = polygon[j]
         if j == npts - 1:
@@ -470,24 +344,22 @@ def poly_y_intercepts(polygon):
         (intercept, flag) = line_intercept(p1, p2, p3, p4)
         if flag > 0:
             intercepts.append(intercept)
+
     return intercepts
 
 
-##########################################################################
-def trans_point(p, theta=0.0, scale=1.0):
-    """
-    simple in-plane rotation of points
-    """
+def trans_point(p: list[float], theta: float = 0.0, scale: float = 1.0) -> np.ndarray:
+    """Simple in-plane rotation of points."""
+
     M = np.array([[cosd(theta), -sind(theta)], [sind(theta), cosd(theta)]])
     pp = scale * np.dot(M, p)
+
     return pp
 
 
-##########################################################################
-def plot_polygon(polygon, **kw):
-    """
-    plot the lines around a polygon
-    """
+def plot_polygon(polygon: list[list[float]], **kw) -> None:
+    """Plot the lines around a polygon."""
+
     try:
         fmt = kw.pop("fmt")
     except Exception:
@@ -498,6 +370,7 @@ def plot_polygon(polygon, **kw):
         label = None
     (points, angles) = sort_points(*polygon)
     npts = len(points)
+
     if npts < 3:
         return
     for j in range(npts):
@@ -512,15 +385,9 @@ def plot_polygon(polygon, **kw):
             pyplot.plot([p1[0], p2[0]], [p1[1], p2[1]], fmt, label=label, **kw)
 
 
-##########################################################################
-def plot_points(points, **kw):
-    """
-    plot a bunch of in-plane ([x,y]) points
+def plot_points(points: list[list[float]], **kw) -> None:
+    """Plot a bunch of in-plane ([x,y]) points."""
 
-    Parameters:
-    -----------
-    * points is a list or tupe of [x,y] pairs
-    """
     try:
         fmt = kw.pop("fmt")
     except Exception:
@@ -529,16 +396,21 @@ def plot_points(points, **kw):
         label = kw.pop("label")
     except Exception:
         label = None
+
     npts = len(points)
+
     if npts == 0:
         return
     xy = np.zeros((npts, 2))
+
     for j in range(npts):
         v = points[j]
         xy[j, 0] = v[0]
         xy[j, 1] = v[1]
+
     idx = np.argsort(xy[:, 0])
     xy = xy[idx]
+
     for j in range(len(xy)):
         if j < npts - 1:
             pyplot.plot([0.0, xy[j, 0]], [0, xy[j, 1]], fmt, **kw)
@@ -546,11 +418,9 @@ def plot_points(points, **kw):
             pyplot.plot([0.0, xy[j, 0]], [0, xy[j, 1]], fmt, label=label, **kw)
 
 
-##################################################################
-def plot_circle(r, **kw):
-    """
-    plot a circle of given radius
-    """
+def plot_circle(r: float, **kw) -> None:
+    """Plot a circle of given radius."""
+
     try:
         fmt = kw.pop("fmt")
     except Exception:
@@ -559,44 +429,8 @@ def plot_circle(r, **kw):
         label = kw.pop("label")
     except Exception:
         label = None
+
     x = np.arange(-r, r + 0.01, 0.01)
     y = np.sqrt(np.fabs(r**2.0 - x**2.0))
     pyplot.plot(x, y, fmt, **kw)
     pyplot.plot(x, -y, fmt, label=label, **kw)
-
-
-##########################################################################
-##########################################################################
-def test():
-    pyplot.clf()
-    pyplot.grid()
-    #
-    poly1 = [[1.0, 1.0], [0.5, 1.5], [-1.0, 1.0], [-1.0, -1.0], [0.0, 0.5], [1.0, -1.0]]
-    poly2 = [[0.5, 2.0], [-0.5, 2.0], [-0.5, -2.0], [0.5, -2.0]]
-    for j in range(len(poly1)):
-        poly1[j] = trans_point(poly1[j], theta=-136.2, scale=0.81)
-    for j in range(len(poly2)):
-        poly2[j] = trans_point(poly2[j], theta=42.3, scale=1.134)
-    #
-    inner = inner_polygon(poly1, poly2)
-    # print inner
-    #
-    n = 100
-    diameter = 1.3
-    print("poly1 area = %6.3f, num=%6.3f" % (poly_area(poly1), poly_area_num(poly1, num_int=n)))
-    print("poly2 area = %6.3f, num=%6.3f" % (poly_area(poly2), poly_area_num(poly2, num_int=n)))
-    print("inner area = %6.3f, num=%6.3f" % (poly_area(inner), poly_area_num(inner, num_int=n, diameter=diameter, plot=True)))
-    #
-    plot_polygon(poly1, fmt="ro-")
-    plot_polygon(poly2, fmt="ko-")
-    plot_points(inner, fmt="go-")
-    plot_polygon(inner, fmt="g--", linewidth=4)
-    plot_circle(diameter / 2.0)
-
-
-##########################################################################
-if __name__ == "__main__":
-    """
-    test
-    """
-    test()

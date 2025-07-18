@@ -9,6 +9,7 @@ This directory contains pytest-based tests for the PDS codebase.
 - `test_image_data.py` - Tests for the image data handling module
 - `test_filtertools.py` - Tests for the HDF5 filtering and date/list operations module
 - `test_mathutil.py` - Tests for mathematical utility functions and numpy/scipy wrappers
+- `test_polygon.py` - Tests for generalized polygon computations and geometric operations
 
 ## Running Tests
 
@@ -24,6 +25,7 @@ pytest tests/test_file_locker.py
 pytest tests/test_image_data.py
 pytest tests/test_filtertools.py
 pytest tests/test_mathutil.py
+pytest tests/test_polygon.py
 ```
 
 To run with verbose output:
@@ -67,6 +69,17 @@ pytest tests/ -v
 - Concurrent access testing with thread synchronization
 - Cross-platform username/hostname detection
 - Context manager and manual lock/release patterns
+
+### Polygon Computations (`test_polygon.py`)
+- **Line Operations**: Line parameter calculation and intersection algorithms  
+- **Point-in-Polygon**: Testing various polygon shapes and edge cases
+- **Polygon Intersection**: Inner polygon calculation and overlap detection
+- **Area Calculations**: Both analytical and numerical integration methods
+- **Coordinate Transformations**: Rotation and scaling operations
+- **Sorting Algorithms**: Point sorting by angular position
+- **Python 2 Compatibility**: Exact preservation of original computational behavior
+- **Plotting Integration**: Matplotlib integration for visualization testing
+- **Edge Cases**: Degenerate polygons, very small/large coordinate ranges
 
 ### HDF5 Filtering (`test_filtertools.py`)
 - Tests for Python 2→3 migration with original behavior preservation
