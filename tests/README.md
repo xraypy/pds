@@ -7,6 +7,7 @@ This directory contains pytest-based tests for the PDS codebase and is structure
 - `__init__.py` - Package initialization, shared test utilities, and test runner
 - `test_active_area.py` - Tests for the active area calculation module
 - `test_background.py` - Tests for the background determination module
+- `test_converters.py` - Tests for the data conversion utility functions
 - `test_file_locker.py` - Tests for the cross-platform file locking module  
 - `test_filtertools.py` - Tests for the HDF5 filtering and date/list operations module
 - `test_gonio_psic.py` - Tests for the PSIC 6-circle diffractometer geometry calculations
@@ -36,6 +37,7 @@ To run specific test files:
 ```bash
 pytest tests/test_active_area.py
 pytest tests/test_background.py
+pytest tests/test_converters.py
 pytest tests/test_file_locker.py
 pytest tests/test_filtertools.py
 pytest tests/test_gonio_psic.py
@@ -72,6 +74,12 @@ pytest tests/ -v
 - **Error Handling**: Invalid geometry specifications and edge cases
 - **Visualization Testing**: Matplotlib integration for debugging plots
 - **Type Safety**: Comprehensive type annotation validation
+
+### Data Conversion Utilities (`test_converters.py`)
+- **Bytes to String Conversion**: Python 3 compatibility for h5py string handling
+- **HDF Value Evaluation**: Safe evaluation of stored HDF data with type conversion
+- **Boolean String Handling**: Conversion of string representations to Python booleans
+- **Error Handling**: Fallback for malformed or non-evaluable data
 
 ### Mathematical Utilities (`test_mathutil.py`)
 - **Numpy Wrappers**: Tests for `ave()`, `std()` with deprecated `numpy.ave()` replacement
