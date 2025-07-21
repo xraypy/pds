@@ -1,80 +1,11 @@
-"""
-Scattering data
-
-Authors / Modifications:
-------------------------
-Craig and Tom
-
-Python 2.x to Python 3.12.3
-Author: Jaswitha (jaswithareddy@uchicago.edu)
-Last modified: 2/5/2025
-
-Notes:
-------
-
-
-Todo:
------
-* HdfDataFile also needs search / filter methods
-that return lists of point numbers
-"""
-
-##############################################################################
 import h5py
 import numpy
 
+from pds.utils.converters import bytes_to_str
 from pds.utils.file_locker import FileLock
 from pds.utils.image_data import correct_image, read_pixel_map
 
-##############################################################################
-
-
-def bytes_to_str(value):
-    """Convert bytes to string for Python 3 compatibility with h5py"""
-    if isinstance(value, bytes):
-        return value.decode("utf-8")
-    return value
-
-
-##############################################################################
-
-# Standard data attributes for a point (ie read returns, write requires)
-'''DEFAULT_DETECTOR = {'name':'default',
-                    'detector_params':{},
-                    'integrate_params':{},
-                    'correction_params':{},
-                    'results':{}}
-"""
-note for image detector detector_params are:
-    (yaw, pitch, roll, dist, cen_pixel, del_x, del_y, scale)
-for correction:
-    (bad_pixels, flat_files, spatial)    
-"""
-DEFAULT_POINT_DATA = {'name':'default',
-                      'type':'',
-                      'info':'',
-                      'geom':'',
-                      'hist':'',
-                      'date':0,
-                      'geom_angle_lbls':[],
-                      'geom_angles':[],
-                      'energy':0,
-                      'lattice':[],
-                      'q':0,
-                      'orient_lbls':[],
-                      'orient':[],
-                      'vref_lbls':[],
-                      'vref':[],
-                      'position_lbls':[],
-                      'positions':[],
-                      'scaler_lbls':[],
-                      'scaler':[],
-                      'scaler_scale':[],
-                      'detector_1':DEFAULT_DETECTOR}'''
-
-# DOES NOT INCLUDE THE VALUES IN 'position_values'
-# OR 'scaler_labels' BECAUSE THESE CHANGE BASED ON
-# THE SCAN TYPE
+# General keys mapping - excludes position/scaler values that vary by scan type
 GEN_KEYS = {
     "chi": ["angle_values", 0],
     "del": ["angle_values", 1],
@@ -115,31 +46,13 @@ GEN_KEYS = {
     "or1_nu": ["or_values", 17],
     "or1_mu": ["or_values", 18],
     "or1_lambda": ["or_values", 19],
-}  # ,
-#'Psi': ['position_values', 0],
-#'H': ['position_values', 1],
-#'K': ['position_values', 2],
-#'L': ['position_values', 3],
-#'Alpha': ['position_values', 4],
-#'Beta': ['position_values', 5],
-#'Epoch': ['scaler_values', 0],
-#'Seconds': ['scaler_values', 1],
-#'i1': ['scaler_values', 2],
-#'Bicron': ['scaler_values', 3],
-#'AmpTek_sc': ['scaler_values', 4],
-#'ROI1': ['scaler_values', 5],
-#'ROI2': ['scaler_values', 6],
-#'ROI3': ['scaler_values', 7],
-#'io': ['scaler_values', 8],
-#'IROI': ['scaler_values', 9]}
+}
 
 ATT_KEYS = ["date_stamp", "energy", "geom", "hist", "info", "name", "type"]
 
 MISC_KEYS = ["Q", "haz"]
 
-# DO NOT INCLUDE 'image_data' OR 'corrected_image'
-# AS THIS WILL CAUSE THEM TO BE (OVER)WRITTEN IN
-# THE FILE.
+# Detector keys - excludes image_data and corrected_image to prevent overwriting
 DET_KEYS = {
     "bad_pixel_map": ["det_%i/corr_values.%i", 0],
     "bad_point": ["det_%i/corr_values.%i", 1],
@@ -190,14 +103,10 @@ DET_ATT_KEYS = ["data", "name"]
 VERSIONED_KEYS = []
 
 
-##############################################################################
 class HdfDataFile:
-    """
-    Container for data stored in HDF files
-    """
+    """Container for data stored in HDF files. Provides read/write access to structured data points."""
 
-    def __init__(self, fname):
-        # Initialize variables
+    def __init__(self, fname: str):
         self.fname = fname
         self.point = 0
         self.point_dict = {}
@@ -216,56 +125,8 @@ class HdfDataFile:
             raise
         self.all_items = self.file.items()
 
-    '''
-    def __del__(self):
-        """
-        If the object is going to be destroyed, make sure
-        the current point is written back to the file first.
-        
-        """
-        
-        if self.point != 0 and self.point_dict != {}:
-            try:
-                self.write_point(self.point_dict, self.point)
-            except:
-                pass
-        
-        self.point = 0
-        self.point_dict = {}
-        try:
-            self.file.flush()
-            self.file.close()
-            self.lock_file.release()
-            print('Lock released??')
-            print('Why?')
-        except:
-            pass
-        del self.file
-        del self.all_items
-        del self
-    '''
-
-    def __getitem__(self, arg):
-        """
-        Since usage will be hdf_object[point][arg], this reads in
-        the point and returns the dictionary.
-
-        """
-        """print "**arguments=", arg
-        self._check_file()
-        if type(arg) == types.StringType:
-            #result = DEFAULT_POINT_DATA[arg]
-            #str = "/pointdata/%4d/%s"  % (self.point,arg)
-            str = "/%s" % arg
-            #result = self.file.get(str)
-            result = self.file[str]
-            
-            #if result == hdf_group:
-            #    result = {}
-            #    tunnel into group building 
-            return result
-        # if the file doesnt have given attribute / data field
-        # how do we return error???"""
+    def __getitem__(self, arg: int) -> dict:
+        """Read point data and return dictionary. Usage: hdf_object[point][arg]."""
         if arg == self.point:
             return self.point_dict
         if self.point != 0 and self.point_dict != {}:
@@ -273,12 +134,8 @@ class HdfDataFile:
         self.read_point(arg)
         return self.point_dict
 
-    def close(self):
-        """
-        If the object is going to be closed, make sure
-        the current point is written back to the file first.
-
-        """
+    def close(self) -> None:
+        """Close the file after writing current point data. Releases file lock."""
 
         try:
             if self.point != 0 and self.point_dict != {}:
@@ -297,24 +154,18 @@ class HdfDataFile:
         except Exception:
             print("Error: file may not have closed cleanly,")
             print("though it may have already been closed.")
-        # Try releasing the lock again, in the event
-        # that closing the file threw an error
         try:
-            self.lock_file.release()
+            self.lock_file.release()  # Retry lock release if file close failed
         except Exception:
             pass
 
-    def delete(self, item):
+    def delete(self, item: str) -> None:
         """Delete a point from the file."""
 
         del self.file[item]
 
-    def get(self, num, default=None):
-        """
-        Acts like a dictionary's get: if num exists, returns
-        the associated dictionary, otherwise returns default.
-
-        """
+    def get(self, num: int, default: dict = None) -> dict:
+        """Return point dictionary if exists, otherwise return default. Works like dict.get()."""
         try:
             return self.__getitem__(num)
         except KeyError:
@@ -322,29 +173,15 @@ class HdfDataFile:
         except:
             raise
 
-    def get_all(self, key, points=None):
-        """
-        Gets the value of key for every point in points.
-        If points is None, gets the value for every point
-        in the file. To tunnel, pass a tuple to key,
-        eg HdfObject.get_all(('det_0', 'image_data'))
-
-        To ensure the returned values are up to date, replaces
-        the point's value (if appropriate) with the value in
-        the current dictionary.
-
-        """
+    def get_all(self, key: str or tuple, points: list = None) -> dict:
+        """Get key value for all points. Use tuple for nested keys like ('det_0', 'image_data')."""
 
         all_results = {}
-
-        # if self.point != 0 and self.point_dict != {}:
-        #    self.write_point(self.point_dict, self.point)
 
         if points is None:
             points = []
             for item in self.all_items:
                 points.append(item[0])
-        # for point in points:
         if isinstance(key, (str, bytes)):
             if key in GEN_KEYS:
                 key_loc = GEN_KEYS[key]
@@ -369,13 +206,12 @@ class HdfDataFile:
                     all_results[self.point] = self.point_dict[key]
             else:
                 for point in points:
-                    if key == "L":
-                        key = b"L"
-                    if key in self.file[point]["position_labels"]:
-                        key_loc = list(self.file[point]["position_labels"]).index(key)
+                    # Handle key search in labels with proper bytes/string conversion
+                    if self._key_in_labels(key, self.file[point]["position_labels"]):
+                        key_loc = self._find_key_in_labels(key, self.file[point]["position_labels"])
                         all_results[point] = self.file[point]["position_values"][key_loc]
-                    elif key in self.file[point]["scaler_labels"]:
-                        key_loc = list(self.file[point]["scaler_labels"]).index(key)
+                    elif self._key_in_labels(key, self.file[point]["scaler_labels"]):
+                        key_loc = self._find_key_in_labels(key, self.file[point]["scaler_labels"])
                         all_results[point] = self.file[point]["scaler_values"][key_loc]
                     else:
                         print("Position/Scaler Labels Unrecognized Key Error: ", key)
@@ -399,8 +235,7 @@ class HdfDataFile:
             elif key in DET_ATT_KEYS:
                 for point in points:
                     try:
-                        value = self.file[point][det_name].attrs[key]
-                        all_results[point] = bytes_to_str(value)
+                        all_results[point] = self.file[point][det_name].attrs[key]
                     except (OSError, IOError) as e:
                         print(f"Error reading attribute {key} for point {point}: {e}")
                         all_results[point] = None
@@ -432,17 +267,8 @@ class HdfDataFile:
             print("Error: unknown key type")
         return all_results
 
-    def read_point(self, num):
-        """
-        read data from the point to self
-
-        return all data as a dictionary
-
-        num should be the whole serial number string,
-        eg '000328'
-
-        """
-        # self._check_file()
+    def read_point(self, num: str) -> None:
+        """Read data from point into dictionary. Num should be full serial string like '000328'."""
         self.point = num
         self.point_dict = {}
         for key in GEN_KEYS:
@@ -486,10 +312,7 @@ class HdfDataFile:
                 try:
                     point_image = numpy.array(self.file[num][det_str]["image_data"])
                     self.point_dict[det_str]["image_data"] = point_image
-                    point_mask = self.point_dict[det_str]["bad_pixel_map"].decode("utf-8")
-                    # if isinstance(point_mask, bytes):
-                    #     point_mask = point_mask.decode('utf-8')
-                    # point_mask = eval(point_mask)
+                    point_mask = bytes_to_str(self.point_dict[det_str]["bad_pixel_map"])
                     if not point_mask.startswith("(") and not point_mask.startswith("["):
                         point_mask = str(read_pixel_map(point_mask))
                         self.point_dict[det_str]["bad_pixel_map"] = point_mask
@@ -501,63 +324,49 @@ class HdfDataFile:
             except Exception:
                 break
 
-    '''def set(self, num, key, value):
-        """Overwrite key in num with value."""
-        pass'''
-
-    def set_all(self, key, value, points=None):
-        """
-        Sets the value of key for every point in points.
-        If points is None, sets the value for every point
-        in the file. To tunnel, pass a tuple to key,
-        eg HdfObject.set_all(('det_0', 'bad_pixel_map'))
-
-        To ensure the set values aren't overwritten by the
-        current dictionary when it's written, sets that value
-        as well (if appropriate).
-
-        """
-
-        # if self.point != 0 and self.point_dict != {}:
-        #    self.write_point(self.point_dict, self.point)
+    def set_all(self, key: str or tuple, value: any, points: list = None) -> None:
+        """Set key value for all points. Use tuple for nested keys like ('det_0', 'bad_pixel_map')."""
 
         if points is None:
             points = []
             for item in self.all_items:
                 points.append(item[0])
-        # for point in points:
-        if isinstance(key, bytes):
-            key = key.decode("utf-8")
-            if key in GEN_KEYS:
+
+        # Handle both string and bytes keys - match original Python 2 behavior
+        if isinstance(key, (str, bytes)):
+            # Convert bytes to string using bytes_to_str for consistency
+            str_key = bytes_to_str(key) if isinstance(key, bytes) else key
+
+            if str_key in GEN_KEYS:
                 if self.point in points:
-                    self.point_dict[key] = value
-                key_loc = GEN_KEYS[key]
+                    self.point_dict[str_key] = value
+                key_loc = GEN_KEYS[str_key]
                 for point in points:
                     self.file[point][key_loc[0]][key_loc[1]] = value
-            elif key in self.file[self.point]["position_labels"]:
+            elif self.point != 0 and self._key_in_labels(str_key, self.file[self.point]["position_labels"]):
                 if self.point in points:
-                    self.point_dict[key] = value
-                key_loc = list(self.file[self.point]["position_labels"]).index(key)
+                    self.point_dict[str_key] = value
+                key_loc = self._find_key_in_labels(str_key, self.file[self.point]["position_labels"])
                 for point in points:
                     self.file[point]["position_values"][key_loc] = value
-            elif key in self.file[self.point]["scaler_labels"]:
+            elif self.point != 0 and self._key_in_labels(str_key, self.file[self.point]["scaler_labels"]):
                 if self.point in points:
-                    self.point_dict[key] = value
-                key_loc = list(self.file[self.point]["scaler_labels"]).index(key)
+                    self.point_dict[str_key] = value
+                key_loc = self._find_key_in_labels(str_key, self.file[self.point]["scaler_labels"])
                 for point in points:
                     self.file[point]["scaler_values"][key_loc] = value
-            elif key in ATT_KEYS:
+            elif str_key in ATT_KEYS:
                 if self.point in points:
-                    self.point_dict[key] = value
-                if key.startswith("hist"):
-                    key = key + "." + str(self.version)
+                    self.point_dict[str_key] = value
+                if str_key.startswith("hist"):
+                    str_key = str_key + "." + str(self.version)
                 for point in points:
-                    self.file[point].attrs[key] = value
-            elif key in MISC_KEYS:
+                    self.file[point].attrs[str_key] = value
+            elif str_key in MISC_KEYS:
                 if self.point in points:
-                    self.point_dict[key] = value
+                    self.point_dict[str_key] = value
                 for point in points:
-                    self.file[point][key] = value
+                    self.file[point][str_key] = value
             else:
                 print("Error: unrecognized key")
         elif isinstance(key, tuple):
@@ -580,16 +389,7 @@ class HdfDataFile:
                     self.file[point][det_name].attrs[key] = value
             elif key.startswith("image_data"):
                 print("Are you sure you want to overwrite the image data?")
-                print("If so, go into the hdf_data.py file and uncomment " + "the lines following this message.")
-                """
-                if self.point in points:
-                    self.point_dict[det_name][key] = value
-                for point in points:
-                    try:
-                        self.file[point][det_name][key] = value
-                    except:
-                        pass
-                """
+                print("If so, go into the hdf_data.py file and uncomment the lines following this message.")
             elif key.startswith("corrected_image"):
                 pass
             else:
@@ -597,64 +397,52 @@ class HdfDataFile:
         else:
             print("Error: unknown key type")
 
-    def version_point(self, data={}):
-        """
-        edit data for a given point, making a new version
+    def _key_in_labels(self, key: str, labels) -> bool:
+        """Check if key exists in labels, handling both string and bytes."""
+        try:
+            for label in labels:
+                if bytes_to_str(label) == key or label == key:
+                    return True
+            return False
+        except Exception:
+            return False
 
-        data is dictionary, just with the new/updated stuff
-        """
-        pass
+    def _find_key_in_labels(self, key: str, labels) -> int:
+        """Find index of key in labels, handling both string and bytes."""
+        for i, label in enumerate(labels):
+            if bytes_to_str(label) == key or label == key:
+                return i
+        raise ValueError(f"Key {key} not found in labels")
 
-    def write_point(self, data, num=None):
-        """
-        write data to file
+    def version_point(self, data: dict = {}) -> None:
+        """Create new version of point with updated data. Data is dictionary with new/updated values."""
 
-        data is a dictionary
-        """
-        # self._check_file()
-        #
+    def write_point(self, data: dict, num: str = None) -> None:
+        """Write dictionary data to file. Uses current point if num not specified."""
         if num is None:
             num = self.point
         for key in data:
-            if isinstance(key, str):
-                key = key.encode("utf-8")
-            if key.startswith(b"hist"):
-                key = key + b"." + str(self.version).encode("utf-8")
-                self.file[num].attrs[key] = data["hist"]
-            elif key.startswith(b"det_"):
-                if key in data:
-                    det_dict = data[key]
+            # Handle both string and bytes keys - match original Python 2 behavior
+            original_key = key
+            str_key = bytes_to_str(key) if isinstance(key, bytes) else key
+
+            if str_key.startswith("hist"):
+                hist_key = str_key + "." + str(self.version)
+                # Use 'hist' if available, otherwise use the original key's data
+                hist_data = data.get("hist", data.get(original_key))
+                self.file[num].attrs[hist_key] = hist_data
+            elif str_key.startswith("det_"):
+                if original_key in data:
+                    det_dict = data[original_key]
                     for det_key in det_dict:
                         try:
                             key_loc = DET_KEYS[det_key]
                             key_loc_path = key_loc[0].split("/")[1] % self.version
                             try:
-                                self.file[num][key][key_loc_path][key_loc[1]] = data[key][det_key]
+                                self.file[num][str_key][key_loc_path][key_loc[1]] = data[original_key][det_key]
                             except IOError:
-                                self.file[num][key][key_loc_path][key_loc[1]] = numpy.float(data[key][det_key])
+                                self.file[num][str_key][key_loc_path][key_loc[1]] = numpy.float(data[original_key][det_key])
                         except KeyError:
                             pass
             else:
                 pass
-
-
-##############################################################################
-if __name__ == "__main__":
-    # file = h5py.File('bob.h5','w')
-    # file = h5py.File('C:\\Users\\biwer\\Desktop\\HDFFiles\\ProjectFULLALL.h5','w')
-    # test_grp = file.create_group('test')
-    # test_grp.create_dataset('ones',data=numpy.ones(10))
-    # test_grp['xx'] = 'a string'
-    # file.close()
-    #
-    # d = HdfDataFile('bob.h5')
-    # testObject = HdfDataFile('C:\\Users\\biwer\\Desktop\\HDFFiles\\ProjectFULLALLv3.h5')
-    testObject = HdfDataFile("C:\\Users\\biwer\\Desktop\\HDFFiles\\WithLambda.h5")
-    # testObject = HdfDataFile('C:\\Users\\biwer\\Desktop\\HDFFiles\\ImageTest.h5')
-    # print d['detector_1']['name']
-    # print d['test']['xx']
-    # x = d['test']['ones']
-    # print x.value
-    # for l in dir(x): print l
-    #
-    # d.file.close()

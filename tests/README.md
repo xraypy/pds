@@ -12,6 +12,7 @@ This directory contains pytest-based tests for the PDS codebase and is structure
 - `test_file_locker.py` - Tests for the cross-platform file locking module  
 - `test_filtertools.py` - Tests for the HDF5 filtering and date/list operations module
 - `test_gonio_psic.py` - Tests for the PSIC 6-circle diffractometer geometry calculations
+- `test_hdf_data.py` - Tests for the HDF5 data file container and Python 2/3 compatibility
 - `test_image_data.py` - Tests for the image data handling module
 - `test_lattice.py` - Tests for the crystallographic lattice calculations module
 - `test_master_to_project.py` - Tests for the master-to-project HDF5 file conversion module
@@ -44,6 +45,7 @@ pytest tests/test_ctr_data.py
 pytest tests/test_file_locker.py
 pytest tests/test_filtertools.py
 pytest tests/test_gonio_psic.py
+pytest tests/test_hdf_data.py
 pytest tests/test_image_data.py
 pytest tests/test_lattice.py
 pytest tests/test_master_to_project.py
