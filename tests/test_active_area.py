@@ -20,6 +20,7 @@ from pds.utils.active_area import (
     surface_intercept_bounds,
 )
 from pds.utils.mathutil import cartesian_mag
+from tests.test_gonio_psic import psic_spec_array
 
 
 class TestSurfaceIntercept:
@@ -552,23 +553,22 @@ class TestOriginalTestFunctions:
         pyplot.clf()  # Clean up
 
     def test_original_test2_with_real_gonio_if_available(self):
-        """Test with real gonio_psic if available, otherwise skip."""
+        """Test with real gonio_psic using test_psic_spec_array function."""
 
-        # Run the original test2 logic
-        psic = gonio_psic.test2(show=False)
-        psic.set_angles(phi=42.0, chi=33, eta=20.0, mu=15.0, nu=75.0, delta=20.0)
+        # Use the available psic_spec_array function from test_gonio_psic
+        psic = psic_spec_array(show=False)
 
-        # Get beam and detector vectors
+        # Get beam and detector vectors using current angles from psic
         beam = gonio_psic.beam_vectors(h=1.3, v=0.1)
         det = gonio_psic.det_vectors(h=2.0, v=1.5, nu=psic.angles["nu"], delta=psic.angles["delta"])
 
         # Get sample vectors
         sample = [[1.0, 1.0], [0.5, 1.5], [-1.0, 1.0], [-1.0, -1.0], [0.0, 0.5], [1.0, -1.0]]
         angles = {"phi": 108.0007, "chi": 0.4831}
-        sample = gonio_psic.sample_vectors(sample, angles=angles, gonio=psic)
+        sample_vectors = gonio_psic.sample_vectors(sample, angles=angles, gonio=psic)
 
         # Compute active area
-        result = active_area(psic.nm, ki=psic.ki, kr=psic.kr, beam=beam, det=det, sample=sample, plot=False)
+        result = active_area(psic.nm, ki=psic.ki, kr=psic.kr, beam=beam, det=det, sample=sample_vectors, plot=False)
 
         # Verify results
         assert isinstance(result, tuple)

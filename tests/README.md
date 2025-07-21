@@ -8,8 +8,9 @@ This directory contains pytest-based tests for the PDS codebase and is structure
 - `test_active_area.py` - Tests for the active area calculation module
 - `test_background.py` - Tests for the background determination module
 - `test_file_locker.py` - Tests for the cross-platform file locking module  
-- `test_image_data.py` - Tests for the image data handling module
 - `test_filtertools.py` - Tests for the HDF5 filtering and date/list operations module
+- `test_gonio_psic.py` - Tests for the PSIC 6-circle diffractometer geometry calculations
+- `test_image_data.py` - Tests for the image data handling module
 - `test_lattice.py` - Tests for the crystallographic lattice calculations module
 - `test_mathutil.py` - Tests for mathematical utility functions and numpy/scipy wrappers
 - `test_polygon.py` - Tests for generalized polygon computations and geometric operations
@@ -36,8 +37,9 @@ To run specific test files:
 pytest tests/test_active_area.py
 pytest tests/test_background.py
 pytest tests/test_file_locker.py
-pytest tests/test_image_data.py
 pytest tests/test_filtertools.py
+pytest tests/test_gonio_psic.py
+pytest tests/test_image_data.py
 pytest tests/test_lattice.py
 pytest tests/test_mathutil.py
 pytest tests/test_polygon.py
@@ -115,6 +117,18 @@ pytest tests/ -v
 - Numeric type compatibility (numpy integers, floats)
 - Original Python 2 eval() expression compatibility
 - Timeout and error condition handling
+
+### PSIC Diffractometer Geometry (`test_gonio_psic.py`)
+- **6-Circle Diffractometer**: Complete PSIC geometry calculations following You's conventions
+- **Orientation Matrix Calculations**: U and B matrix calculations from primary/secondary reflections
+- **Goniometer Rotations**: Z matrix calculations for phi, chi, eta, mu sample rotations
+- **Detector Calculations**: Q vector, k-vector (ki, kr), and detector rotation matrix calculations
+- **Pseudo-Angle Calculations**: TTH, ALPHA, BETA, OMEGA, PSI, TAU, QAZ, NAZ, SIGMA_AZ, TAU_AZ
+- **Reference Vector Operations**: Surface normal calculations and chi/phi flat angle determinations
+- **SPEC File Interface**: Complete G array parsing and psic_from_spec functionality
+- **Vector Calculations**: Beam, detector, and sample aperture vector calculations
+- **Original Test Functions**: Exact reproduction of Python 2 test1() and test2() functions
+- **Numerical Precision**: High-precision validation against original expected results
 
 ### Crystallographic Lattice (`test_lattice.py`)
 - **Unit Cell Parameters**: Lattice parameter initialization and updates
