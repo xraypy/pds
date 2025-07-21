@@ -1,5 +1,7 @@
 from typing import Any
 
+import numpy as np
+
 
 def bytes_to_str(value: Any) -> Any:
     """Convert bytes to string for Python 3 compatibility with h5py."""
@@ -43,3 +45,22 @@ def safe_eval_hdf(value: Any) -> Any:
     except Exception as e:
         print(f"Error evaluating HDF value: {value}, error: {e}")
         return value
+
+
+def extract_value(data: float | list[float] | np.ndarray, point: int) -> float:
+    """Extract float value from data at given point index. Handles both scalar and array data consistently."""
+    if hasattr(data, "__getitem__") and not isinstance(data, str):
+        try:
+            return float(data[point])
+        except (IndexError, TypeError):
+            # For arrays/lists, try to get the first element if point access fails
+            try:
+                if len(data) > 0:
+                    return float(data[0])
+                else:
+                    raise ValueError("Empty array/list cannot be converted to float")
+            except (TypeError, AttributeError):
+                # If it's not a container or length is not accessible, try direct conversion
+                return float(data)
+    else:
+        return float(data)

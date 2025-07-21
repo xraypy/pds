@@ -1,70 +1,78 @@
+from typing import Any, Optional
+
 import numpy as np
 
 from pds.utils.active_area import active_area
+from pds.utils.converters import bytes_to_str, extract_value
 from pds.utils.gonio_psic import beam_vectors, det_vectors, psic_from_spec, sample_vectors
 from pds.utils.mathutil import cosd, sind
 
 
-def image_point_F(scan, point, Iitg="I", Inorm="io", Ierr="Ierr", Ibgr="Ibgr", transm="transm", corr_params={}, preparsed=False):
-    """Computes the structure factor F and its error for a single scan point in an image scan, applying intensity corrections."""
-
-    d = {"I": 0.0, "Inorm": 0.0, "Ierr": 0.0, "Ibgr": 0.0, "transm": 0.0, "F": 0.0, "Ferr": 0.0, "ctot": 1.0, "alpha": 0.0, "beta": 0.0}
-    d["I"] = scan[Iitg][point]
-    d["Inorm"] = scan[Inorm][point]
-    d["Ierr"] = scan[Ierr][point]
-    d["Ibgr"] = scan[Ibgr][point]
-    d["transm"] = scan[transm][point]
-
+def image_point_F(
+    scan: dict[str, Any],
+    point: int,
+    Iitg: str = "I",
+    Inorm: str = "io",
+    Ierr: str = "Ierr",
+    Ibgr: str = "Ibgr",
+    transm: str = "transm",
+    corr_params: Optional[dict[str, Any]] = None,
+    preparsed: bool = False,
+) -> dict[str, float]:
+    """Computes structure factor F and error for single scan point with intensity corrections. Returns dictionary with intensity values and calculated F, Ferr."""
+    # Default to empty dict if None passed
     if corr_params is None:
-        d["ctot"] = 1.0
-        scale = 1.0
-    else:
-        # compute correction factors
-        scale = corr_params.get("scale")
-        if scale is None:
-            scale = 1.0
-        scale = float(scale)
-        corr = _get_corr(scan, point, corr_params, preparsed)
-        if corr is None:
-            d["ctot"] = 1.0
-        else:
-            d["ctot"] = corr.ctot_stationary()
-            d["alpha"] = corr.gonio.pangles["alpha"]
-            d["beta"] = corr.gonio.pangles["beta"]
+        corr_params = {}
 
-    # compute F
-    if d["I"] <= 0.0 or d["Inorm"] <= 0.0:
-        d["F"] = 0.0
-        d["Ferr"] = 0.0
-    else:
-        scale = scale / d["transm"] * d["ctot"] / d["Inorm"]
-        # scale = scale * d['ctot']/d['Inorm']
-        d["F"] = np.sqrt(scale * d["I"])
-        d["Ferr"] = 0.5 * scale**0.5 * d["Ierr"] / d["I"] ** 0.5
+    d = {
+        "I": extract_value(scan[Iitg], point),
+        "Inorm": extract_value(scan[Inorm], point),
+        "Ierr": extract_value(scan[Ierr], point),
+        "Ibgr": extract_value(scan[Ibgr], point),
+        "transm": extract_value(scan[transm], point),
+        "F": 0.0,
+        "Ferr": 0.0,
+        "ctot": 1.0,
+        "alpha": 0.0,
+        "beta": 0.0,
+    }
+
+    scale = corr_params.get("scale", 1.0)
+    corr = _get_corr(scan, point, corr_params, preparsed)
+    if corr is not None:
+        d["ctot"] = corr.ctot_stationary()
+        d["alpha"] = corr.gonio.pangles["alpha"]
+        d["beta"] = corr.gonio.pangles["beta"]
+
+    # Calculate structure factor F
+    if d["I"] > 0.0 and d["Inorm"] > 0.0:
+        scale_factor = scale / d["transm"] * d["ctot"] / d["Inorm"]
+        d["F"] = float(np.sqrt(scale_factor * d["I"]))
+        d["Ferr"] = float(0.5 * np.sqrt(scale_factor) * d["Ierr"] / np.sqrt(d["I"]))
     return d
 
 
-def _get_corr(scan, point, corr_params, preparsed=False):
-    """Returns a CtrCorrection instance for the specified geometry and scan point, using provided correction parameters."""
+def _get_corr(scan: dict[str, Any], point: int, corr_params: dict[str, Any], preparsed: bool = False) -> Optional["CtrCorrectionPsic"]:
+    """Returns CtrCorrection instance for specified geometry and scan point. Uses correction parameters to configure goniometer and correction factors."""
+    # Return None if no goniometer data available
+    if "G" not in scan:
+        return None
 
     geom = corr_params.get("geom", "psic")
     beam = corr_params.get("beam_slits", {})
     det = corr_params.get("det_slits")
     sample = corr_params.get("sample")
 
-    # get gonio instance for corrections
-    if geom == "psic" or geom == b"psic":
-        # Implement the handling for 'psic' geometry
+    if geom == "psic" or bytes_to_str(geom) == "psic":
         gonio = psic_from_spec(scan["G"], preparsed=preparsed)
         _update_psic_angles(gonio, scan, point)
     else:
-        raise NotImplementedError(f"Geometry {geom} not implemented")
+        raise NotImplementedError(f"Geometry {bytes_to_str(geom)} not implemented")
     return CtrCorrectionPsic(gonio=gonio, beam_slits=beam, det_slits=det, sample=sample)
 
 
-def _update_psic_angles(gonio, scan, point, verbose=True):
-    """Updates the goniometer angles for a specific scan point using values from the scan data."""
-
+def _update_psic_angles(gonio: Any, scan: dict[str, Any], point: int, verbose: bool = True) -> None:
+    """Updates goniometer angles for specific scan point using scan data. Extracts angle values from scan dictionary handling both scalar and array data."""
     try:
         if hasattr(scan, "dims"):
             npts = int(scan.dims[0])
@@ -75,9 +83,9 @@ def _update_psic_angles(gonio, scan, point, verbose=True):
         npts = scan.get("dims", (1, 0))[0]
     try:
         if hasattr(scan, "name"):
-            scan_name = scan.name
+            scan_name = bytes_to_str(scan.name) or ""
         else:
-            scan_name = scan.get("name", "")
+            scan_name = bytes_to_str(scan.get("name", "")) or ""
     except Exception as e:
         print("Error getting scan name:", e)
         scan_name = ""
@@ -158,11 +166,16 @@ def _update_psic_angles(gonio, scan, point, verbose=True):
 
 
 class CtrCorrectionPsic:
-    """Provides correction factors for measured intensities in Psic geometry, including polarization, Lorentz, and geometric area corrections."""
+    """Provides correction factors for measured intensities in Psic geometry. Combines polarization, Lorentz, and geometric area corrections."""
 
-    def __init__(self, gonio=None, beam_slits={}, det_slits=None, sample={}):
-        """Initializes correction settings with goniometer, beam slits, detector slits, and sample geometry for the Psic setup."""
-
+    def __init__(
+        self,
+        gonio: Optional[Any] = None,
+        beam_slits: dict[str, Any] = {},
+        det_slits: Optional[dict[str, Any]] = None,
+        sample: dict[str, Any] | float = {},
+    ) -> None:
+        """Initializes correction settings with goniometer and slit geometries. Configures pseudo-angle calculations if needed."""
         self.gonio = gonio
         if self.gonio.calc_psuedo is False:
             self.gonio.calc_psuedo = True
@@ -171,12 +184,11 @@ class CtrCorrectionPsic:
         self.det_slits = det_slits
         self.sample = sample
 
-        # fraction horz polarization
+        # Fraction horizontal polarization
         self.fh = 1.0
 
-    def ctot_stationary(self, plot=False, fig=None):
-        """Calculates the overall correction factor for stationary (image) measurements, combining polarization, Lorentz, and area corrections."""
-
+    def ctot_stationary(self, plot: bool = False, fig: Optional[Any] = None) -> float:
+        """Calculates overall correction factor for stationary measurements. Combines polarization, Lorentz, and area corrections."""
         cp = self.polarization()
         cl = self.lorentz_stationary()
         ca = self.active_area(plot=plot, fig=fig)
@@ -189,16 +201,14 @@ class CtrCorrectionPsic:
             print("   Total=%f" % ct)
         return ct
 
-    def lorentz_stationary(self):
-        """Calculates the Lorentz correction factor for stationary (image) measurements."""
-
+    def lorentz_stationary(self) -> float:
+        """Calculates Lorentz correction factor for stationary measurements. Returns sine of beta angle."""
         beta = self.gonio.pangles["beta"]
         cl = sind(beta)
         return cl
 
-    def polarization(self):
-        """Calculates the polarization correction factor based on the beam and detector angles."""
-
+    def polarization(self) -> float:
+        """Calculates polarization correction factor based on beam and detector angles. Uses delta and nu angles from goniometer."""
         delta = self.gonio.angles["delta"]
         nu = self.gonio.angles["nu"]
         p = 1.0 - (cosd(delta) * sind(nu)) ** 2.0
@@ -206,12 +216,10 @@ class CtrCorrectionPsic:
             cp = 0.0
         else:
             cp = 1.0 / p
-
         return cp
 
-    def active_area(self, plot=False, fig=None):
-        """Calculates a correction factor based on the overlap between the beam, detector, and sample areas."""
-
+    def active_area(self, plot: bool = False, fig: Optional[Any] = None) -> float:
+        """Calculates correction factor based on beam, detector, and sample area overlap. Requires beam slit specifications."""
         if self.beam_slits == {} or self.beam_slits is None:
             print("Warning beam slits not specified")
             return 1.0
@@ -226,12 +234,10 @@ class CtrCorrectionPsic:
             print("beta is less than 0.0")
             return 0.0
 
-        # get beam vectors
         bh = self.beam_slits["horz"]
         bv = self.beam_slits["vert"]
         beam = beam_vectors(h=bh, v=bv)
 
-        # get detector vectors
         if self.det_slits is None:
             det = None
         else:
@@ -239,7 +245,6 @@ class CtrCorrectionPsic:
             dv = self.det_slits["vert"]
             det = det_vectors(h=dh, v=dv, nu=self.gonio.angles["nu"], delta=self.gonio.angles["delta"])
 
-        # get sample polygon
         if isinstance(self.sample, dict):
             sample_dia = self.sample.get("dia", 0.0)
             sample_vecs = self.sample.get("polygon", None)
@@ -254,7 +259,6 @@ class CtrCorrectionPsic:
         else:
             sample = self.sample
 
-        # compute active area correction
         (A_beam, A_int) = active_area(self.gonio.nm, ki=self.gonio.ki, kr=self.gonio.kr, beam=beam, det=det, sample=sample, plot=plot, fig=fig)
         if A_int == 0.0:
             ca = 0.0

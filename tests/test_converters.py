@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
-from pds.utils.converters import bytes_to_str, safe_eval_hdf
+from pds.utils.converters import bytes_to_str, extract_value, safe_eval_hdf
 
 
 class TestBytesToStr:
@@ -115,6 +115,121 @@ class TestSafeEvalHdf:
         mock_arr = MockArray()
         result = safe_eval_hdf(mock_arr)
         assert result is mock_arr
+
+
+class TestExtractValue:
+    """Test extract_value function for handling scalar and array data."""
+
+    def test_scalar_float(self):
+        """Test extraction from scalar float value."""
+        assert extract_value(3.14, 0) == 3.14
+        assert extract_value(3.14, 5) == 3.14  # Point index ignored for scalars
+        assert isinstance(extract_value(3.14, 0), float)
+
+    def test_scalar_int(self):
+        """Test extraction from scalar integer value."""
+        assert extract_value(42, 0) == 42.0
+        assert extract_value(42, 10) == 42.0  # Point index ignored for scalars
+        assert isinstance(extract_value(42, 0), float)
+
+    def test_list_valid_index(self):
+        """Test extraction from list with valid index."""
+        data = [1.0, 2.5, 3.7, 4.2]
+        assert extract_value(data, 0) == 1.0
+        assert extract_value(data, 1) == 2.5
+        assert extract_value(data, 2) == 3.7
+        assert extract_value(data, 3) == 4.2
+        assert isinstance(extract_value(data, 1), float)
+
+    def test_list_invalid_index(self):
+        """Test extraction from list with invalid index falls back to first element."""
+        data = [1.0, 2.5, 3.7]
+        # Index out of range should return the first element
+        result = extract_value(data, 10)
+        assert result == 1.0
+        assert isinstance(result, float)
+
+    def test_numpy_array_valid_index(self):
+        """Test extraction from numpy array with valid index."""
+        data = np.array([5.5, 6.6, 7.7, 8.8])
+        assert extract_value(data, 0) == 5.5
+        assert extract_value(data, 1) == 6.6
+        assert extract_value(data, 2) == 7.7
+        assert extract_value(data, 3) == 8.8
+        assert isinstance(extract_value(data, 1), float)
+
+    def test_numpy_array_invalid_index(self):
+        """Test extraction from numpy array with invalid index falls back to first element."""
+        data = np.array([5.5, 6.6, 7.7])
+        # Index out of range should return the first element
+        result = extract_value(data, 10)
+        assert result == 5.5
+        assert isinstance(result, float)
+
+    def test_numpy_scalar(self):
+        """Test extraction from numpy scalar values."""
+        data = np.float64(9.99)
+        assert extract_value(data, 0) == 9.99
+        assert extract_value(data, 5) == 9.99  # Point index ignored for scalars
+        assert isinstance(extract_value(data, 0), float)
+
+    def test_string_input(self):
+        """Test that strings are treated as non-indexable and converted to float."""
+        # This should raise ValueError as strings can't be converted to float
+        with pytest.raises(ValueError):
+            extract_value("hello", 0)
+
+    def test_numeric_string(self):
+        """Test extraction from numeric strings."""
+        assert extract_value("3.14", 0) == 3.14
+        assert extract_value("42", 5) == 42.0
+        assert isinstance(extract_value("3.14", 0), float)
+
+    def test_mixed_types_in_list(self):
+        """Test extraction from list with mixed numeric types."""
+        data = [1, 2.5, np.float64(3.7), 4]
+        assert extract_value(data, 0) == 1.0
+        assert extract_value(data, 1) == 2.5
+        assert extract_value(data, 2) == 3.7
+        assert extract_value(data, 3) == 4.0
+        assert all(isinstance(extract_value(data, i), float) for i in range(4))
+
+    def test_empty_list(self):
+        """Test extraction from empty list with fallback to scalar conversion."""
+        data = []
+        # This should raise ValueError as empty list can't be converted to float
+        with pytest.raises(ValueError):
+            extract_value(data, 0)
+
+    def test_single_element_list(self):
+        """Test extraction from single-element list."""
+        data = [7.5]
+        assert extract_value(data, 0) == 7.5
+        # Index out of range should fall back to first element
+        result = extract_value(data, 1)
+        assert result == 7.5
+        assert isinstance(result, float)
+
+    def test_negative_values(self):
+        """Test extraction of negative values."""
+        data = [-1.5, -2.7, -3.9]
+        assert extract_value(data, 0) == -1.5
+        assert extract_value(data, 1) == -2.7
+        assert extract_value(data, 2) == -3.9
+
+        # Test scalar negative value
+        assert extract_value(-5.5, 0) == -5.5
+
+    def test_zero_values(self):
+        """Test extraction of zero values."""
+        data = [0.0, 0, -0.0]
+        assert extract_value(data, 0) == 0.0
+        assert extract_value(data, 1) == 0.0
+        assert extract_value(data, 2) == 0.0
+
+        # Test scalar zero
+        assert extract_value(0, 0) == 0.0
+        assert extract_value(0.0, 0) == 0.0
 
 
 if __name__ == "__main__":
