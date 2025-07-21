@@ -1,17 +1,10 @@
-"""
-Master to Project Parser
-Author: Craig Biwer (cbiwer@uchicago.edu)
-7/12/2012
-
-Python 2.x to Python 3.12.3
-Author: Jaswitha (jaswithareddy@uchicago.edu)
-Last modified: 2/5/2025
-"""
-
 import re
+from typing import Any
 
 import h5py
 import numpy as np
+
+from pds.utils.converters import bytes_to_str
 
 INTEGRATION_PARAMETERS = {
     "bgrflag": 1,
@@ -47,13 +40,8 @@ CORRECTION_PARAMETERS = {
 DETECTOR_PARAMETERS = {"beam_slits": {}, "det_slits": {}, "name": "pilatus"}
 
 
-def read_pixel_map(fname):
-    """
-    read pixel map file
-
-    assume the file format is
-    (bad pixel)  (good pixel)
-    """
+def read_pixel_map(fname: str) -> tuple[list[list[int]], list[list[int]]] | list[Any]:
+    """Read the pixel map file assuming (bad pixel) (good pixel) format."""
     bad_pixels = []
     good_pixels = []
     try:
@@ -68,46 +56,25 @@ def read_pixel_map(fname):
         f.close()
         for p in bad:
             pp = p.split(",")
-            bad_pixels.append(map(int, pp))
+            bad_pixels.append(list(map(int, pp)))
         for p in good:
             pp = p.split(",")
-            good_pixels.append(map(int, pp))
+            good_pixels.append(list(map(int, pp)))
         return bad_pixels, good_pixels
     except Exception:
         print("Error reading file: %s" % fname)
         return []
 
 
-def master_to_project(master_file, desired_scans, project_file, append=True, gui=False):
-    """Convert a list of scans from a master file
-    (potentially with some listed attributes)
-    to a project file.
-
-    Inputs:
-        -master_file: the full directory path to the master file
-        -desired_scans: a nested dictionary describing what scans
-                        to pull from the master file and write to
-                        the project file. Format is:
-                            {spec_file: {scan: {attribute: value}}}
-        -project_file: the full directory path of the desired
-                        output file
-
-    """
+def master_to_project(master_file: str, desired_scans: dict[str, dict[str, dict[str, Any]]], project_file: str, append: bool = True, gui: bool = False) -> None:
+    """Convert scans from a master file to a project file. Handles both appending and overwriting."""
 
     read_this = h5py.File(master_file, "r")
-    # Define a data type for an array of variable-length strings
+    # Data type for variable-length string arrays
     var_len_strs = h5py.vlen_dtype(str)
 
     if append:
-        # Open the project in append mode, get the last point
-        # number written, and gather all the unique names already
-        # in the project file. This allows new points to be
-        # added without overwriting anything (items() gives
-        # the list in alphabetical order, so the largest number
-        # comes last). This breaks for projects with more than
-        # 999999 points, labeled sequentially (no point 0).
-        # Once a project has a point with a 7-digit name, appending
-        # may cause overwrites.
+        # Append mode: add new points without overwriting, may overwrite past 999999 points.
         write_this = h5py.File(project_file, "a")
         this_items = list(write_this.items())
         point_counter = int(this_items[-1][0]) + 1
@@ -115,17 +82,12 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
         for item in this_items:
             all_names[item[1].attrs.get("name")] = item[1]
     else:
-        # Open the project in write mode (overwriting any
-        # existing data), set the naming counter to 1,
-        # and clear the existing names.
+        # Write mode: overwrite existing data, reset naming counter.
         write_this = h5py.File(project_file, "w")
         point_counter = 1
         all_names = {}
 
-    # The starting point number (this only works if
-    # the file consists of sequentially numbered
-    # points, starting at 1 with no gaps).
-    # point_counter = len(write_this) + 1
+    # Ensure sequentially numbered points from 1.
 
     progress_continue = True
     if gui:
@@ -152,14 +114,14 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
                 specified_attrs = desired_scans[spec_name][scan_number]
                 file_epoch = read_head.attrs.get("init_epoch", 0)
 
-                point_labs_list = [x.decode("utf-8") if isinstance(x, bytes) else x for x in read_head["point_labs"]]
+                point_labs_list = [bytes_to_str(x) for x in read_head["point_labs"]]
                 epoch_loc = point_labs_list.index("Epoch")
 
-                param_labs_list = [x.decode("utf-8") if isinstance(x, bytes) else x for x in read_head["param_labs"]]
+                param_labs_list = [bytes_to_str(x) for x in read_head["param_labs"]]
 
                 # add_time = 0
                 for i in range(num_points):
-                    # The epoch offset of the point
+                    # Epoch offset of the point
                     point_epoch = read_head["point_data"][i][epoch_loc]
 
                     uniq_name = str(spec_name + ":S" + scan_number + ":P" + str(i + 1) + "/" + str(num_points) + ":" + str(point_epoch + file_epoch))
@@ -181,25 +143,23 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
                     point_group = write_this.create_group(point_name)
                     point_counter += 1
 
-                    # The unique identifier
+                    # Unique identifier
                     point_group.attrs["name"] = uniq_name
                     all_names[uniq_name] = point_group
-                    # The scan type
+                    # Scan type
                     point_group.attrs["type"] = read_head.attrs.get("s_type", "NA")
-                    # Info about the point; initialized to the spec command
+                    # Point info initialized to the spec command
                     point_group.attrs["info"] = read_head.attrs.get("cmd", "NA")
-                    # The geometry of the point
+                    # Geometry of the point
                     point_group.attrs["geom"] = specified_attrs.get("geom", INTEGRATION_PARAMETERS["geom"])
-                    # A comment field; initialized to 'Initialized'
+                    # Comment field initialized to 'Initialized'
                     point_group.attrs["hist.1"] = "Initialized"
-                    # The time the point was taken (saved as an epoch)
-                    # NOTE: This is determined by adding the Epoch offset of the
-                    # point to the epoch at the beginning of the file
+                    # Time the point was taken as epoch.
                     point_group.attrs["date_stamp"] = point_epoch + file_epoch
-                    # The energy
+                    # Energy
                     point_group.attrs["energy"] = read_head.attrs.get("energy", "NA")
 
-                    # The angles
+                    # Angles
                     ang_labels = ["chi", "del", "eta", "mu", "nu", "phi"]
                     point_group.create_dataset("angle_labels", data=ang_labels)
 
@@ -221,10 +181,9 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
                         ang_values.append(ang_val)
                     point_group.create_dataset("angle_values", data=ang_values)
 
-                    # The real-space lattice followed by the recip-space lattice
+                    # Real-space lattice followed by recip-space lattice
                     lattice_start = list(param_labs_list).index("g_aa")
-                    # lattice_stop = list(\
-                    #                   param_labs_list).index('g_ga_s')
+                    # lattice_stop = list(param_labs_list).index('g_ga_s')
                     ltc_lbls = [
                         "real_a",
                         "real_b",
@@ -255,16 +214,15 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
                     L_val = read_head["point_data"][i][L_loc]
                     point_group.create_dataset("Q", data=[h_val, k_val, L_val])
 
-                    # The or's (all of or0 followed by all of or1)
-                    # HKLs
+                    # Or's: all of or0 followed by all of or1
                     or_start = list(param_labs_list).index("g_h0")
                     or_zero = list(read_head["param_data"][or_start : or_start + 3])
                     or_one = list(read_head["param_data"][or_start + 3 : or_start + 6])
-                    # Angles
+                    # Or angles
                     or_start += 6
                     or_zero.extend(read_head["param_data"][or_start : or_start + 6])
                     or_one.extend(read_head["param_data"][or_start + 6 : or_start + 12])
-                    # Lambdas
+                    # Or lambdas
                     or_start += 12
                     or_zero.extend(read_head["param_data"][or_start : or_start + 1])
                     or_one.extend(read_head["param_data"][or_start + 1 : or_start + 2])
@@ -299,27 +257,27 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
                     haz_data = read_head["param_data"][haz_start : haz_start + 3]
                     point_group.create_dataset("haz", data=haz_data)
 
-                    # The position values
+                    # Position values
                     split_index = point_labs_list.index("Epoch")
                     pos_lbls = point_labs_list[:split_index]
                     point_group.create_dataset("position_labels", data=pos_lbls)
                     pos_values = read_head["point_data"][i][:split_index]
                     point_group.create_dataset("position_values", data=pos_values)
 
-                    # The scaler values
+                    # Scaler values
                     sclr_lbls = point_labs_list[split_index:]
                     point_group.create_dataset("scaler_labels", data=sclr_lbls)
                     sclr_values = read_head["point_data"][i][split_index:]
                     point_group.create_dataset("scaler_values", data=sclr_values)
 
-                    # The detector
+                    # Detector
                     det_group = point_group.create_group("det_0")
-                    # Name
+                    # Detector name
                     no_show = DETECTOR_PARAMETERS.get("name", "NA")
                     det_group.attrs["name"] = specified_attrs.get("name", no_show)
-                    # Data
+                    # Detector data
                     det_group.attrs["data"] = read_head["point_data"][i]
-                    # Image, if it exists
+                    # Image data if it exists
                     try:
                         det_group.create_dataset("image_data", data=read_head["image_data"][i], compression="szip")
                     except Exception:
@@ -401,19 +359,6 @@ def master_to_project(master_file, desired_scans, project_file, append=True, gui
     if gui:
         progress_continue = False
         progress_box.Destroy()
-
-        """
-        for attr in DEFAULT_ATTRIBUTES.keys():
-            if attr not in desired_scans[spec_name][scan_number].keys():
-                point_group.attrs[attr] = DEFAULT_ATTRIBUTES[attr]
-            else:
-                point_group.attrs[attr] = str(desired_scans[spec_name][scan_number][attr])
-        point_group.create_dataset('raw_data', data=read_head['point_data'][i])
-        try:
-            point_group.create_dataset('image_data', data=read_head['image_data'][i], compression='szip')
-        except:
-            pass
-        """
 
     read_this.close()
     write_this.close()

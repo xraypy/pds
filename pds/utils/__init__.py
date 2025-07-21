@@ -5,7 +5,7 @@ from pds.utils.filtertools import list_intersect, list_union
 from pds.utils.gonio_psic import psic_from_spec
 from pds.utils.hdf_data import HdfDataFile
 from pds.utils.image_data import ImageAna
-from pds.utils.mastertoproject import master_to_project
+from pds.utils.master_to_project import master_to_project
 
 __all__ = [
     "ImageAna",

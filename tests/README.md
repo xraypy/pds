@@ -14,6 +14,7 @@ This directory contains pytest-based tests for the PDS codebase and is structure
 - `test_gonio_psic.py` - Tests for the PSIC 6-circle diffractometer geometry calculations
 - `test_image_data.py` - Tests for the image data handling module
 - `test_lattice.py` - Tests for the crystallographic lattice calculations module
+- `test_master_to_project.py` - Tests for the master-to-project HDF5 file conversion module
 - `test_mathutil.py` - Tests for mathematical utility functions and numpy/scipy wrappers
 - `test_polygon.py` - Tests for generalized polygon computations and geometric operations
 
@@ -45,6 +46,7 @@ pytest tests/test_filtertools.py
 pytest tests/test_gonio_psic.py
 pytest tests/test_image_data.py
 pytest tests/test_lattice.py
+pytest tests/test_master_to_project.py
 pytest tests/test_mathutil.py
 pytest tests/test_polygon.py
 ```
