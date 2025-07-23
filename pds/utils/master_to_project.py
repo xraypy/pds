@@ -341,7 +341,7 @@ def master_to_project(master_file: str, desired_scans: dict[str, dict[str, dict[
                     det_group.create_dataset("det_values.1", data=det_values, dtype=var_len_strs)
                     # Results
                     res_labels = ["alpha", "beta", "ctot", "F", "F_changed", "Ferr", "I", "I_c", "I_r", "Ibgr", "Ibgr_c", "Ibgr_r", "Ierr", "Ierr_c", "Ierr_r"]
-                    res_values = [0, 0, 0, 0, True, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                    res_values = [0, 0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # F_changed: 1.0=True, 0.0=False for float64 compatibility
                     det_group.create_dataset("result_labels", data=res_labels)
                     det_group.create_dataset("result_values.1", data=res_values, dtype=np.float64)
 

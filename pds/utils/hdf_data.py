@@ -439,7 +439,17 @@ class HdfDataFile:
                             key_loc = DET_KEYS[det_key]
                             key_loc_path = key_loc[0].split("/")[1] % self.version
                             try:
-                                self.file[num][str_key][key_loc_path][key_loc[1]] = data[original_key][det_key]
+                                # Try to write the value directly first
+                                try:
+                                    self.file[num][str_key][key_loc_path][key_loc[1]] = data[original_key][det_key]
+                                except TypeError:
+                                    # If we get a TypeError about string conversion, handle bytes/string conversion
+                                    value_to_write = data[original_key][det_key]
+                                    if isinstance(value_to_write, bytes):
+                                        value_to_write = bytes_to_str(value_to_write)
+                                    else:
+                                        value_to_write = str(value_to_write)
+                                    self.file[num][str_key][key_loc_path][key_loc[1]] = value_to_write
                             except IOError:
                                 self.file[num][str_key][key_loc_path][key_loc[1]] = numpy.float(data[original_key][det_key])
                         except KeyError:
