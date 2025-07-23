@@ -1,4 +1,5 @@
 import re
+from typing import Dict, Optional
 
 import wx
 
@@ -6,15 +7,15 @@ import wx
 class ConsoleCapture:
     """Enhanced console capture with color support and better functionality"""
 
-    def __init__(self, text_ctrl, is_stderr=False):
+    def __init__(self, text_ctrl: Optional[wx.TextCtrl], is_stderr: bool = False) -> None:
         """Initialize the console capture."""
-        self.text_ctrl = text_ctrl
-        self.is_stderr = is_stderr
-        self.buffer = ""
-        self.ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        self.text_ctrl: Optional[wx.TextCtrl] = text_ctrl
+        self.is_stderr: bool = is_stderr
+        self.buffer: str = ""
+        self.ansi_escape: re.Pattern[str] = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
         # Color mapping for different message types
-        self.colors = {
+        self.colors: Dict[str, wx.Colour] = {
             "error": wx.Colour(220, 50, 47),  # Red
             "warning": wx.Colour(255, 193, 7),  # Orange/Yellow
             "info": wx.Colour(38, 139, 210),  # Blue
@@ -25,10 +26,10 @@ class ConsoleCapture:
         }
 
         # Text attributes for styles
-        self.styles = {}
+        self.styles: Dict[str, wx.TextAttr] = {}
         self._create_text_styles()
 
-    def _create_text_styles(self):
+    def _create_text_styles(self) -> None:
         """Create text styles for different message types"""
         if not self.text_ctrl:
             return
@@ -41,7 +42,7 @@ class ConsoleCapture:
             attr.SetFont(default_font)
             self.styles[style_name] = attr
 
-    def write(self, string):
+    def write(self, string: str) -> None:
         """Write string to the text control with color support"""
         if not string or not self.text_ctrl:
             return
@@ -59,7 +60,7 @@ class ConsoleCapture:
             wx.CallAfter(self._write_line_to_ctrl, self.buffer)
             self.buffer = ""
 
-    def _write_line_to_ctrl(self, line):
+    def _write_line_to_ctrl(self, line: str) -> None:
         """Write a line to the text control with appropriate coloring"""
         try:
             if not self.text_ctrl:
@@ -89,7 +90,7 @@ class ConsoleCapture:
             # If the control is destroyed or there's an error, ignore it
             pass
 
-    def _determine_style(self, text):
+    def _determine_style(self, text: str) -> Optional[wx.TextAttr]:
         """Determine the appropriate style based on text content"""
         text_lower = text.lower().strip()
 
@@ -109,18 +110,18 @@ class ConsoleCapture:
         else:
             return self.styles.get("stdout")
 
-    def flush(self):
+    def flush(self) -> None:
         """Flush any remaining buffer content"""
         if self.buffer and self.text_ctrl:
             wx.CallAfter(self._write_line_to_ctrl, self.buffer)
             self.buffer = ""
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the text control"""
         if self.text_ctrl:
             wx.CallAfter(self.text_ctrl.Clear)
 
-    def close(self):
+    def close(self) -> None:
         """Close the capture and flush remaining content"""
         self.flush()
         self.text_ctrl = None
