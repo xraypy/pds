@@ -1,5 +1,7 @@
 import math
 import os
+import sys
+from typing import Any
 
 import matplotlib
 import wx
@@ -10,31 +12,15 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
 
+from pds.gui.console_capture import ConsoleCapture
 from pds.gui.hdf_to_tree import HDFToTree, myTreeCtrl
-from pds.utils import CtrCorrectionPsic, FileLockException, HdfDataFile, ImageAna, bytes_to_str, image_point_F, psic_from_spec
+from pds.utils import CtrCorrectionPsic, FileLockException, HdfDataFile, ImageAna, bytes_to_str, image_point_F, psic_from_spec, safe_eval_hdf
 
 
-# Safe eval function for HDF object values
-def safe_eval_hdf(value):
-    """Safely evaluate HDF object values, converting bytes to strings first."""
-    try:
-        # Handle the case where value is already a numpy array or similar object
-        if hasattr(value, "shape") or hasattr(value, "__array__"):
-            return value
-        result = eval(bytes_to_str(value))
-        # Handle empty list case which often indicates missing/default data
-        if result == []:
-            return None
-        return result
-    except Exception as e:
-        print(f"Error evaluating HDF value: {value}, error: {e}")
-        return value
-
-
-# This class is the interface for integrating data
-# class Integrator(wx.Frame, wx.Notebook, wxUtil):
 class Integrator(wx.Frame, wx.Notebook):
-    def __init__(self, *args, **kwargs):
+    """Main interface for integrating data. Provides GUI for HDF data processing and visualization."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.newFile = True
         self.firstOpen = True
         self.hdfRoot = None
@@ -42,7 +28,6 @@ class Integrator(wx.Frame, wx.Notebook):
         self.hdfTreeObject = None
         self.customTreeObject = None
 
-        # Make the window
         wx.Frame.__init__(self, args[0], -1, title="HDF Integrator", size=(1024, 780))
 
         self.menuBar = wx.MenuBar()
@@ -53,11 +38,8 @@ class Integrator(wx.Frame, wx.Notebook):
         self.fileMenu.AppendSeparator()
         self.saveHKL = self.fileMenu.Append(-1, "Save HKLFFerr...", "Write H, K, L, F, and Ferr\n" + "values to a file")
         self.saveHKLE = self.fileMenu.Append(-1, "Save HKLEFFerr...", "Write H, K, L, E, F, and\n" + "Ferr values to a file")
-        # JES add saveCTRab 1/4/2016
         self.saveCTRab = self.fileMenu.Append(-1, "Save CTR, alpha, beta", "Write H, K, L, F, \n" + "Ferr, alpha and beta to file")
-        # JES add saveRIDS 5/1/2013
         self.saveRIDS = self.fileMenu.Append(-1, "Save RIDS...", "Write E, H, K, L, F, \n" + "Ferr, alpha and beta to file")
-        # JES add saveII0Ibgr 2/28/2014
         self.saveIIoIbgr = self.fileMenu.Append(-1, "Save Intensities...", "Write H, K, L, F, \n" + "Ferr, I, Io, Ibgr, Sec")
         self.menuBar.Append(self.fileMenu, "File")
 
@@ -67,11 +49,12 @@ class Integrator(wx.Frame, wx.Notebook):
 
         self.viewMenu = wx.Menu()
         self.viewAreaCorrection = self.viewMenu.Append(-1, "View Area Correction")
+        self.viewMenu.AppendSeparator()
+        self.toggleOutputWindow = self.viewMenu.Append(-1, "Show Output Window", "Toggle stdout/stderr output window", wx.ITEM_CHECK)
         self.menuBar.Append(self.viewMenu, "View")
 
         self.SetMenuBar(self.menuBar)
 
-        # Make the status bar
         self.statusBar = self.CreateStatusBar(5)
         self.statusBar.SetStatusWidths([238, -1, 238, 56, 91])
 
@@ -81,8 +64,8 @@ class Integrator(wx.Frame, wx.Notebook):
         self.integrateCancel.Bind(wx.EVT_BUTTON, self.integrateStop)
         self.integrateCancel.Hide()
 
-        # Window layout - Use nested SplitterWindows instead of MultiSplitterWindow
-        self.splitWindow = wx.SplitterWindow(self, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
+        self.mainSplitter = wx.SplitterWindow(self, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
+        self.splitWindow = wx.SplitterWindow(self.mainSplitter, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
         self.rightSplitter = wx.SplitterWindow(self.splitWindow, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
 
         self.treeBook = wx.Notebook(self.splitWindow, style=wx.SUNKEN_BORDER)
@@ -96,11 +79,8 @@ class Integrator(wx.Frame, wx.Notebook):
         self.rodPanel = wx.Panel(self.dataWindow, style=wx.SUNKEN_BORDER)
         self.infoPanel = wx.Panel(self.rightSplitter, style=wx.SUNKEN_BORDER)
 
-        # Split the main window: left (tree) and right (data + info)
         self.splitWindow.SplitVertically(self.treeBook, self.rightSplitter, 180)
         self.splitWindow.SetMinimumPaneSize(32)
-
-        # Split the right side: middle (data) and right (info)
         self.rightSplitter.SplitVertically(self.dataWindow, self.infoPanel, 500)
         self.rightSplitter.SetMinimumPaneSize(32)
 
@@ -113,13 +93,19 @@ class Integrator(wx.Frame, wx.Notebook):
         self.paramBook.AddPage(self.basicPage, "Basic")
         self.paramBook.AddPage(self.morePage, "More")
 
-        # Initialize the data tree structure
         self.hdfTree = myTreeCtrl(self.treePanel)
-
-        # Make the custom selector window
         self.customSelection = customSelector(self)
 
-        # Populate the sizers
+        # Set up variables for lazy initialization of output window
+        self.outputPanel = None
+        self.outputText = None
+        self.clearOutputBtn = None
+        self.consoleCapture = None
+        self.outputWindowVisible = False
+
+        self.originalStdout = sys.stdout
+        self.originalStderr = sys.stderr
+        self.captureEnabled = False
         self.fig4 = Figure(figsize=(1, 1))
         self.canvas4 = FigCanvas(self.graphPanel, -1, self.fig4)
 
@@ -152,7 +138,6 @@ class Integrator(wx.Frame, wx.Notebook):
         self.graphControlSizer.Add(self.keepMaxLbl, flag=wx.ALIGN_CENTER | wx.LEFT, border=8)
         self.graphControlSizer.Add(self.keepMaxToggle, flag=wx.ALIGN_CENTER)
         self.graphControlSizer.Add(self.imageMaxValue, flag=wx.ALIGN_CENTER | wx.LEFT, border=8)
-        # self.graphControlSizer.AddStretchSpacer(1)
 
         self.graphSizer = wx.BoxSizer(wx.VERTICAL)
         self.graphSizer.Add(self.canvas4, proportion=1, flag=wx.EXPAND | wx.ALL, border=4)
@@ -161,8 +146,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.rodSizer = wx.BoxSizer(wx.VERTICAL)
         self.rodSizer.Add(self.rodCanvas, proportion=1, flag=wx.EXPAND | wx.ALL, border=4)
 
-        # The top is the point parameters, the middle the scan parameters,
-        # and the bottom the point information and integrate button
+        # The top is the point parameters, the middle the scan parameters, and the bottom the point information and integrate button
         self.infoSizer1 = wx.BoxSizer(wx.VERTICAL)
         # This spaces the parameter label and the tab box appropriately
         self.paramSizer1 = wx.BoxSizer(wx.VERTICAL)
@@ -175,22 +159,7 @@ class Integrator(wx.Frame, wx.Notebook):
         # The top label
         self.pointParamLbl = wx.StaticText(self.infoPanel, label="Point Parameters:")
 
-        ####################################################################
-        # START POINT BASIC PARAM SIZERS
-        ####################################################################
-
-        # basicSizer1 (vertical) holds basicSizer2, followed by
-        # the 'Apply above to:' sizer
-        # basicSizer2 (horizontal) holds basicSizer3 (vertical,
-        # the first label and the field from each row) followed by
-        # basicSizer4 (vertical, the 'Apply to:' label and
-        # buttons from each row)
-
-        # The basic panel contents
-        # xxSizer1 contains the first label and the input
-        # field (from each row; xx is the attribute name)
-        # xxSizer2 contains the second label and the apply
-        # buttons (from each row; xx is the attribute name)
+        # Point basic parameter sizers
         self.colNbgrSizer1 = wx.BoxSizer(wx.HORIZONTAL)
         self.colNbgrSizer2 = wx.BoxSizer(wx.HORIZONTAL)
         self.colPowerSizer1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -211,8 +180,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.rotateSizer2 = wx.BoxSizer(wx.HORIZONTAL)
         self.applySizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # Create all the fields here; this allows for easier tab traversal
-        # since the order of focus depends on the order of creation
+        # Create all the fields here
         self.colNbgrField = wx.TextCtrl(self.basicPage, style=wx.TE_PROCESS_ENTER)
         self.colPowerField = wx.TextCtrl(self.basicPage, style=wx.TE_PROCESS_ENTER)
         self.colWidthField = wx.TextCtrl(self.basicPage, style=wx.TE_PROCESS_ENTER)
@@ -370,8 +338,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.basicSizer3.Add(self.roiSizer1, proportion=1, flag=wx.EXPAND | wx.ALL)
         self.basicSizer3.Add(self.rotateSizer1, proportion=1, flag=wx.EXPAND | wx.ALL)
 
-        # The sizer for the headings above the scan / custom
-        # buttons and freeze check box
+        # The sizer for the headings above the scan / custom buttons and freeze check box
         self.headingSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.headingSizer.AddStretchSpacer(prop=5)
         self.headingSizer.Add(wx.StaticText(self.basicPage, label="Apply to:"), flag=wx.ALIGN_CENTER | wx.LEFT, border=4)
@@ -391,8 +358,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.basicSizer4.Add(self.roiSizer2, proportion=1, flag=wx.EXPAND | wx.ALL)
         self.basicSizer4.Add(self.rotateSizer2, proportion=1, flag=wx.EXPAND | wx.ALL)
 
-        # Add the label / input field and label / button
-        # sizers next to each other
+        # Add the label / input field and label / button sizers next to each other
         self.basicSizer2.Add(self.basicSizer3, proportion=1, flag=wx.EXPAND | wx.ALL)
         self.basicSizer2.Add(self.basicSizer4, proportion=1, flag=wx.EXPAND | wx.ALL)
 
@@ -418,22 +384,12 @@ class Integrator(wx.Frame, wx.Notebook):
         self.histSizer.Add(self.histButtonSizer, flag=wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, border=4)
         self.morePage.SetSizerAndFit(self.histSizer)
 
-        ####################################################################
-        # END POINT BASIC PARAM SIZERS
-        ####################################################################
-
         self.paramSizer1.Add(self.pointParamLbl)
         self.paramSizer1.Add(self.paramBook, proportion=1, flag=wx.EXPAND | wx.LEFT, border=4)
 
-        ####################################################################
-        # START SCAN PARAM SIZERS
-        ####################################################################
-
-        # This spaces the parameter label and the field rows appropriately
+        # Scan parameter sizers
         self.corrSizer1 = wx.BoxSizer(wx.VERTICAL)
         self.corrSizer2 = wx.BoxSizer(wx.VERTICAL)
-        # Each field row contains a label, an entry field,
-        # and an 'Apply to Scan' button
         self.scaleSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.beamSlitSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.detSlitSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -443,8 +399,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.badMapSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.applyCorrSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # Create a panel to hold all of the scan-level correction values
-        # This is used to allow for tab-traversal
+        # Panel to hold scan-level correction values for tab-traversal
         self.corrPanel = wx.Panel(self.infoPanel, style=wx.SIMPLE_BORDER | wx.TAB_TRAVERSAL)
         self.corrPanel.SetBackgroundColour(wx.WHITE)
 
@@ -525,34 +480,25 @@ class Integrator(wx.Frame, wx.Notebook):
         self.corrSizer1.Add(self.scanParamLbl, flag=wx.LEFT, border=4)
         self.corrSizer1.Add(self.corrPanel, proportion=1, flag=wx.EXPAND | wx.LEFT, border=4)
 
-        ####################################################################
-        # END SCAN PARAM SIZERS
-        ####################################################################
-
-        ####################################################################
-        # START DATA SIZERS
-        ####################################################################
-
-        # The panel to hold the point information
+        # Data information sizers and layout
         self.dataPanel = wx.Panel(self.infoPanel, style=wx.SIMPLE_BORDER)
         self.dataPanel.SetBackgroundColour(wx.WHITE)
 
-        # The label for the section
+        # Section label
         self.dataLbl = wx.StaticText(self.infoPanel, label="Point Information:")
 
-        # The 'Integrate Scan' and 'Integrate Custom' sizer and buttons
+        # Integration buttons
         self.integrateSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.integrateScan = wx.Button(self.infoPanel, label="Integrate Scan")
         self.integrateCustom = wx.Button(self.infoPanel, label="Integrate Custom...")
         self.integrateSizer.Add(self.integrateScan, proportion=1, flag=wx.EXPAND)
         self.integrateSizer.Add(self.integrateCustom, proportion=1, flag=wx.EXPAND)
 
-        # The sizers to hold the entire section and
-        # the point information, respectively
+        # Main data sizers
         self.dataSizer1 = wx.BoxSizer(wx.VERTICAL)
         self.dataSizer2 = wx.BoxSizer(wx.VERTICAL)
 
-        # The sizers for each row of point information
+        # Row sizers for point information display
         self.hklSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.iSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -620,15 +566,10 @@ class Integrator(wx.Frame, wx.Notebook):
         # Calculate the appropriate sizes
         self.dataPanel.SetSizerAndFit(self.dataSizer2)
 
-        # Add the label, point information, and
-        # integrate button to the overall sizer
+        # Add the label, point information, and integrate button to the overall sizer
         self.dataSizer1.Add(self.dataLbl, flag=wx.LEFT, border=4)
         self.dataSizer1.Add(self.dataPanel, proportion=1, flag=wx.EXPAND | wx.LEFT, border=4)
         self.dataSizer1.Add(self.integrateSizer, flag=wx.EXPAND | wx.LEFT, border=4)
-
-        ####################################################################
-        # END DATA SIZERS
-        ####################################################################
 
         self.infoSizer1.Add(self.paramSizer1, proportion=12, flag=wx.EXPAND | wx.LEFT, border=4)
         self.infoSizer1.Add(self.corrSizer1, proportion=9, flag=wx.EXPAND)
@@ -638,10 +579,6 @@ class Integrator(wx.Frame, wx.Notebook):
         self.graphPanel.SetSizerAndFit(self.graphSizer)
         self.rodPanel.SetSizerAndFit(self.rodSizer)
         self.infoPanel.SetSizerAndFit(self.infoSizer1)
-
-        ####################################################################
-        # START TOOLTIPS
-        ####################################################################
 
         self.colNbgrLbl1.SetToolTip(labelTips["colNbgr"])
         self.colPowerLbl1.SetToolTip(labelTips["colPower"])
@@ -661,26 +598,15 @@ class Integrator(wx.Frame, wx.Notebook):
         self.samplePolygonLbl1.SetToolTip(labelTips["samplePolygon"])
         self.badMapLbl1.SetToolTip(labelTips["badMap"])
 
-        ####################################################################
-        # END TOOLTIPS
-        ####################################################################
-
-        ####################################################################
-        # START BINDINGS
-        ####################################################################
-
         # Window bindings
         self.statusBar.Bind(wx.EVT_SIZE, self.onSize)
         self.Bind(wx.EVT_CLOSE, self.onClose)
 
         # Menu bindings
         self.Bind(wx.EVT_MENU, self.saveHKLEFFerr, self.saveHKLE)
-        # JES add saveRIDS 5/1/2013
         self.Bind(wx.EVT_MENU, self.saveRIDSdata, self.saveRIDS)
-        # JES add saveIIoIbgr 2/28/2014
         self.Bind(wx.EVT_MENU, self.saveIdata, self.saveIIoIbgr)
         self.Bind(wx.EVT_MENU, self.saveHKLFFerr, self.saveHKL)
-        # JES add saveCTRalphabeta 1/4/2016
         self.Bind(wx.EVT_MENU, self.saveCTRabData, self.saveCTRab)
         self.Bind(wx.EVT_MENU, self.saveAttrFile, self.saveAttributes)
         self.Bind(wx.EVT_MENU, self.loadFileDialog, self.loadHDF)
@@ -689,6 +615,8 @@ class Integrator(wx.Frame, wx.Notebook):
 
         self.Bind(wx.EVT_MENU, self.showAreaCorrection, self.viewAreaCorrection)
 
+        self.Bind(wx.EVT_MENU, self.toggleOutputWindowVisibility, self.toggleOutputWindow)
+
         # Escape and delete key bindings
         self.Bind(wx.EVT_CHAR_HOOK, self.escapeKey)
         self.Bind(wx.EVT_CHAR_HOOK, self.deleteItem)
@@ -696,8 +624,7 @@ class Integrator(wx.Frame, wx.Notebook):
         # Freeze ROI key binding
         self.Bind(wx.EVT_CHAR_HOOK, self.freezeROI)
 
-        # Bind switching items in the tree to
-        # updating the graphs and data fields
+        # Bind switching items in the tree to updating the graphs and data fields
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.newSelected, self.hdfTree)
 
         # Bind the bad point toggle to updating the current selection
@@ -708,8 +635,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.imageMaxField.Bind(wx.EVT_TEXT_ENTER, self.updateImageMax)
         self.imageMaxField.Bind(wx.EVT_KILL_FOCUS, self.updateImageMax)
 
-        # Bind losing focus on a field (tab or click away)
-        # to updating that field
+        # Bind losing focus on a field (tab or click away) to updating that field
         self.colNbgrField.Bind(wx.EVT_KILL_FOCUS, self.updateItem)
         self.colPowerField.Bind(wx.EVT_KILL_FOCUS, self.updateItem)
         self.colWidthField.Bind(wx.EVT_KILL_FOCUS, self.updateItem)
@@ -730,8 +656,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.samplePolygonField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
         self.badMapField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
 
-        # Bind pressing enter in a field to
-        # updating that field (focus remains)
+        # Bind pressing enter in a field to updating that field (focus remains)
         self.colNbgrField.Bind(wx.EVT_TEXT_ENTER, self.updateItem)
         self.colPowerField.Bind(wx.EVT_TEXT_ENTER, self.updateItem)
         self.colWidthField.Bind(wx.EVT_TEXT_ENTER, self.updateItem)
@@ -750,8 +675,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.samplePolygonField.Bind(wx.EVT_TEXT_ENTER, self.applyToScan)
         self.badMapField.Bind(wx.EVT_TEXT_ENTER, self.applyToScan)
 
-        # Bind the scan buttons to copying the chosen parameter
-        # to all the points in a scan
+        # Bind the scan buttons to copying the chosen parameter to all the points in a scan
         self.colNbgrScan.Bind(wx.EVT_BUTTON, self.applyToScan)
         self.colPowerScan.Bind(wx.EVT_BUTTON, self.applyToScan)
         self.colWidthScan.Bind(wx.EVT_BUTTON, self.applyToScan)
@@ -765,8 +689,7 @@ class Integrator(wx.Frame, wx.Notebook):
 
         self.histScan.Bind(wx.EVT_BUTTON, self.applyToScan)
 
-        # Bind the custom buttons to copying the chosen
-        # parameter(s) to a chosen subset
+        # Bind the custom buttons to copying the chosen parameter(s) to a chosen subset
         self.colNbgrCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
         self.colPowerCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
         self.colWidthCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
@@ -781,31 +704,21 @@ class Integrator(wx.Frame, wx.Notebook):
 
         self.histCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
 
-        # Bind the 'Integrate Scan' button to integrating the
-        # currently selected scan
+        # Bind the 'Integrate Scan' button to integrating the currently selected scan
         self.integrateScan.Bind(wx.EVT_BUTTON, self.integrateSelectedScan)
         # Bind the integrate button to integrating a chosen subset
         self.integrateCustom.Bind(wx.EVT_BUTTON, self.applyToCustom)
 
-        ####################################################################
-        # END BINDINGS
-        ####################################################################
-
-        # Show the window
-        self.statusSizer.Add(self.splitWindow, proportion=664, flag=wx.EXPAND)
+        # Initially show only the main content (no output window)
+        self.mainSplitter.Initialize(self.splitWindow)
+        self.statusSizer.Add(self.mainSplitter, proportion=664, flag=wx.EXPAND)
         self.statusSizer.Add(self.statusBar, proportion=31, flag=wx.EXPAND)
         self.SetSizer(self.statusSizer)
         self.CenterOnScreen()
         self.Show()
-        # wx.lib.inspection.InspectionTool().Show()
-        # self.Bind(wx.EVT_CLOSE, self.on_close)
-        # print 'time 1: ', time1, '(', time1-time1, ')'
-        # print 'time 2: ', time2, '(', time2-time1, ')'
-        # print 'time 25: ', time25, '(', time25-time1, ')'
-        # print 'time 3: ', time3, '(', time3-time1, ')'
 
-    # Open a dialog to choose an HDF file to load
-    def loadFileDialog(self, event):
+    def loadFileDialog(self, event: wx.Event) -> None:
+        """Open a dialog to choose an HDF file to load."""
         loadDialog = wx.FileDialog(
             self, message="Load file...", defaultDir=os.getcwd(), defaultFile="", wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*", style=wx.FD_OPEN
         )
@@ -820,8 +733,7 @@ class Integrator(wx.Frame, wx.Notebook):
             except Exception:
                 pass
 
-            # Since hdfObject is now closed, clear all variables
-            # to prevent attempted read / writes
+            # Since hdfObject is now closed, clear all variables to prevent attempted read / writes
             self.newFile = True
             self.firstOpen = True
             self.hdfTree.DeleteAllItems()
@@ -842,9 +754,8 @@ class Integrator(wx.Frame, wx.Notebook):
             self.loadFile(loadDialog.GetPath())
         loadDialog.Destroy()
 
-    # Load an HDF file into an hdf_data object and parse
-    # it into a tree.
-    def loadFile(self, fileName):
+    def loadFile(self, fileName: str) -> None:
+        """Load an HDF file into an hdf_data object and parse it into a tree."""
         try:
             self.hdfObject = HdfDataFile(fileName)
         except FileLockException as e:
@@ -852,7 +763,6 @@ class Integrator(wx.Frame, wx.Notebook):
             return
         except Exception:
             return
-        # self.set_data('hdfObject', self.hdfObject)
         self.hdfTreeObject = HDFToTree()
         self.hdfTreeObject.populateTree(self.hdfTree, self.hdfObject)
         self.hdfRoot = self.hdfTree.GetRootItem()
@@ -863,26 +773,25 @@ class Integrator(wx.Frame, wx.Notebook):
         self.customTreeObject.populateTree(self.customSelection.customTree, self.hdfObject)
         self.customSelection.customRoot = self.customSelection.customTree.GetRootItem()
 
-    # Return focus to the tree when the escape key is pressed
-    def escapeKey(self, event):
+    def escapeKey(self, event: wx.Event) -> None:
+        """Return focus to the tree when the escape key is pressed."""
         event.Skip()
         if event.GetKeyCode() == wx.WXK_ESCAPE:
             self.hdfTree.SetFocus()
 
-    # Deletes whatever is selected when the delete
-    # key is pressed while the tree has focus
-    def deleteItem(self, event):
+    def deleteItem(self, event: wx.Event) -> None:
+        """Delete selected item when delete key is pressed while tree has focus."""
         event.Skip()
         if event.GetKeyCode() == wx.WXK_DELETE:
             if not self.FindFocus() == self.hdfTree:
                 return
             thisItem = self.hdfTree.GetSelection()
-            itemText = self.hdfTree.GetItemText(thisItem)  # .split()[1][:-1]
+            itemText = self.hdfTree.GetItemText(thisItem)
             confirmation = wx.MessageDialog(
                 self,
                 message="Are you sure you " + "want to delete " + itemText + "?",
                 caption="Warning!",
-                style=wx.YES_NO | wx.NO_DEFAULT,  #'scan ' + \
+                style=wx.YES_NO | wx.NO_DEFAULT,
             )
             if confirmation.ShowModal() == wx.ID_NO:
                 confirmation.Destroy()
@@ -894,27 +803,27 @@ class Integrator(wx.Frame, wx.Notebook):
             self.customTreeObject.populateTree(self.customSelection.customTree, self.hdfObject)
             self.customSelection.customRoot = self.customSelection.customTree.GetRootItem()
 
-    # Toggle the 'Freeze ROI' box when the 'F2' key is pressed
-    def freezeROI(self, event):
+    def freezeROI(self, event: wx.Event) -> None:
+        """Toggle the 'Freeze ROI' box when the 'F2' key is pressed."""
         event.Skip()
         if event.GetKeyCode() == wx.WXK_F2:
             if not self.roiField.GetValue() == "":
                 self.roiFreeze.SetValue(not self.roiFreeze.GetValue())
 
-    # Updates the status bar text with the L and F coordinates
-    # of the cursor
-    def updateCursorStatus(self, event):
+    def updateCursorStatus(self, event: Any) -> None:
+        """Update status bar text with L and F coordinates of cursor."""
         if event.inaxes:
             self.statusBar.SetStatusText("L: %3.2f, F: %3.2f" % (event.xdata, event.ydata), 1)
         else:
             self.statusBar.SetStatusText("", 1)
 
     @staticmethod
-    def closestL(a, l_values):
+    def closestL(a: float, l_values: list[float]) -> float:
+        """Find the L value closest to the given value a."""
         return min(l_values, key=lambda x: abs(x - a))
 
-    # Selects the point nearest the location of the click
-    def clickToSelect(self, event):
+    def clickToSelect(self, event: Any) -> None:
+        """Select the point nearest to the click location."""
         if event.inaxes:
             ofMe = self.hdfTree.GetSelection()
             myParent = self.hdfTree.GetItemParent(ofMe)
@@ -937,18 +846,14 @@ class Integrator(wx.Frame, wx.Notebook):
 
             allLs = dict([L, child] for child, L in allLs.items())
             thisPoint = self.closestL(event.xdata, allLs.keys())
-            # item, cookie = self.hdfTree.GetFirstChild(myParent)
-            # while item and \
-            #        self.hdfTree.GetItemPyData(item) != allLs[thisPoint]:
-            #    item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
             try:
                 self.hdfTree.SelectItem(dataLookup[allLs[thisPoint]])
             except Exception:
                 print("Error: can't locate point.")
             self.hdfTree.SetFocus()
 
-    # Copy parameters from one set of points to another by closest L value
-    def copyFromTo(self, event):
+    def copyFromTo(self, event: wx.Event) -> None:
+        """Copy parameters from one set of points to another by closest L value."""
         self.customSelection.customTree.Expand(self.customSelection.customRoot)
         self.customSelection.CenterOnParent()
         self.customSelection.SetTitle("Copy from...")
@@ -962,9 +867,6 @@ class Integrator(wx.Frame, wx.Notebook):
             fromThese.extend(self.customTreeObject.getRelevantChildren(self.customSelection.customTree, self.hdfObject, selected))
         fromThese = list(set(fromThese))
         fromDict = {}
-        # for parentNumber, myNumber in fromThese:
-        #    fromL = scanData[parentNumber][myNumber].get('L', 0.)
-        #    fromDict[fromL] = (parentNumber, myNumber)
         fromDict = self.hdfObject.get_all("L", fromThese)
         fromDict = dict([L, child] for child, L in fromDict.items())
         possibleLs = fromDict.keys()
@@ -987,7 +889,7 @@ class Integrator(wx.Frame, wx.Notebook):
             copyFrom = self.closestL(toL, possibleLs)
             copyData = fromDict[copyFrom]
             self.hdfObject.set_all(("det_0", "image_changed"), "True", [itemData])
-            self.hdfObject.set_all(("det_0", "F_changed"), True, [itemData])
+            self.hdfObject.set_all(("det_0", "F_changed"), "True", [itemData])
             for key in (
                 "cnbgr",
                 "cpow",
@@ -1019,9 +921,8 @@ class Integrator(wx.Frame, wx.Notebook):
         self.updateRodPlot(myParent, itemData)
         self.updateFields(itemData)
 
-    # Build the appropriate data structure to pass to
-    # gonio_psic instead of the unparsed G array
-    def buildPsicG(self, itemData):
+    def buildPsicG(self, itemData: int) -> list:
+        """Build data structure for gonio_psic from unparsed G array."""
         psicG = []
         # cell
         psicG.append(
@@ -1065,25 +966,103 @@ class Integrator(wx.Frame, wx.Notebook):
         psicG.append(list(self.hdfObject[itemData]["haz"]))
         return psicG
 
-    # Plot the area correction
-    def showAreaCorrection(self, event):
+    def _createOutputWindow(self) -> None:
+        """Create the output window components lazily."""
+        if self.outputPanel is not None:
+            return
+
+        # Create the output window (initially hidden)
+        self.outputPanel = wx.Panel(self.mainSplitter)
+        self.outputText = wx.TextCtrl(self.outputPanel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+
+        # Set font to match the application default (same as other text controls)
+        default_font = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        self.outputText.SetFont(default_font)
+
+        # Create clear button for output window
+        self.clearOutputBtn = wx.Button(self.outputPanel, label="Clear")
+        self.clearOutputBtn.Bind(wx.EVT_BUTTON, self.onClearOutput)
+
+        # Layout for output panel
+        outputSizer = wx.BoxSizer(wx.VERTICAL)
+        buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
+        buttonSizer.Add(wx.StaticText(self.outputPanel, label="Console Output:"), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+        buttonSizer.AddStretchSpacer()
+        buttonSizer.Add(self.clearOutputBtn, 0, wx.RIGHT, 5)
+        outputSizer.Add(buttonSizer, 0, wx.EXPAND | wx.ALL, 2)
+        outputSizer.Add(self.outputText, 1, wx.EXPAND | wx.ALL, 2)
+        self.outputPanel.SetSizer(outputSizer)
+
+        # Initially hide the output panel
+        self.outputPanel.Hide()
+
+        # Create console capture now that we have the text control
+        self.consoleCapture = ConsoleCapture(self.outputText)
+
+    def toggleOutputWindowVisibility(self, event: wx.Event) -> None:
+        """Toggle the visibility of the stdout/stderr output window."""
+        if self.outputWindowVisible:
+            # Hide the output window
+            self.mainSplitter.Unsplit(self.outputPanel)
+            self.outputPanel.Hide()
+            self.outputWindowVisible = False
+            self.toggleOutputWindow.SetItemLabel("Show Output Window")
+            # Disable capture when hiding
+            self.disableCapture()
+        else:
+            # Create output window if it doesn't exist yet
+            self._createOutputWindow()
+
+            # Show the output window
+            self.outputPanel.Show()
+            self.mainSplitter.SplitHorizontally(self.splitWindow, self.outputPanel, -150)
+            self.outputWindowVisible = True
+            self.toggleOutputWindow.SetItemLabel("Hide Output Window")
+            # Enable capture when showing
+            self.enableCapture()
+
+        # Force layout update
+        self.Layout()
+
+    def enableCapture(self) -> None:
+        """Enable stdout/stderr capture to the output window."""
+        if not self.captureEnabled:
+            sys.stdout = self.consoleCapture
+            sys.stderr = self.consoleCapture
+            self.captureEnabled = True
+
+    def disableCapture(self) -> None:
+        """Disable stdout/stderr capture."""
+        if self.captureEnabled:
+            sys.stdout = self.originalStdout
+            sys.stderr = self.originalStderr
+            self.captureEnabled = False
+
+    def onClearOutput(self, event: wx.Event) -> None:
+        """Clear the output window."""
+        self.outputText.Clear()
+
+    def onClose(self, event: wx.Event) -> None:
+        """Handle window closing by restoring stdout/stderr."""
+        self.disableCapture()
+        try:
+            self.hdfObject.close()
+            self.lockFile.release()
+        except Exception:
+            pass
+        event.Skip()
+
+    def showAreaCorrection(self, event: wx.Event) -> None:
+        """Plot the area correction for the selected data point."""
         ofMe = self.hdfTree.GetSelection()
         itemData = self.hdfTree.GetItemData(ofMe)
         if itemData is None:
             return
-        # Because the G array is already parsed, we need to build
-        # the appropriate data structures to pass to gonio_psic
+        # Because the G array is already parsed, we need to build the appropriate data structures to pass to gonio_psic
         psicG = self.buildPsicG(itemData)
 
         psic = psic_from_spec(psicG, preparsed=True)
         angles = self.hdfObject[itemData]
-        # test = angles.keys()
-        # test.sort()
-        # print test
-        # print angles['Beta']
-        # print angles['beta']
-        # print angles['Alpha']
-        # print angles['alpha']
         psic.set_angles(
             phi=angles.get("phi", None),
             chi=angles.get("chi", None),
@@ -1092,7 +1071,6 @@ class Integrator(wx.Frame, wx.Notebook):
             nu=angles.get("nu", None),
             delta=angles.get("del", None),
         )
-        # print psic
         beam_slits = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["beam_slits"])
         det_slits = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["det_slits"])
         if det_slits == {}:
@@ -1104,10 +1082,9 @@ class Integrator(wx.Frame, wx.Notebook):
         }
         cor = CtrCorrectionPsic(gonio=psic, beam_slits=beam_slits, det_slits=det_slits, sample=sample)
         cor.ctot_stationary(plot=True)
-        # pyplot.show()
 
-    # Update a point when the bad point checkbox is toggled
-    def updateBadPoint(self, event):
+    def updateBadPoint(self, event: wx.Event) -> None:
+        """Update a point when the bad point checkbox is toggled."""
         event.Skip()
         try:
             if event.GetKeyCode() != wx.WXK_F4:
@@ -1126,20 +1103,14 @@ class Integrator(wx.Frame, wx.Notebook):
         if itemData is None:
             self.badPointToggle.SetValue(False)
             return
-        # myText = self.hdfTree.GetItemText(ofMe)
-        # myNumber = myText.split()[1]
         myParent = self.hdfTree.GetItemParent(ofMe)
-        # parentText = self.hdfTree.GetItemText(myParent)
-        # parentNumber = parentText.split()[1][:-1]
-        # scanData[parentNumber][myNumber]['badPoint'] = \
-        #        self.badPointToggle.GetValue()
         self.hdfObject[itemData]["det_0"]["bad_point"] = str(self.badPointToggle.GetValue())
         self.updateF(itemData)
         self.updateRodPlot(myParent, itemData)
         self.updateLabels(itemData)
 
-    # Update a point when the image max is changed
-    def updateImageMax(self, event):
+    def updateImageMax(self, event: wx.Event) -> None:
+        """Update a point when the image max is changed."""
         ofMe = self.hdfTree.GetSelection()
         myParent = self.hdfTree.GetItemParent(ofMe)
         itemData = self.hdfTree.GetItemData(ofMe)
@@ -1148,7 +1119,7 @@ class Integrator(wx.Frame, wx.Notebook):
             return
         newValue = bytes_to_str(self.imageMaxField.GetValue())
         currentValue = bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"])
-        if event.GetEventType() == wx.wxEVT_KILL_FOCUS:
+        if event.GetEventType() == wx.EVT_KILL_FOCUS:
             self.imageMaxField.SetValue(str(currentValue))
             return
         try:
@@ -1163,17 +1134,8 @@ class Integrator(wx.Frame, wx.Notebook):
         except Exception:
             self.imageMaxField.SetValue(str(currentValue))
 
-    # When a text field loses focus, this function is
-    # called to update the scanData dictionary
-    # accordingly. After checking that a valid point is
-    # selected, this checks if any change was made. If
-    # not, nothing happens; if a change is detected,
-    # this attempts to save the new parameter value and
-    # update the plots accordingly. Failing this, it
-    # simply rewrites the current value of the parameter
-    # to the field and no change is made.
-    def updateItem(self, event):
-        # print 'Updating item'
+    def updateItem(self, event: wx.Event) -> None:
+        """Update data when text field loses focus after validating changes."""
         event.Skip()
         try:
             ofMe = self.hdfTree.GetSelection()
@@ -1197,31 +1159,38 @@ class Integrator(wx.Frame, wx.Notebook):
             self.rotateField: ("rotangle", float),
         }
         myParent = self.hdfTree.GetItemParent(ofMe)
-        # print possibilities[event.GetEventObject()]
         whatField = event.GetEventObject()
         if whatField == self.histBox:
             self.hdfObject[itemData]["hist"] = str(self.histBox.GetValue())
             return
         updateThis, ofType = possibilities[whatField]
-        # print event.GetEventObject()#.GetValue()
+
         try:
-            if safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis]) == ofType(eval(whatField.GetValue())):
+            new_value = safe_eval_hdf(whatField.GetValue())
+            if ofType is list and new_value is None:
+                new_value = []
+            elif ofType is dict and new_value is None:
+                new_value = {}
+            elif new_value is not None:
+                new_value = ofType(new_value)
+
+            current_value = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
+            if current_value == new_value:
                 pass
             else:
-                self.hdfObject[itemData]["det_0"][updateThis] = str(ofType(eval(whatField.GetValue())))
-                whatField.SetValue(self.hdfObject[itemData]["det_0"][updateThis])
+                # Always store as string in HDF5, but preserve the actual data type for comparison
+                self.hdfObject[itemData]["det_0"][updateThis] = str(new_value) if new_value is not None else ""
+                whatField.SetValue(str(new_value) if new_value is not None else "")
                 self.hdfObject[itemData]["det_0"]["image_changed"] = "True"
-                self.hdfObject[itemData]["det_0"]["F_changed"] = True
+                self.hdfObject[itemData]["det_0"]["F_changed"] = 1.0
                 self.updateFourPlot(myParent, itemData)
                 self.updateRodPlot(myParent, itemData)
                 self.updateLabels(itemData)
         except Exception:
-            whatField.SetValue(self.hdfObject[itemData]["det_0"][updateThis])
+            whatField.SetValue(str(self.hdfObject[itemData]["det_0"][updateThis]))
 
-    # Apply a given parameter or all parameters
-    # to every point in the current scan
-    def applyToScan(self, event):
-        # print 'Copying to scan'
+    def applyToScan(self, event: wx.Event) -> None:
+        """Apply parameter values to every point in the current scan."""
         ofMe = self.hdfTree.GetSelection()
         itemData = self.hdfTree.GetItemData(ofMe)
         if itemData is None:
@@ -1248,7 +1217,7 @@ class Integrator(wx.Frame, wx.Notebook):
         whatButton = event.GetEventObject()
         toChange = []
         if whatButton == self.applyScan:
-            toChange = possibilities.values()
+            toChange = list(possibilities.values())
         elif whatButton == self.badMapField:
             if whatButton.GetValue() == "":
                 whatButton.SetValue(str(self.hdfObject[itemData]["det_0"]["bad_pixel_map"]))
@@ -1267,11 +1236,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.hdfObject.set_all(("det_0", "bad_pixel_map"), str(self.hdfObject[itemData]["det_0"]["bad_pixel_map"]), updateThese)
                 self.hdfObject.set_all(("det_0", "pixel_map_changed"), "True", updateThese)
                 self.hdfObject.set_all(("det_0", "image_changed"), "True", updateThese)
-                self.hdfObject.set_all(("det_0", "F_changed"), True, updateThese)
-                # self.hdfObject[itemData]['det_0']['pixel_map_changed'] = \
-                #                                                    'False'
-                # self.hdfObject.write_point(self.hdfObject[itemData])
-                # self.hdfObject.read_point(itemData)
+                self.hdfObject.set_all(("det_0", "F_changed"), 1.0, updateThese)
                 self.updateFourPlot(myParent, itemData)
                 self.updateF(itemData)
                 self.updateRodPlot(myParent, itemData)
@@ -1298,12 +1263,20 @@ class Integrator(wx.Frame, wx.Notebook):
         del item
         for updateThis, ofType, whatField in toChange:
             try:
+                new_value = safe_eval_hdf(whatField.GetValue())
+                if ofType is list and new_value is None:
+                    new_value = []
+                elif ofType is dict and new_value is None:
+                    new_value = {}
+                elif new_value is not None:
+                    new_value = ofType(new_value)
+
                 allValues = self.hdfObject.get_all(("det_0", updateThis), updateThese)
-                justThese = [item for item in updateThese if str(allValues[item]) != str(ofType(eval(whatField.GetValue())))]
-                self.hdfObject.set_all(("det_0", updateThis), str(ofType(eval(whatField.GetValue()))), justThese)
+                justThese = [item for item in updateThese if str(allValues[item]) != str(new_value)]
+                self.hdfObject.set_all(("det_0", updateThis), str(new_value) if new_value is not None else "", justThese)
                 if not fOnly:
                     self.hdfObject.set_all(("det_0", "image_changed"), "True", justThese)
-                self.hdfObject.set_all(("det_0", "F_changed"), True, justThese)
+                self.hdfObject.set_all(("det_0", "F_changed"), 1.0, justThese)
             except Exception:
                 whatField.SetValue(str(self.hdfObject[itemData]["det_0"][updateThis]))
         if fOnly:
@@ -1311,14 +1284,12 @@ class Integrator(wx.Frame, wx.Notebook):
         self.updateRodPlot(myParent, itemData)
         self.updateLabels(itemData)
 
-    # Interrupt the current integration
-    def integrateStop(self, event):
+    def integrateStop(self, event: wx.Event) -> None:
+        """Interrupt the current integration."""
         self.integrateContinue = False
 
-    # Apply a given parameter or all parameters
-    # to a custom selection of scans and points
-    def applyToCustom(self, event):
-        # print 'Copying to custom'
+    def applyToCustom(self, event: wx.Event) -> None:
+        """Apply parameter values to a custom selection of scans and points."""
         ofMe = self.hdfTree.GetSelection()
         itemData = self.hdfTree.GetItemData(ofMe)
         if itemData is None and event.GetEventObject() != self.integrateCustom:
@@ -1349,17 +1320,13 @@ class Integrator(wx.Frame, wx.Notebook):
         updateThese = list(set(updateThese))
         updateThese.sort()
 
-        # If integrate custom was pressed, integrate the selected
-        # scans and return. Otherwise, skip this section and apply
-        # the appropriate attribute(s) to the selected scans.
+        # If integrate custom was pressed, integrate the selected cans and return.
+        # Otherwise, skip this section and apply the appropriate attribute(s) to the selected scans.
         if event.GetEventObject() == self.integrateCustom:
             self.integrateContinue = True
             integrateProgress = 0
-            # self.statusBar.SetRange(len(updateThese))
-            # self.statusBar.SetProgress(0)
             self.onSize(None)
             self.integrateCancel.Show()
-            # self.statusBar.Start()
             for iterData in updateThese:
                 iterItem = self.hdfTreeObject.reverseLookup[iterData]
                 iterString = self.hdfTreeObject.statusString(self.hdfTree, self.hdfObject, iterItem)
@@ -1370,23 +1337,22 @@ class Integrator(wx.Frame, wx.Notebook):
                 try:
                     if safe_eval_hdf(self.hdfObject[iterData]["det_0"]["image_changed"]):
                         self.integratePoint(iterData)
-                    if self.hdfObject[iterData]["det_0"]["F_changed"]:
+                    # Check F_changed flag - handle both float (1.0/0.0) and string representations
+                    f_changed_val = self.hdfObject[iterData]["det_0"]["F_changed"]
+                    if (isinstance(f_changed_val, (int, float)) and f_changed_val != 0) or safe_eval_hdf(f_changed_val):
                         self.updateF(iterData)
                 except:
                     print("Error reading " + iterString.lower())
                     raise
                 integrateProgress += 1
-                # self.statusBar.SetProgress(integrateProgress)
                 while wx.GetApp().HasPendingEvents():
                     wx.GetApp().Yield(True)
             self.integrateContinue = False
             self.hdfTree.SetFocus()
             if self.hdfTree.GetSelection() == ofMe:
-                # self.updateFourPlot(myParent, itemData)
                 self.updateRodPlot(myParent, itemData)
             self.statusBar.SetStatusText("", 2)
             self.integrateCancel.Hide()
-            # self.statusBar.Stop()
             return
         elif event.GetEventObject() == self.histCustom:
             self.hdfObject.set_all("hist", str(self.histBox.GetValue()), updateThese)
@@ -1417,9 +1383,9 @@ class Integrator(wx.Frame, wx.Notebook):
         toChange = []
         fOnly = False
         if whatButton == self.applyCustom:
-            toChange = possibilities1.values()
+            toChange = list(possibilities1.values())
         elif whatButton == self.applyCorrCustom:
-            toChange = possibilities2.values()
+            toChange = list(possibilities2.values())
             fOnly = True
         else:
             toChange = [possibilities1[whatButton]]
@@ -1431,16 +1397,24 @@ class Integrator(wx.Frame, wx.Notebook):
                     self.hdfObject.set_all(("det_0", "bad_pixel_map"), str(self.badMapField.GetValue()), justThese)
                     self.hdfObject.set_all(("det_0", "pixel_map_changed"), "True", justThese)
                     self.hdfObject.set_all(("det_0", "image_changed"), "True", justThese)
-                    self.hdfObject.set_all(("det_0", "F_changed"), True, justThese)
+                    self.hdfObject.set_all(("det_0", "F_changed"), 1.0, justThese)
                     if justThese:
                         fOnly = False
                 else:
+                    new_value = safe_eval_hdf(whatField.GetValue())
+                    if ofType is list and new_value is None:
+                        new_value = []
+                    elif ofType is dict and new_value is None:
+                        new_value = {}
+                    elif new_value is not None:
+                        new_value = ofType(new_value)
+
                     allValues = self.hdfObject.get_all(("det_0", updateThis), updateThese)
-                    justThese = [item for item in updateThese if str(allValues[item]) != str(ofType(eval(whatField.GetValue())))]
-                    self.hdfObject.set_all(("det_0", updateThis), str(ofType(eval(whatField.GetValue()))), justThese)
+                    justThese = [item for item in updateThese if str(allValues[item]) != str(new_value)]
+                    self.hdfObject.set_all(("det_0", updateThis), str(new_value) if new_value is not None else "", justThese)
                     if not fOnly:
                         self.hdfObject.set_all(("det_0", "image_changed"), "True", justThese)
-                    self.hdfObject.set_all(("det_0", "F_changed"), True, justThese)
+                    self.hdfObject.set_all(("det_0", "F_changed"), 1.0, justThese)
             except:
                 print("Error updating selection")
                 raise
@@ -1449,8 +1423,8 @@ class Integrator(wx.Frame, wx.Notebook):
         self.updateRodPlot(myParent, itemData)
         self.updateLabels(itemData)
 
-    # Integrate the currently-selected scan
-    def integrateSelectedScan(self, event):
+    def integrateSelectedScan(self, event: wx.Event) -> None:
+        """Integrate all points in the currently selected scan."""
         ofMe = self.hdfTree.GetSelection()
         itemData = self.hdfTree.GetItemData(ofMe)
         updateThese = []
@@ -1473,11 +1447,8 @@ class Integrator(wx.Frame, wx.Notebook):
 
         self.integrateContinue = True
         integrateProgress = 0
-        # self.statusBar.SetRange(len(updateThese))
-        # self.statusBar.SetProgress(0)
         self.onSize(None)
         self.integrateCancel.Show()
-        # self.statusBar.Start()
         for iterData in updateThese:
             iterItem = self.hdfTreeObject.reverseLookup[iterData]
             iterString = self.hdfTreeObject.statusString(self.hdfTree, self.hdfObject, iterItem)
@@ -1488,30 +1459,24 @@ class Integrator(wx.Frame, wx.Notebook):
             try:
                 if safe_eval_hdf(self.hdfObject[iterData]["det_0"]["image_changed"]):
                     self.integratePoint(iterData)
-                if self.hdfObject[iterData]["det_0"]["F_changed"]:
+                if safe_eval_hdf(self.hdfObject[iterData]["det_0"]["F_changed"]):
                     self.updateF(iterData)
             except:
                 print("Error reading " + iterString.lower())
                 raise
             integrateProgress += 1
-            # self.statusBar.SetProgress(integrateProgress)
             while wx.GetApp().HasPendingEvents():
                 wx.GetApp().Yield(True)
         self.integrateContinue = False
         self.hdfTree.SetFocus()
         if self.hdfTree.GetSelection() == ofMe and itemData is not None:
-            # self.updateFourPlot(myParent, itemData)
             self.updateRodPlot(myParent, itemData)
         self.statusBar.SetStatusText("", 2)
         self.integrateCancel.Hide()
-        # self.statusBar.Stop()
         return
 
-    # Gets the values of the parameters from the
-    # hdfObject and writes them to the appropriate
-    # entry fields.
-    def updateFields(self, itemData):
-        # print 'Updating fields'
+    def updateFields(self, itemData: int) -> None:
+        """Load parameter values from HDF object to GUI fields."""
         self.badPointToggle.SetValue(safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_point"]))
         self.imageMaxField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"]))
         self.imageMaxValue.SetLabel("ROI Max: " + bytes_to_str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
@@ -1522,24 +1487,34 @@ class Integrator(wx.Frame, wx.Notebook):
         self.rowPowerField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["rpow"]))
         self.rowWidthField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["rwidth"]))
         self.flagField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["bgrflag"]))
-        self.roiField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["roi"]))
+        # ROI field might contain lists, so use safe_eval_hdf
+        roi_val = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["roi"])
+        self.roiField.SetValue(str(roi_val if roi_val is not None else "[]"))
         self.rotateField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["rotangle"]))
 
         self.histBox.SetValue(bytes_to_str(self.hdfObject[itemData]["hist"]))
 
-        self.scaleField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["scale"]))
-        self.beamSlitField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["beam_slits"]))
-        self.detSlitField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["det_slits"]))
-        self.sampleAngleField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["sample_angles"]))
-        self.sampleDiameterField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["sample_diameter"]))
-        self.samplePolygonField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["sample_polygon"]))
-        self.badMapField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["bad_pixel_map"]))
+        # Handle None values for scan parameters
+        scale_val = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["scale"])
+        beam_slits_val = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["beam_slits"])
+        det_slits_val = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["det_slits"])
+        sample_angles_val = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_angles"])
+        sample_diameter_val = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_diameter"])
+        sample_polygon_val = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_polygon"])
+        bad_pixel_map_val = safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_pixel_map"])
+
+        self.scaleField.SetValue(str(scale_val if scale_val is not None else ""))
+        self.beamSlitField.SetValue(str(beam_slits_val if beam_slits_val is not None else "{}"))
+        self.detSlitField.SetValue(str(det_slits_val if det_slits_val is not None else "{}"))
+        self.sampleAngleField.SetValue(str(sample_angles_val if sample_angles_val is not None else "{}"))
+        self.sampleDiameterField.SetValue(str(sample_diameter_val if sample_diameter_val is not None else ""))
+        self.samplePolygonField.SetValue(str(sample_polygon_val if sample_polygon_val is not None else "[]"))
+        self.badMapField.SetValue(str(bad_pixel_map_val if bad_pixel_map_val is not None else ""))
 
         self.updateLabels(itemData)
 
-    # Updates the information labels from the hdfObject
-    # transmission,etc. added April 2015, JES
-    def updateLabels(self, itemData):
+    def updateLabels(self, itemData: int) -> None:
+        """Update information labels with values from HDF object."""
         # print 'Updating labels'
         self.hLbl.SetLabel("H: " + str(self.hdfObject[itemData]["H"]))
         self.kLbl.SetLabel("K: " + str(self.hdfObject[itemData]["K"]))
@@ -1557,18 +1532,12 @@ class Integrator(wx.Frame, wx.Notebook):
         self.filtersLbl.SetLabel("filters: " + str(round(self.hdfObject[itemData]["filters"], 2)))
         self.corrdetLbl.SetLabel("corrdet: " + str(round(self.hdfObject[itemData]["corrdet"], 2)))
 
-    # How to (re)calculate the F value for a point
-    # Since the rod plot may need to update regardless
-    # of whether or not this function is called
-    # (i.e. a new point is selected means the red ball
-    # must move, but no new F is necessarily calculated),
-    # this function does not call updateRodPlot, leaving
-    # that to whichever function initially called updateF
-    def updateF(self, itemData):
+    def updateF(self, itemData: int) -> None:
+        """Calculate and update F value for a data point."""
         if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_point"]):
             self.hdfObject[itemData]["det_0"]["F"] = 0
             self.hdfObject[itemData]["det_0"]["Ferr"] = 0
-            self.hdfObject[itemData]["det_0"]["F_changed"] = False
+            self.hdfObject[itemData]["det_0"]["F_changed"] = 0.0
             return
         sample_params = {
             "dia": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_diameter"]),
@@ -1584,10 +1553,8 @@ class Integrator(wx.Frame, wx.Notebook):
         }
         if corr_params["det_slits"] == {}:
             corr_params["det_slits"] = None
-        # TPT changed 'numPoints' to 'dims'
-        # transmission, etc. added April 2015, JES
+        # TPT changed 'numPoints' to 'dims' transmission
         psicG = self.buildPsicG(itemData)
-        # print("\nitem_data", self.hdfObject[itemData], "\n")
         scan_dict = {
             "I": [self.hdfObject[itemData]["det_0"]["I"]],
             "io": [self.hdfObject[itemData]["io"]],
@@ -1609,17 +1576,16 @@ class Integrator(wx.Frame, wx.Notebook):
         self.hdfObject[itemData]["det_0"]["ctot"] = fDict["ctot"]
         self.hdfObject[itemData]["det_0"]["alpha"] = fDict["alpha"]
         self.hdfObject[itemData]["det_0"]["beta"] = fDict["beta"]
-        self.hdfObject[itemData]["det_0"]["F_changed"] = False
+        self.hdfObject[itemData]["det_0"]["F_changed"] = 0.0
 
-    # Integrate a point without updating the GUI
-    def integratePoint(self, itemData):
-        # print 'Integrating scan ' + parentNumber + ' point ' + myNumber
+    def integratePoint(self, itemData: int) -> None:
+        """Integrate a single data point without updating the GUI."""
         if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
             self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
             self.hdfObject.write_point(self.hdfObject[itemData])
             self.hdfObject.read_point(itemData)
         self.hdfObject[itemData]["det_0"]["image_changed"] = "False"
-        self.hdfObject[itemData]["det_0"]["F_changed"] = True
+        self.hdfObject[itemData]["det_0"]["F_changed"] = 1.0
 
         # Get the corrected image data - this is already image data, not a filename
         corrected_image = self.hdfObject[itemData]["det_0"]["corrected_image"]
@@ -1688,11 +1654,8 @@ class Integrator(wx.Frame, wx.Notebook):
         self.hdfObject[itemData]["det_0"]["integrated"] = str(integrated)
         self.updateF(itemData)
 
-    # How to update the L vs I/F plot
-    # This update usually occurs last, and so does not call other updates
-    def updateRodPlot(self, myParent, itemData):
-        # print 'Updating rod plot'
-        # numChildren = self.hdfTree.GetChildrenCount(myParent)
+    def updateRodPlot(self, myParent: Any, itemData: int) -> None:
+        """Update the rod plot showing L vs I/F values."""
         iterList = []
         pendingLList = []
         pendingFList = []
@@ -1718,7 +1681,10 @@ class Integrator(wx.Frame, wx.Notebook):
         iterFList = self.hdfObject.get_all(("det_0", "F"), iterList)
         iterFerrList = self.hdfObject.get_all(("det_0", "Ferr"), iterList)
         for key in iterImageChanged.keys():
-            if not (safe_eval_hdf(iterImageChanged[key]) or iterFChanged[key]):
+            # Handle F_changed as float (1.0/0.0) or string - consistent boolean evaluation
+            f_changed_val = iterFChanged[key]
+            f_changed_bool = (isinstance(f_changed_val, (int, float)) and f_changed_val != 0) or safe_eval_hdf(f_changed_val)
+            if not (safe_eval_hdf(iterImageChanged[key]) or f_changed_bool):
                 doneLList.append(iterLList[key])
                 doneFList.append(iterFList[key])
                 doneFerrList.append(iterFerrList[key])
@@ -1766,25 +1732,18 @@ class Integrator(wx.Frame, wx.Notebook):
         rodPlot.axis([minL, maxL, minF, maxF])
         self.rodCanvas.draw()
 
-    # How to update the plot of four graphs
-    # (image, roi, row and column sums)
-    # Calls updateF if needed, since F depends on the integration
-    def updateFourPlot(self, myParent, itemData):
-        # print 'Updating four plot'
+    def updateFourPlot(self, myParent: Any, itemData: int) -> None:
+        """Update the four-panel plot showing image, ROI, and profile data."""
 
-        def updateROIFromClick(eclick, erelease):
-            #'eclick and erelease are the press and release events'
-            # print " The button you used were: ", \
-            #       eclick.button, erelease.button
+        def updateROIFromClick(eclick: Any, erelease: Any) -> None:
             x1, y1 = eclick.xdata, eclick.ydata
             x2, y2 = erelease.xdata, erelease.ydata
             thisROI = str(list(map(int, map(round, [x1, y1, x2, y2]))))
             self.hdfObject[itemData]["det_0"]["roi"] = thisROI
-            # Just to make sure it was written properly:
             thisROI = self.hdfObject[itemData]["det_0"]["roi"]
             self.roiField.SetValue(thisROI)
             self.hdfObject[itemData]["det_0"]["image_changed"] = "True"
-            self.hdfObject[itemData]["det_0"]["F_changed"] = True
+            self.hdfObject[itemData]["det_0"]["F_changed"] = "True"
             self.updateFourPlot(myParent, itemData)
             self.imageMaxValue.SetLabel("ROI Max: " + str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
             self.updateRodPlot(myParent, itemData)
@@ -1848,7 +1807,7 @@ class Integrator(wx.Frame, wx.Notebook):
             )
         else:
             self.hdfObject[itemData]["det_0"]["image_changed"] = "False"
-            self.hdfObject[itemData]["det_0"]["F_changed"] = True
+            self.hdfObject[itemData]["det_0"]["F_changed"] = 1.0
 
             # Get the corrected image data - this is already image data, not a filename
             corrected_image = self.hdfObject[itemData]["det_0"]["corrected_image"]
@@ -1905,7 +1864,9 @@ class Integrator(wx.Frame, wx.Notebook):
         # TPT rename embedPlot to embed_plot
         (im_max, colormap, subplot2) = imageAna.embed_plot(self.fig4)  # 'colormap',
         self.hdfObject[itemData]["det_0"]["real_image_max"] = str(im_max)
-        if self.hdfObject[itemData]["det_0"]["F_changed"]:
+        # Check F_changed flag - handle both float (1.0/0.0) and string representations
+        f_changed_val = self.hdfObject[itemData]["det_0"]["F_changed"]
+        if (isinstance(f_changed_val, (int, float)) and f_changed_val != 0) or safe_eval_hdf(f_changed_val):
             self.updateF(itemData)
         toggle_selector.RS = RectangleSelector(
             subplot2,
@@ -1920,11 +1881,8 @@ class Integrator(wx.Frame, wx.Notebook):
         )
         self.canvas4.draw()
 
-    # Clear all input fields of values
-    # (e.g. for when there is no scan point selected)
-    # transmission, etc. added April 2015, JES
-    def clearFields(self):
-        # print 'Clearing fields'
+    def clearFields(self) -> None:
+        """Clear all GUI input fields when no scan point is selected."""
         self.badPointToggle.SetValue(False)
         if not self.keepMaxToggle.GetValue():
             self.imageMaxField.Clear()
@@ -1974,13 +1932,11 @@ class Integrator(wx.Frame, wx.Notebook):
         self.bLbl.SetLabel("filters: ")
         self.secLbl.SetLabel("corrdet: ")
 
-    # What to do when a new selection is made
-    def newSelected(self, event):
-        # print 'New selected'
+    def newSelected(self, event: wx.Event) -> None:
+        """Handle new tree item selection by updating plots and fields."""
         ofMe = event.GetItem()
         myParent = self.hdfTree.GetItemParent(ofMe)
         itemData = self.hdfTree.GetItemData(ofMe)
-        # print self.hdfTree.GetItemData(ofMe)
         if itemData is None:
             self.fig4.clear()
             self.canvas4.draw()
@@ -1991,8 +1947,6 @@ class Integrator(wx.Frame, wx.Notebook):
         else:
             if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
                 self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
-                # self.hdfObject.write_point(self.hdfObject[itemData])
-                # self.hdfObject.read_point(itemData)
             if self.keepMaxToggle.GetValue():
                 self.hdfObject[itemData]["det_0"]["image_max"] = str(self.imageMaxField.GetValue())
             possibilities = {
@@ -2009,21 +1963,29 @@ class Integrator(wx.Frame, wx.Notebook):
             for key in possibilities:
                 if key.GetValue():
                     whatField, updateThis, ofType = possibilities[key]
-                    if self.hdfObject[itemData]["det_0"][updateThis] == str(ofType(eval(whatField.GetValue()))):
+                    new_value = safe_eval_hdf(whatField.GetValue())
+                    if ofType is list and new_value is None:
+                        new_value = []
+                    elif ofType is dict and new_value is None:
+                        new_value = {}
+                    elif new_value is not None:
+                        new_value = ofType(new_value)
+
+                    if self.hdfObject[itemData]["det_0"][updateThis] == str(new_value):
                         pass
                     else:
-                        self.hdfObject[itemData]["det_0"][updateThis] = str(ofType(eval(whatField.GetValue())))
-                        whatField.SetValue(str(self.hdfObject[itemData]["det_0"][updateThis]))
+                        self.hdfObject[itemData]["det_0"][updateThis] = str(new_value) if new_value is not None else ""
+                        whatField.SetValue(str(new_value) if new_value is not None else "")
                         self.hdfObject[itemData]["det_0"]["image_changed"] = "True"
-                        self.hdfObject[itemData]["det_0"]["F_changed"] = True
+                        self.hdfObject[itemData]["det_0"]["F_changed"] = 1.0
             self.updateFourPlot(myParent, itemData)
             self.updateRodPlot(myParent, itemData)
             self.updateFields(itemData)
             statusText = self.hdfTreeObject.statusString(self.hdfTree, self.hdfObject, ofMe)
             self.statusBar.SetStatusText(statusText)
 
-    # Save the current point's attributes into a tab-delimited file
-    def saveAttrFile(self, event):
+    def saveAttrFile(self, event: wx.Event) -> None:
+        """Save current point's attributes to a tab-delimited file."""
         try:
             ofMe = self.hdfTree.GetSelection()
             itemData = self.hdfTree.GetItemData(ofMe)
@@ -2073,7 +2035,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     value = self.hdfObject[itemData]["det_0"][key]
                     value = value.decode("utf-8")
                     attributeFile.write(key + "\t" + value + "\n")
-                attributeFile.write("geom\t" + self.hdfObject[itemData]["geom"])
+                attributeFile.write("geom\t" + bytes_to_str(self.hdfObject[itemData]["geom"]))
                 print("Attribute file saved to" + saveDialog.GetPath())
             except Exception:
                 print("Error writing to file")
@@ -2083,9 +2045,8 @@ class Integrator(wx.Frame, wx.Notebook):
             attributeFile.close()
         saveDialog.Destroy()
 
-    # Write a file to the current directory containing the index, H, K,
-    # L, F, and Ferr values for each point
-    def saveHKLFFerr(self, event):
+    def saveHKLFFerr(self, event: wx.Event) -> None:
+        """Save H, K, L, F, and Ferr values to file."""
         self.customSelection.customTree.Expand(self.customSelection.customRoot)
         self.customSelection.CenterOnParent()
         userReply = self.customSelection.ShowModal()
@@ -2140,9 +2101,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 raise
         saveDialog.Destroy()
 
-    # Write a file to the current directory containing the index, H, K,
-    # L, E, F, and Ferr values for each point
-    def saveHKLEFFerr(self, event):
+    def saveHKLEFFerr(self, event: wx.Event) -> None:
+        """Save H, K, L, E, F, and Ferr values to file."""
         self.customSelection.customTree.Expand(self.customSelection.customRoot)
         self.customSelection.CenterOnParent()
         userReply = self.customSelection.ShowModal()
@@ -2199,10 +2159,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 raise
         saveDialog.Destroy()
 
-    # JES add saveRIDSdata to create file in format for Heberling code
-    # Write a file to the current directory containing the E, H, K,
-    # L, F, Ferr, alpha and beta values for each point
-    def saveRIDSdata(self, event):
+    def saveRIDSdata(self, event: wx.Event) -> None:
+        """Save RIDS format data with E, H, K, L, F, Ferr, alpha, beta values."""
         self.customSelection.customTree.Expand(self.customSelection.customRoot)
         self.customSelection.CenterOnParent()
         userReply = self.customSelection.ShowModal()
@@ -2262,10 +2220,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 raise
         saveDialog.Destroy()
 
-    # JES add saveCTRab 1/4/2016
-    # Write a file to the current directory containing the
-    # H, K, L, F, Ferr, alpha and beta values for each point
-    def saveCTRabData(self, event):
+    def saveCTRabData(self, event: wx.Event) -> None:
+        """Save CTR data with H, K, L, F, Ferr, alpha, beta values."""
         self.customSelection.customTree.Expand(self.customSelection.customRoot)
         self.customSelection.CenterOnParent()
         userReply = self.customSelection.ShowModal()
@@ -2323,10 +2279,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 raise
         saveDialog.Destroy()
 
-    # JES add saveIdata to create file that saves Intensity data
-    # Write a file to the current directory containing the  H, K, L,
-    # F, Ferr, I, Io, and Ibgr for each point
-    def saveIdata(self, event):
+    def saveIdata(self, event: wx.Event) -> None:
+        """Save intensity data with H, K, L, F, Ferr, I, Io, Ibgr values."""
         self.customSelection.customTree.Expand(self.customSelection.customRoot)
         self.customSelection.CenterOnParent()
         userReply = self.customSelection.ShowModal()
@@ -2388,8 +2342,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 raise
         saveDialog.Destroy()
 
-    # Resize the cancel button in the status bar
-    def onSize(self, event):
+    def onSize(self, event: wx.Event | None) -> None:
+        """Handle window resize events and adjust layout."""
         # Phoenix-compatible approach for nested splitters
         total_width = self.GetSize()[0]
         # Set the main split position (tree vs rest)
@@ -2404,34 +2358,14 @@ class Integrator(wx.Frame, wx.Notebook):
         self.integrateCancel.SetPosition((rect.x + 2, rect.y + 2))
         self.integrateCancel.SetSize((rect.width - 4, rect.height - 4))
 
-    # Close the HDF file, destroy the window and the custom tree window
-    def onClose(self, event):
-        if self.hdfObject is not None:
-            self.hdfObject.close()
-        self.customSelection.Destroy()
-        del self.customSelection
-        self.Destroy()
-        del self
 
-
-# Tree class identical to a regular wx.TreeCtrl
-# except for an overridden sort function
-"""class myTreeCtrl(wx.TreeCtrl):
-    def __init__(self, *args, **kwargs):
-        wx.TreeCtrl.__init__(self, *args, **kwargs)
-        
-    def OnCompareItems(self, item1, item2):
-        return cmp(self.GetItemPyData(item1), self.GetItemPyData(item2))"""
-
-
-# Opens a new tree for custom selection
 class customSelector(wx.Dialog):
-    def __init__(self, *args, **kwargs):
+    """Opens a new tree for custom selection"""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         wx.Dialog.__init__(self, args[0], -1, title="Choose points...", size=(200, 800), style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 
         self.customTree = myTreeCtrl(self, style=wx.TR_MULTIPLE | wx.TR_HAS_BUTTONS)
-        # self.customRoot = self.customTree.AddRoot(\
-        #        os.path.split(self.GetParent().filename)[1])
 
         self.okButton = wx.Button(self, wx.ID_OK, label="Ok")
         self.cancelButton = wx.Button(self, wx.ID_CANCEL, label="Cancel")
@@ -2448,24 +2382,11 @@ class customSelector(wx.Dialog):
         self.SetSizer(self.choosingSizer1)
 
 
-# Holds the RectangleSelector used to pick an ROI
-def toggle_selector(event):
-    print("Key pressed.")
-    """
-    if event.key in ['Q', 'q'] and toggle_selector.RS.active:
-        print ' RectangleSelector deactivated.'
-        toggle_selector.RS.set_active(False)
-    if event.key in ['A', 'a'] and not toggle_selector.RS.active:
-        print ' RectangleSelector activated.'
-        toggle_selector.RS.set_active(True)
-    """
+def toggle_selector(event: Any) -> None:
+    """Holds the RectangleSelector used to pick an ROI"""
 
 
 labelTips = {
-    #'I':"""Enter label for intensity. Options:\n%s""",
-    #'Inorm':"""Enter label for intensity normalization. Options:\n%s""",
-    #'Ierr':"""Enter label for intensity errors. Options:\n%s""",
-    #'Ibgr':"""Enter label for intensity background. Options:\n%s""",
     "roi": """Enter the image roi. The format is [x1,y1,x2,y2] where values
         are in pixels corresponding to two corners of the box. Use the set button to
         select the roi from the image plot zoom value (Fig 1) -> raw scan data plot.""",
@@ -2484,9 +2405,6 @@ labelTips = {
     "colPower": """Power of polynomial used in row (x) direction bgr fit.
         pow = 0 results in linear background only (see nbgr).  Larger values of pow
         result in steeper polynomials.""",
-    #'bgr col tan':"""Flag for use of tangents in column (y) direction bgr determination.
-    #    If 'True' then the local slope is removed when fitting a polynomial to a point.
-    #    Helpful for data sitting on a broad sloping background""",
     "rowNbgr": """Number of background points for linear part of row direction
         (x-direction) bgr fit. If nbgr = 0, no linear fit is included""",
     "rowWidth": """Peak width for the row (x) direction bgr fit.
@@ -2496,14 +2414,6 @@ labelTips = {
     "rowPower": """Power of polynomial used in row (x) direction bgr fit.
         pow = 0 results in linear background only (see nbgr).  Larger values of pow
         result in steeper polynomials.""",
-    #'bgr row tan':"""Flag for use of tangents in row direction (x) bgr determination.
-    #    If 'True' then the local slope is removed when fitting a polynomial to a point.
-    #    Helpful for data sitting on a broad sloping background""",
-    #'bgr nline':"""For 2D backgrounds, number of lines to average for polynomial fits.
-    #    This option helps to smear out sharp features in the background""",
-    #'bgr filter':"""Flag (True/False) to use a spline filter for 2D background determination""",
-    #'bgr compress':"""Compression factor to apply during background fitting.  This will
-    #    speed up the background determinations and add some smoothing""",
     "beamSlit": """Enter the incident beam slit settings: beam_slits = {'horz':.6,'vert':.8}
         horz = beam horz width in mm (total width in lab-z / horz scattering plane)
         vert = beam vert hieght in mm (total width in lab-x / vert scattering plane)
