@@ -380,8 +380,12 @@ class HdfDataFile:
                 for point in points:
                     try:
                         self.file[point][det_name][key_loc_path][key_loc[1]] = value
-                    except IOError:
-                        self.file[point][det_name][key_loc_path][key_loc[1]] = numpy.float(value)
+                    except (IOError, TypeError):
+                        # Handle type mismatches - try string conversion first, then float
+                        try:
+                            self.file[point][det_name][key_loc_path][key_loc[1]] = str(value)
+                        except (IOError, TypeError):
+                            self.file[point][det_name][key_loc_path][key_loc[1]] = numpy.float(value)
             elif key in DET_ATT_KEYS:
                 if self.point in points:
                     self.point_dict[det_name][key] = value

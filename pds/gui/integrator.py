@@ -888,8 +888,8 @@ class Integrator(wx.Frame, wx.Notebook):
             toL = toL[itemData]
             copyFrom = self.closestL(toL, possibleLs)
             copyData = fromDict[copyFrom]
-            self.hdfObject.set_all(("det_0", "image_changed"), "True", [itemData])
-            self.hdfObject.set_all(("det_0", "F_changed"), "True", [itemData])
+            self.hdfObject.set_all(("det_0", "image_changed"), 1.0, [itemData])
+            self.hdfObject.set_all(("det_0", "F_changed"), 1.0, [itemData])
             for key in (
                 "cnbgr",
                 "cpow",
