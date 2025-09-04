@@ -75,12 +75,28 @@ def master_to_project(master_file: str, desired_scans: dict[str, dict[str, dict[
 
     if append:
         # Append mode: add new points without overwriting, may overwrite past 999999 points.
-        write_this = h5py.File(project_file, "a")
+        try:
+            write_this = h5py.File(project_file, "a")
+        except Exception as e:
+            raise IOError(f"Cannot open project file for appending: {project_file}. Error: {e}")
+
         this_items = list(write_this.items())
-        point_counter = int(this_items[-1][0]) + 1
-        all_names = {}
-        for item in this_items:
-            all_names[item[1].attrs.get("name")] = item[1]
+        if not this_items:
+            print(f"Warning: Project file {project_file} appears to be empty, starting from point 1")
+            point_counter = 1
+            all_names = {}
+        else:
+            try:
+                point_counter = int(this_items[-1][0]) + 1
+                print(f"Appending to existing project file with {len(this_items)} points, starting from point {point_counter}")
+            except (ValueError, IndexError) as e:
+                raise ValueError(f"Cannot determine last point number in project file. Error: {e}")
+
+            all_names = {}
+            for item in this_items:
+                name_attr = item[1].attrs.get("name")
+                if name_attr:
+                    all_names[name_attr] = item[1]
     else:
         # Write mode: overwrite existing data, reset naming counter.
         write_this = h5py.File(project_file, "w")

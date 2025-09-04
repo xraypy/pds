@@ -865,17 +865,26 @@ class Filter(wx.Frame):
             # Append scans to existing project file
             print("Start: ", time.ctime(time.time()))
             out_file = save_dialog.GetPath()
+            print(f"Appending {sum(len(scans) for scans in self.projectDict.values())} scans to {out_file}")
+
             try:
                 master_to_project(self.filterFileName, self.projectDict, out_file, append=True, gui=True)
+                print("\n✅ Successfully appended scans to project file")
             except Exception as e:
-                print("Error saving to project file:", e)
+                import traceback
+
+                print(f"\n❌ Error appending to project file: {e}")
+                print("Full error details:")
+                traceback.print_exc()
+                # Show error dialog to user
+                error_msg = f"Failed to append scans to project file:\n\n{str(e)}\n\nSee console output for full details."
+                wx.MessageBox(error_msg, "Append Error", wx.OK | wx.ICON_ERROR)
+            finally:
                 mlockFile.release()
                 plockFile.release()
                 print("Locks released")
+
             print("Finish: ", time.ctime(time.time()))
-            mlockFile.release()
-            plockFile.release()
-            print("Locks released")
         save_dialog.Destroy()
 
     def keepSelected(self, event: wx.CommandEvent) -> None:

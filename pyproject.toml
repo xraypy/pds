@@ -28,6 +28,9 @@ dependencies = [
     "wxpython>=4.2.3",
 ]
 
+[project.scripts]
+pds = "pds:main"
+
 [project.urls]
 Homepage = "https://github.com/xraypy/pds"
 
@@ -35,9 +38,17 @@ Homepage = "https://github.com/xraypy/pds"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatchling.build.targets.wheel]
+packages = ["pds"]
+include = [
+  "/pds/icons/*.svg",
+  "/pds/icons/*.png"
+]
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",
+    "pyinstaller>=6.15.0",
     "pytest>=8.4.1",
     "ruff>=0.12.2",
 ]
@@ -95,6 +106,7 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "cli: marks tests as CLI functionality tests",
     "compatibility: marks tests as Python 2/3 compatibility tests",
     "regression: marks tests as regression prevention tests",
 ]
