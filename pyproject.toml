@@ -1,0 +1,118 @@
+[project]
+name = "pds"
+version = "0.1.0"
+maintainers = [
+    {name = "Christofanis Skordas", email = "55315750+skordaschristofanis@users.noreply.github.com"}
+]
+description = "Surface scattering integration"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {file = "LICENSE"}
+classifiers = [
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License"
+]
+requires-python = "==3.13.*"
+dependencies = [
+    "h5py>=3.14.0",
+    "matplotlib>=3.10.3",
+    "numpy>=2.3.1",
+    "pillow>=11.3.0",
+    "pyshortcuts>=1.9.5",
+    "scipy>=1.16.0",
+    "tables>=3.10.2",
+    "wxpython>=4.2.3",
+]
+
+[project.scripts]
+pds = "pds:main"
+
+[project.urls]
+Homepage = "https://github.com/xraypy/pds"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatchling.build.targets.wheel]
+packages = ["pds"]
+include = [
+  "/pds/icons/*.svg",
+  "/pds/icons/*.png"
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pyinstaller>=6.15.0",
+    "pytest>=8.4.1",
+    "ruff>=0.12.2",
+]
+
+[tool.ruff]
+exclude = [
+    ".eggs",
+    ".git",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".venv",
+    ".vscode",
+    "build",
+    "dist",
+]
+line-length = 160
+indent-width = 4
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --tb=short"
+testpaths = [
+    "tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]
+
+# Markers for test categorization
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "cli: marks tests as CLI functionality tests",
+    "compatibility: marks tests as Python 2/3 compatibility tests",
+    "regression: marks tests as regression prevention tests",
+]
+
+# Test discovery
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
