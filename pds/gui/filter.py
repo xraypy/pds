@@ -42,6 +42,7 @@ class Filter(wx.Frame):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         wx.Frame.__init__(self, args[0], -1, title="HDF Project File Builder", size=(1440, 890))
+        self.SetMinSize((1280, 650))
 
         # Create main splitter for optional output window
         self.mainSplitter = wx.SplitterWindow(self, style=wx.SP_3D | wx.SP_LIVE_UPDATE)
@@ -139,7 +140,8 @@ class Filter(wx.Frame):
         self.leftSizer.Add(self.filterButtonSizer, proportion=0, flag=wx.EXPAND)
         self.leftSizer.Add(self.tableSizer, proportion=1, flag=wx.EXPAND)
         self.leftSizer.Add(self.managementSizer, proportion=0, flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=4)
-        self.leftPanel.SetSizerAndFit(self.leftSizer)
+        self.leftPanel.SetMinSize((600, 400))
+        self.leftPanel.SetSizer(self.leftSizer)
 
         self.fileSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.fileLabel = wx.StaticText(self.middlePanel, label="File Name: ")
@@ -200,7 +202,8 @@ class Filter(wx.Frame):
         self.middleSizer.Add(self.loadSaveAttributeSizer, flag=wx.EXPAND)
         self.middleSizer.AddSpacer(6)
 
-        self.middlePanel.SetSizerAndFit(self.middleSizer)
+        self.middlePanel.SetMinSize((350, 400))
+        self.middlePanel.SetSizer(self.middleSizer)
 
         self.projectNameSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.projectNameText = wx.StaticText(self.rightPanel, label="Project Name: ")
@@ -220,11 +223,12 @@ class Filter(wx.Frame):
         self.rightSizer.Add(self.projectNameSizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=20)
         self.rightSizer.Add(self.newProjectTree, proportion=1, flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=4)
         self.rightSizer.Add(self.nextStepSizer, proportion=0, flag=wx.EXPAND | wx.TOP | wx.BOTTOM, border=4)
-        self.rightPanel.SetSizerAndFit(self.rightSizer)
+        self.rightPanel.SetMinSize((360, 400))
+        self.rightPanel.SetSizer(self.rightSizer)
 
         self.fullSizer.Add(self.leftPanel, proportion=6, flag=wx.EXPAND | wx.LEFT, border=8)
         self.fullSizer.Add(self.middlePanel, proportion=3, flag=wx.EXPAND)
-        self.fullSizer.Add(self.rightPanel, proportion=3, flag=wx.EXPAND | wx.RIGHT, border=8)
+        self.fullSizer.Add(self.rightPanel, proportion=4, flag=wx.EXPAND | wx.RIGHT, border=8)
 
         self.fullWindow.SetSizer(self.fullSizer)
 
