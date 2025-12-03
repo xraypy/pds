@@ -1192,6 +1192,31 @@ class Integrator(wx.Frame, wx.Notebook):
             elif new_value is not None:
                 new_value = ofType(new_value)
 
+            # Special validation for ROI field - must be a list of exactly 4 integers
+            if whatField == self.roiField:
+                if not isinstance(new_value, list):
+                    print(f"Invalid ROI format: must be a list, got {type(new_value).__name__}")
+                    # Get the current value and ensure it's properly formatted
+                    current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
+                    whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                    return
+                if len(new_value) != 4 and len(new_value) != 0:
+                    print(f"Invalid ROI format: must have 4 values [x1, y1, x2, y2] or be empty, got {len(new_value)} values")
+                    # Get the current value and ensure it's properly formatted
+                    current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
+                    whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                    return
+                if len(new_value) == 4:
+                    try:
+                        # Ensure all values are numeric
+                        new_value = [int(v) for v in new_value]
+                    except (ValueError, TypeError):
+                        print(f"Invalid ROI format: all values must be integers")
+                        # Get the current value and ensure it's properly formatted
+                        current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
+                        whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                        return
+
             current_value = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
             if current_value == new_value:
                 pass
@@ -1204,7 +1229,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.updateFourPlot(myParent, itemData)
                 self.updateRodPlot(myParent, itemData)
                 self.updateLabels(itemData)
-        except Exception:
+        except Exception as e:
+            print(f"Error updating {updateThis}: {e}")
             whatField.SetValue(str(self.hdfObject[itemData]["det_0"][updateThis]))
 
     def applyToScan(self, event: wx.Event) -> None:
