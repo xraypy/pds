@@ -27,6 +27,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.hdfObject = None
         self.hdfTreeObject = None
         self.customTreeObject = None
+        self.lastDirectory = os.getcwd()  # Track last used directory
 
         wx.Frame.__init__(self, args[0], -1, title="HDF Integrator", size=(1024, 780))
 
@@ -720,12 +721,15 @@ class Integrator(wx.Frame, wx.Notebook):
     def loadFileDialog(self, event: wx.Event) -> None:
         """Open a dialog to choose an HDF file to load."""
         loadDialog = wx.FileDialog(
-            self, message="Load file...", defaultDir=os.getcwd(), defaultFile="", wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*", style=wx.FD_OPEN
+            self, message="Load file...", defaultDir=self.lastDirectory, defaultFile="", wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*", style=wx.FD_OPEN
         )
         if loadDialog.ShowModal() == wx.ID_OK:
             if not os.path.isfile(loadDialog.GetPath()):
                 print("Error: File does not exist")
                 return
+            # Update last directory
+            self.lastDirectory = os.path.dirname(loadDialog.GetPath())
+            
             try:
                 self.hdfObject.close()
                 self.lockFile.release()
@@ -2042,12 +2046,14 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="txt files (*.txt)|*.txt|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
+            # Update last directory
+            self.lastDirectory = os.path.dirname(saveDialog.GetPath())
             print("Saving attribute file to" + saveDialog.GetPath())
             try:
                 attributeFile = open(saveDialog.GetPath(), "w")
@@ -2107,13 +2113,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="lst files (*.lst)|*.lst|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving H, K, L, F, and Ferr values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
@@ -2163,13 +2171,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="lst files (*.lst)|*.lst|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving H, K, L, E, F, and Ferr values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
@@ -2221,13 +2231,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="rsd files (*.rsd)|*.rsd|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving RIDS to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
@@ -2282,13 +2294,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="lst files (*.lst)|*.lst|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving CTR, Alpha, and Beta values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
@@ -2341,13 +2355,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="int files (*.int)|*.int|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving Intesity data to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)

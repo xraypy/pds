@@ -73,6 +73,7 @@ class Filter(wx.Frame):
         self.dateResult = None
         self.dateCases = None
         self.projectDict = {}
+        self.lastDirectory = os.getcwd()  # Track last used directory
         self.fullWindow = wx.Panel(self.mainSplitter)
 
         # Set up variables for lazy initialization of output window
@@ -284,7 +285,7 @@ class Filter(wx.Frame):
         loadDialog = wx.FileDialog(
             self,
             message="Load file...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="Master files (*.mh5)|*.mh5|" + "All files (*.*)|*",
             style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
@@ -293,6 +294,8 @@ class Filter(wx.Frame):
             if not os.path.isfile(loadDialog.GetPath()):
                 print("Error: File does not exist")
                 return
+            # Update last directory
+            self.lastDirectory = os.path.dirname(loadDialog.GetPath())
 
             # Reset all state variables for new file
             del self.filterFile
@@ -563,9 +566,11 @@ class Filter(wx.Frame):
     def loadAttributes(self, event: wx.CommandEvent) -> None:
         """Load attribute-value pairs from a tab-delimited text file."""
         loadDialog = wx.FileDialog(
-            self, message="Load file...", defaultDir=os.getcwd(), defaultFile="", wildcard="txt files (*.txt)|*.txt|" + "All files (*.*)|*", style=wx.FD_OPEN
+            self, message="Load file...", defaultDir=self.lastDirectory, defaultFile="", wildcard="txt files (*.txt)|*.txt|" + "All files (*.*)|*", style=wx.FD_OPEN
         )
         if loadDialog.ShowModal() == wx.ID_OK:
+            # Update last directory
+            self.lastDirectory = os.path.dirname(loadDialog.GetPath())
             print("Loading attribute file " + loadDialog.GetPath())
             try:
                 attributeFile = open(loadDialog.GetPath())
@@ -600,9 +605,11 @@ class Filter(wx.Frame):
     def saveAttributes(self, event: wx.CommandEvent) -> None:
         """Save current attribute list to a tab-delimited text file."""
         saveDialog = wx.FileDialog(
-            self, message="Save file...", defaultDir=os.getcwd(), defaultFile="", wildcard="txt files (*.txt)|*.txt|" + "All files (*.*)|*", style=wx.FD_SAVE
+            self, message="Save file...", defaultDir=self.lastDirectory, defaultFile="", wildcard="txt files (*.txt)|*.txt|" + "All files (*.*)|*", style=wx.FD_SAVE
         )
         if saveDialog.ShowModal() == wx.ID_OK:
+            # Update last directory
+            self.lastDirectory = os.path.dirname(saveDialog.GetPath())
             print("Saving attribute file " + saveDialog.GetPath())
             try:
                 attributeFile = open(saveDialog.GetPath(), "w")
@@ -795,18 +802,19 @@ class Filter(wx.Frame):
             return
 
         # Show file dialog for new project file location
-        self.fileDirectory, holding = os.path.split(self.filterFileName)
         file_types = "Project files (*.ph5)|*.ph5|All files (*.*)|*"
         save_dialog = wx.FileDialog(
             self,
             message="Create file...",
-            defaultDir=self.fileDirectory,
+            defaultDir=self.lastDirectory,
             defaultFile=self.projectNameBox.GetValue(),
             wildcard=file_types,
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
 
         if save_dialog.ShowModal() == wx.ID_OK:
+            # Update last directory
+            self.lastDirectory = os.path.dirname(save_dialog.GetPath())
             # Lock both master and project files during creation
             mlockFile = FileLock(self.filterFileName)
             plockFile = FileLock(save_dialog.GetPath())
@@ -845,13 +853,14 @@ class Filter(wx.Frame):
             return
 
         # Show file dialog for existing project file to append to
-        self.fileDirectory, holding = os.path.split(self.filterFileName)
         file_types = "Project files (*.ph5)|*.ph5|All files (*.*)|*"
         save_dialog = wx.FileDialog(
-            self, message="Append to...", defaultDir=self.fileDirectory, defaultFile=self.projectNameBox.GetValue(), wildcard=file_types, style=wx.FD_SAVE
+            self, message="Append to...", defaultDir=self.lastDirectory, defaultFile=self.projectNameBox.GetValue(), wildcard=file_types, style=wx.FD_SAVE
         )
 
         if save_dialog.ShowModal() == wx.ID_OK:
+            # Update last directory
+            self.lastDirectory = os.path.dirname(save_dialog.GetPath())
             # Lock both master and project files during append operation
             mlockFile = FileLock(self.filterFileName)
             plockFile = FileLock(save_dialog.GetPath())
