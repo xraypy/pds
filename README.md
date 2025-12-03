@@ -5,17 +5,17 @@
 
 A comprehensive Python toolkit for X-ray scattering data analysis, providing both GUI and CLI interfaces for SPEC file conversion, data processing, and integration analysis.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [🚀 Quick Start](#-quick-start)
-- [📖 Usage](#-usage)
-- [🧪 Examples](#-examples)
-- [🔍 Advanced Options](#-advanced-options)
-- [🛠️ Development](#️-development)
-- [🐛 Troubleshooting](#-troubleshooting)
-- [📄 License](#-license)
+- [Quick Start](#-quick-start)
+- [Usage](#-usage)
+- [Examples](#-examples)
+- [Advanced Options](#-advanced-options)
+- [Development](#️-development)
+- [Troubleshooting](#-troubleshooting)
+- [License](#-license)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
@@ -40,7 +40,7 @@ A comprehensive Python toolkit for X-ray scattering data analysis, providing bot
    pds --help
    ```
 
-## 📖 Usage
+## Usage
 
 ### Command Line Interface
 
@@ -122,7 +122,7 @@ pds --make_icon
 pds -m
 ```
 
-## 🧪 Examples
+## Examples
 
 ### Typical Workflow
 
@@ -153,15 +153,15 @@ Based on our testing with real scientific data:
 ```bash
 # Convert a single experimental run
 pds --convert uo2-29a_1d_O2_1.spec
-# ✅ Processed 43 scans with image data → 89 MB HDF5 file
+# Processed 43 scans with image data → 89 MB HDF5 file
 
 # Batch convert entire experimental directory
 pds --convert /path/to/experiment/ --once
-# ✅ Processed 243+ scans → 490+ MB total data
+# Processed 243+ scans → 490+ MB total data
 
 # Monitor live experiment data
 pds --convert /beamline/data --process-existing -i 10
-# ✅ Process existing data, then monitor every 10 seconds
+# Process existing data, then monitor every 10 seconds
 ```
 
 ### Conversion Results
@@ -170,7 +170,7 @@ Typical conversion performance:
 - **70 scans** → 134 MB HDF5 (0.24 minutes)
 - **86 scans** → 164 MB HDF5 (0.31 minutes)
 
-## 🔍 Advanced Options
+## Advanced Options
 
 ### Convert Command Options
 
@@ -186,7 +186,7 @@ Typical conversion performance:
 - `--process-existing` - Process existing files before monitoring
 - `--once` - Process existing files once and exit
 
-## 🛠️ Development
+## Development
 
 ### Running Tests
 ```bash
@@ -215,7 +215,7 @@ ruff format .
 pre-commit install
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -262,7 +262,7 @@ pds --convert help
 pds --test
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

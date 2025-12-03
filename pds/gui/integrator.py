@@ -27,6 +27,7 @@ class Integrator(wx.Frame, wx.Notebook):
         self.hdfObject = None
         self.hdfTreeObject = None
         self.customTreeObject = None
+        self.lastDirectory = os.getcwd()  # Track last used directory
 
         wx.Frame.__init__(self, args[0], -1, title="HDF Integrator", size=(1024, 780))
 
@@ -720,12 +721,15 @@ class Integrator(wx.Frame, wx.Notebook):
     def loadFileDialog(self, event: wx.Event) -> None:
         """Open a dialog to choose an HDF file to load."""
         loadDialog = wx.FileDialog(
-            self, message="Load file...", defaultDir=os.getcwd(), defaultFile="", wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*", style=wx.FD_OPEN
+            self, message="Load file...", defaultDir=self.lastDirectory, defaultFile="", wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*", style=wx.FD_OPEN
         )
         if loadDialog.ShowModal() == wx.ID_OK:
             if not os.path.isfile(loadDialog.GetPath()):
                 print("Error: File does not exist")
                 return
+            # Update last directory
+            self.lastDirectory = os.path.dirname(loadDialog.GetPath())
+            
             try:
                 self.hdfObject.close()
                 self.lockFile.release()
@@ -1119,9 +1123,27 @@ class Integrator(wx.Frame, wx.Notebook):
             return
         newValue = bytes_to_str(self.imageMaxField.GetValue())
         currentValue = bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"])
-        if event.GetEventType() == wx.EVT_KILL_FOCUS:
-            self.imageMaxField.SetValue(str(currentValue))
+        # Don't revert the field on kill focus - allow the user to edit it
+        # The value will be applied when they press Enter or move to another point
+        if event.GetEventType() == wx.EVT_KILL_FOCUS.typeId:
+            # Only update if the value actually changed
+            try:
+                if newValue.strip() == "":
+                    self.imageMaxField.SetValue(str(currentValue))
+                    return
+                if str(int(newValue)) == currentValue:
+                    return
+                elif int(newValue) <= 0 and int(newValue) != -1:
+                    self.imageMaxField.SetValue(currentValue)
+                    return
+                else:
+                    self.hdfObject[itemData]["det_0"]["image_max"] = str(int(newValue))
+                    self.updateFourPlot(myParent, itemData)
+                    self.imageMaxValue.SetLabel("ROI Max: " + str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
+            except Exception:
+                self.imageMaxField.SetValue(str(currentValue))
             return
+        # Handle Enter key press
         try:
             if str(int(newValue)) == currentValue:
                 return
@@ -1174,6 +1196,31 @@ class Integrator(wx.Frame, wx.Notebook):
             elif new_value is not None:
                 new_value = ofType(new_value)
 
+            # Special validation for ROI field - must be a list of exactly 4 integers
+            if whatField == self.roiField:
+                if not isinstance(new_value, list):
+                    print(f"Invalid ROI format: must be a list, got {type(new_value).__name__}")
+                    # Get the current value and ensure it's properly formatted
+                    current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
+                    whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                    return
+                if len(new_value) != 4 and len(new_value) != 0:
+                    print(f"Invalid ROI format: must have 4 values [x1, y1, x2, y2] or be empty, got {len(new_value)} values")
+                    # Get the current value and ensure it's properly formatted
+                    current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
+                    whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                    return
+                if len(new_value) == 4:
+                    try:
+                        # Ensure all values are numeric
+                        new_value = [int(v) for v in new_value]
+                    except (ValueError, TypeError):
+                        print(f"Invalid ROI format: all values must be integers")
+                        # Get the current value and ensure it's properly formatted
+                        current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
+                        whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                        return
+
             current_value = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
             if current_value == new_value:
                 pass
@@ -1186,7 +1233,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.updateFourPlot(myParent, itemData)
                 self.updateRodPlot(myParent, itemData)
                 self.updateLabels(itemData)
-        except Exception:
+        except Exception as e:
+            print(f"Error updating {updateThis}: {e}")
             whatField.SetValue(str(self.hdfObject[itemData]["det_0"][updateThis]))
 
     def applyToScan(self, event: wx.Event) -> None:
@@ -1998,12 +2046,14 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="txt files (*.txt)|*.txt|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
+            # Update last directory
+            self.lastDirectory = os.path.dirname(saveDialog.GetPath())
             print("Saving attribute file to" + saveDialog.GetPath())
             try:
                 attributeFile = open(saveDialog.GetPath(), "w")
@@ -2063,13 +2113,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="lst files (*.lst)|*.lst|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving H, K, L, F, and Ferr values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
@@ -2119,13 +2171,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="lst files (*.lst)|*.lst|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving H, K, L, E, F, and Ferr values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
@@ -2177,13 +2231,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="rsd files (*.rsd)|*.rsd|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving RIDS to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
@@ -2238,13 +2294,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="lst files (*.lst)|*.lst|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving CTR, Alpha, and Beta values to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
@@ -2297,13 +2355,15 @@ class Integrator(wx.Frame, wx.Notebook):
         saveDialog = wx.FileDialog(
             self,
             message="Save file as...",
-            defaultDir=os.getcwd(),
+            defaultDir=self.lastDirectory,
             defaultFile="",
             wildcard="int files (*.int)|*.int|" + "All files (*.*)|*",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
         )
         if saveDialog.ShowModal() == wx.ID_OK:
             fname = saveDialog.GetPath()
+            # Update last directory
+            self.lastDirectory = os.path.dirname(fname)
             print("Saving Intesity data to" + saveDialog.GetPath())
             try:
                 allBadPs = self.hdfObject.get_all(("det_0", "bad_point"), saveThese)
