@@ -1119,9 +1119,27 @@ class Integrator(wx.Frame, wx.Notebook):
             return
         newValue = bytes_to_str(self.imageMaxField.GetValue())
         currentValue = bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"])
-        if event.GetEventType() == wx.EVT_KILL_FOCUS:
-            self.imageMaxField.SetValue(str(currentValue))
+        # Don't revert the field on kill focus - allow the user to edit it
+        # The value will be applied when they press Enter or move to another point
+        if event.GetEventType() == wx.EVT_KILL_FOCUS.typeId:
+            # Only update if the value actually changed
+            try:
+                if newValue.strip() == "":
+                    self.imageMaxField.SetValue(str(currentValue))
+                    return
+                if str(int(newValue)) == currentValue:
+                    return
+                elif int(newValue) <= 0 and int(newValue) != -1:
+                    self.imageMaxField.SetValue(currentValue)
+                    return
+                else:
+                    self.hdfObject[itemData]["det_0"]["image_max"] = str(int(newValue))
+                    self.updateFourPlot(myParent, itemData)
+                    self.imageMaxValue.SetLabel("ROI Max: " + str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
+            except Exception:
+                self.imageMaxField.SetValue(str(currentValue))
             return
+        # Handle Enter key press
         try:
             if str(int(newValue)) == currentValue:
                 return
