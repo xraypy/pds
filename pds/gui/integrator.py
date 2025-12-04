@@ -635,6 +635,8 @@ class Integrator(wx.Frame, wx.Notebook):
         # Bind the image max field to updating the current selection
         self.imageMaxField.Bind(wx.EVT_TEXT_ENTER, self.updateImageMax)
         self.imageMaxField.Bind(wx.EVT_KILL_FOCUS, self.updateImageMax)
+        self.imageMaxField.Bind(wx.EVT_SET_FOCUS, self.onImageMaxSetFocus)
+        self.imageMaxField.Bind(wx.EVT_LEFT_DOWN, self.onImageMaxClick)
 
         # Bind losing focus on a field (tab or click away) to updating that field
         self.colNbgrField.Bind(wx.EVT_KILL_FOCUS, self.updateItem)
@@ -1112,6 +1114,15 @@ class Integrator(wx.Frame, wx.Notebook):
         self.updateF(itemData)
         self.updateRodPlot(myParent, itemData)
         self.updateLabels(itemData)
+
+    def onImageMaxClick(self, event: wx.Event) -> None:
+        """Handle imageMaxField mouse click to ensure it receives focus."""
+        self.imageMaxField.SetFocus()
+        event.Skip()
+
+    def onImageMaxSetFocus(self, event: wx.Event) -> None:
+        """Handle imageMaxField receiving focus."""
+        event.Skip()
 
     def updateImageMax(self, event: wx.Event) -> None:
         """Update a point when the image max is changed."""
