@@ -1997,30 +1997,34 @@ class Integrator(wx.Frame, wx.Notebook):
     def _write_point_results(self, itemData: int, integration_results: dict[str, Any] | None, f_results: dict[str, Any] | None) -> None:
         """Write integration and F results back to HDF5 file. Must be called with lock."""
         with self.hdf_lock:
+            # Get point dictionary reference once to avoid multiple __getitem__ calls
+            # which could trigger write_point on previous point during iteration
+            point_dict = self.hdfObject[itemData]
+
             if integration_results is not None:
-                self.hdfObject[itemData]["det_0"]["image_changed"] = "False"
-                self.hdfObject[itemData]["det_0"]["F_changed"] = 1.0
-                self.hdfObject[itemData]["det_0"]["I"] = integration_results["I"]
-                self.hdfObject[itemData]["det_0"]["Ibgr"] = integration_results["Ibgr"]
-                self.hdfObject[itemData]["det_0"]["Ierr"] = integration_results["Ierr"]
-                self.hdfObject[itemData]["det_0"]["I_c"] = integration_results["I_c"]
-                self.hdfObject[itemData]["det_0"]["I_r"] = integration_results["I_r"]
-                self.hdfObject[itemData]["det_0"]["Ibgr_c"] = integration_results["Ibgr_c"]
-                self.hdfObject[itemData]["det_0"]["Ibgr_r"] = integration_results["Ibgr_r"]
-                self.hdfObject[itemData]["det_0"]["Ierr_c"] = integration_results["Ierr_c"]
-                self.hdfObject[itemData]["det_0"]["Ierr_r"] = integration_results["Ierr_r"]
-                self.hdfObject[itemData]["det_0"]["integrated"] = str(integration_results["integrated"])
+                point_dict["det_0"]["image_changed"] = "False"
+                point_dict["det_0"]["F_changed"] = 1.0
+                point_dict["det_0"]["I"] = integration_results["I"]
+                point_dict["det_0"]["Ibgr"] = integration_results["Ibgr"]
+                point_dict["det_0"]["Ierr"] = integration_results["Ierr"]
+                point_dict["det_0"]["I_c"] = integration_results["I_c"]
+                point_dict["det_0"]["I_r"] = integration_results["I_r"]
+                point_dict["det_0"]["Ibgr_c"] = integration_results["Ibgr_c"]
+                point_dict["det_0"]["Ibgr_r"] = integration_results["Ibgr_r"]
+                point_dict["det_0"]["Ierr_c"] = integration_results["Ierr_c"]
+                point_dict["det_0"]["Ierr_r"] = integration_results["Ierr_r"]
+                point_dict["det_0"]["integrated"] = str(integration_results["integrated"])
 
             if f_results is not None:
-                self.hdfObject[itemData]["det_0"]["F"] = f_results["F"]
-                self.hdfObject[itemData]["det_0"]["Ferr"] = f_results["Ferr"]
-                self.hdfObject[itemData]["det_0"]["ctot"] = f_results["ctot"]
-                self.hdfObject[itemData]["det_0"]["alpha"] = f_results["alpha"]
-                self.hdfObject[itemData]["det_0"]["beta"] = f_results["beta"]
-                self.hdfObject[itemData]["det_0"]["F_changed"] = 0.0
+                point_dict["det_0"]["F"] = f_results["F"]
+                point_dict["det_0"]["Ferr"] = f_results["Ferr"]
+                point_dict["det_0"]["ctot"] = f_results["ctot"]
+                point_dict["det_0"]["alpha"] = f_results["alpha"]
+                point_dict["det_0"]["beta"] = f_results["beta"]
+                point_dict["det_0"]["F_changed"] = 0.0
 
-            # Write the point data (write_point will use current point from __getitem__)
-            self.hdfObject.write_point(self.hdfObject[itemData])
+            # Write the point data using the point number directly to avoid another __getitem__ call
+            self.hdfObject.write_point(point_dict, str(itemData))
 
     def _integrate_point_worker(self, task_queue: queue.Queue, result_queue: queue.Queue) -> None:
         """Worker thread: reads and processes a single point."""
