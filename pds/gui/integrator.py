@@ -3,7 +3,8 @@ import os
 import queue
 import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import matplotlib
@@ -1519,6 +1520,9 @@ class Integrator(wx.Frame, wx.Notebook):
         if len(updateThese) == 0:
             return
 
+        # Start timing
+        start_time = time.perf_counter()
+
         self.integrateContinue = True
         self.onSize(None)
         self.integrateCancel.Show()
@@ -1563,15 +1567,25 @@ class Integrator(wx.Frame, wx.Notebook):
                     future = executor.submit(self._integrate_point_worker, task_queue, result_queue)
                     futures.append(future)
 
-                # Wait for all workers to complete
-                for future in as_completed(futures):
-                    try:
-                        future.result()
-                    except Exception as e:
-                        print(f"Worker thread error: {e}")
-                        import traceback
+                # Wait for all workers to complete with periodic GUI updates
+                completed = set()
+                while len(completed) < len(futures):
+                    # Check for completed futures
+                    for future in futures:
+                        if future not in completed and future.done():
+                            try:
+                                future.result()
+                            except Exception as e:
+                                print(f"Worker thread error: {e}")
+                                import traceback
 
-                        traceback.print_exc()
+                                traceback.print_exc()
+                            completed.add(future)
+
+                    # Yield to GUI to prevent freezing
+                    if len(completed) < len(futures):
+                        wx.GetApp().Yield(True)
+                        time.sleep(0.01)  # Small sleep to prevent busy-waiting
         except Exception as e:
             print(f"Error in thread pool: {e}")
             import traceback
@@ -1579,15 +1593,29 @@ class Integrator(wx.Frame, wx.Notebook):
             traceback.print_exc()
             self.integrateContinue = False
 
-        # Wait for writer thread to finish
+        # Wait for writer thread to finish with periodic GUI updates
         try:
-            writer_thread.join(timeout=300)  # 5 minute timeout
+            timeout = 300  # 5 minute timeout
+            check_interval = 0.1  # Check every 100ms
+            elapsed = 0.0
+            while writer_thread.is_alive() and elapsed < timeout:
+                writer_thread.join(timeout=check_interval)
+                elapsed += check_interval
+                # Yield to GUI to prevent freezing
+                wx.GetApp().Yield(True)
+
             if writer_thread.is_alive():
                 print("Warning: Writer thread did not complete in time")
         except Exception as e:
             print(f"Error waiting for writer thread: {e}")
 
         self.integrateContinue = False
+
+        # Calculate and print total integration time
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Integration completed in {elapsed_time:.2f} seconds ({elapsed_time / 60:.2f} minutes) for {total_points} point(s)")
+
         self.hdfTree.SetFocus()
         if self.hdfTree.GetSelection() == ofMe:
             if itemData is not None:
