@@ -1809,32 +1809,38 @@ class Integrator(wx.Frame, wx.Notebook):
     def _read_point_data_threadsafe(self, itemData: int) -> dict[str, Any]:
         """Thread-safe method to read point data from HDF5 file."""
         with self.hdf_lock:
+            # Get point dictionary reference once to avoid multiple __getitem__ calls
+            # which could trigger write_point on previous point during iteration
+            point_dict = self.hdfObject[itemData]
+
             # Read point data into a copy to avoid state conflicts
-            if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
-                self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
-                self.hdfObject.write_point(self.hdfObject[itemData])
+            if safe_eval_hdf(point_dict["det_0"]["pixel_map_changed"]):
+                point_dict["det_0"]["pixel_map_changed"] = "False"
+                self.hdfObject.write_point(point_dict, str(itemData))
                 self.hdfObject.read_point(str(itemData))
+                # Re-get the point_dict after read_point in case it changed
+                point_dict = self.hdfObject[itemData]
 
             # Create a deep copy of the point data we need
             point_data = {
-                "corrected_image": self.hdfObject[itemData]["det_0"]["corrected_image"],
-                "roi": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["roi"]),
-                "rotangle": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rotangle"]),
-                "bgrflag": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bgrflag"]),
-                "cnbgr": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cnbgr"]),
-                "cwidth": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cwidth"]),
-                "cpow": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cpow"]),
-                "ctan": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["ctan"]),
-                "rnbgr": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rnbgr"]),
-                "rwidth": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rwidth"]),
-                "rpow": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rpow"]),
-                "rtan": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rtan"]),
-                "nline": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["nline"]),
-                "filter": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["filter"]),
-                "compress": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["compress"]),
-                "image_max": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["image_max"]),
-                "image_changed": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["image_changed"]),
-                "F_changed": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["F_changed"]),
+                "corrected_image": point_dict["det_0"]["corrected_image"],
+                "roi": safe_eval_hdf(point_dict["det_0"]["roi"]),
+                "rotangle": safe_eval_hdf(point_dict["det_0"]["rotangle"]),
+                "bgrflag": safe_eval_hdf(point_dict["det_0"]["bgrflag"]),
+                "cnbgr": safe_eval_hdf(point_dict["det_0"]["cnbgr"]),
+                "cwidth": safe_eval_hdf(point_dict["det_0"]["cwidth"]),
+                "cpow": safe_eval_hdf(point_dict["det_0"]["cpow"]),
+                "ctan": safe_eval_hdf(point_dict["det_0"]["ctan"]),
+                "rnbgr": safe_eval_hdf(point_dict["det_0"]["rnbgr"]),
+                "rwidth": safe_eval_hdf(point_dict["det_0"]["rwidth"]),
+                "rpow": safe_eval_hdf(point_dict["det_0"]["rpow"]),
+                "rtan": safe_eval_hdf(point_dict["det_0"]["rtan"]),
+                "nline": safe_eval_hdf(point_dict["det_0"]["nline"]),
+                "filter": safe_eval_hdf(point_dict["det_0"]["filter"]),
+                "compress": safe_eval_hdf(point_dict["det_0"]["compress"]),
+                "image_max": safe_eval_hdf(point_dict["det_0"]["image_max"]),
+                "image_changed": safe_eval_hdf(point_dict["det_0"]["image_changed"]),
+                "F_changed": safe_eval_hdf(point_dict["det_0"]["F_changed"]),
             }
             return point_data
 
@@ -1945,7 +1951,10 @@ class Integrator(wx.Frame, wx.Notebook):
     def _process_point_F(self, itemData: int) -> dict[str, Any] | None:
         """Calculate F value for a point. Must be called with HDF lock held."""
         with self.hdf_lock:
-            if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_point"]):
+            # Get point dictionary reference once to avoid multiple __getitem__ calls
+            point_dict = self.hdfObject[itemData]
+
+            if safe_eval_hdf(point_dict["det_0"]["bad_point"]):
                 return {
                     "F": 0,
                     "Ferr": 0,
@@ -1955,15 +1964,15 @@ class Integrator(wx.Frame, wx.Notebook):
                 }
 
             sample_params = {
-                "dia": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_diameter"]),
-                "angles": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_angles"]),
-                "polygon": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_polygon"]),
+                "dia": safe_eval_hdf(point_dict["det_0"]["sample_diameter"]),
+                "angles": safe_eval_hdf(point_dict["det_0"]["sample_angles"]),
+                "polygon": safe_eval_hdf(point_dict["det_0"]["sample_polygon"]),
             }
             corr_params = {
-                "scale": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["scale"]),
-                "geom": self.hdfObject[itemData]["geom"],
-                "beam_slits": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["beam_slits"]),
-                "det_slits": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["det_slits"]),
+                "scale": safe_eval_hdf(point_dict["det_0"]["scale"]),
+                "geom": point_dict["geom"],
+                "beam_slits": safe_eval_hdf(point_dict["det_0"]["beam_slits"]),
+                "det_slits": safe_eval_hdf(point_dict["det_0"]["det_slits"]),
                 "sample": sample_params,
             }
             if corr_params["det_slits"] == {}:
@@ -1971,18 +1980,18 @@ class Integrator(wx.Frame, wx.Notebook):
 
             psicG = self.buildPsicG(itemData)
             scan_dict = {
-                "I": [self.hdfObject[itemData]["det_0"]["I"]],
-                "io": [self.hdfObject[itemData]["io"]],
-                "Ierr": [self.hdfObject[itemData]["det_0"]["Ierr"]],
-                "Ibgr": [self.hdfObject[itemData]["det_0"]["Ibgr"]],
+                "I": [point_dict["det_0"]["I"]],
+                "io": [point_dict["io"]],
+                "Ierr": [point_dict["det_0"]["Ierr"]],
+                "Ibgr": [point_dict["det_0"]["Ibgr"]],
                 "dims": (1, 0),
-                "transm": [self.hdfObject[itemData]["transm"]],
-                "phi": float(self.hdfObject[itemData].get("phi")),
-                "chi": float(self.hdfObject[itemData].get("chi")),
-                "eta": float(self.hdfObject[itemData].get("eta")),
-                "mu": float(self.hdfObject[itemData].get("mu")),
-                "nu": float(self.hdfObject[itemData].get("nu")),
-                "del": float(self.hdfObject[itemData].get("del")),
+                "transm": [point_dict["transm"]],
+                "phi": float(point_dict.get("phi")),
+                "chi": float(point_dict.get("chi")),
+                "eta": float(point_dict.get("eta")),
+                "mu": float(point_dict.get("mu")),
+                "nu": float(point_dict.get("nu")),
+                "del": float(point_dict.get("del")),
                 "G": psicG,
             }
             fDict = image_point_F(scan=scan_dict, point=0, corr_params=corr_params, preparsed=True)
