@@ -1732,7 +1732,8 @@ class Integrator(wx.Frame, wx.Notebook):
 
     def integratePoint(self, itemData: int) -> None:
         """Integrate a single data point without updating the GUI."""
-        if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
+        pixel_map_changed = self.hdfObject[itemData]["det_0"].get("pixel_map_changed", "False")
+        if safe_eval_hdf(pixel_map_changed):
             self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
             self.hdfObject.write_point(self.hdfObject[itemData])
             self.hdfObject.read_point(itemData)
@@ -1814,7 +1815,8 @@ class Integrator(wx.Frame, wx.Notebook):
             point_dict = self.hdfObject[itemData]
 
             # Read point data into a copy to avoid state conflicts
-            if safe_eval_hdf(point_dict["det_0"]["pixel_map_changed"]):
+            pixel_map_changed = point_dict["det_0"].get("pixel_map_changed", "False")
+            if safe_eval_hdf(pixel_map_changed):
                 point_dict["det_0"]["pixel_map_changed"] = "False"
                 self.hdfObject.write_point(point_dict, str(itemData))
                 self.hdfObject.read_point(str(itemData))
@@ -2227,7 +2229,8 @@ class Integrator(wx.Frame, wx.Notebook):
             self.updateLabels(itemData)
             self.hdfTree.SetFocus()
 
-        if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
+        pixel_map_changed = self.hdfObject[itemData]["det_0"].get("pixel_map_changed", "False")
+        if safe_eval_hdf(pixel_map_changed):
             self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
             self.hdfObject.write_point(self.hdfObject[itemData])
             self.hdfObject.read_point(itemData)
@@ -2422,7 +2425,8 @@ class Integrator(wx.Frame, wx.Notebook):
             self.clearFields()
             self.statusBar.SetStatusText(self.hdfTree.GetItemText(ofMe))
         else:
-            if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
+            pixel_map_changed = self.hdfObject[itemData]["det_0"].get("pixel_map_changed", "False")
+            if safe_eval_hdf(pixel_map_changed):
                 self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
             if self.keepMaxToggle.GetValue():
                 self.hdfObject[itemData]["det_0"]["image_max"] = str(self.imageMaxField.GetValue())

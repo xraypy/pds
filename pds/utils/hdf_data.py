@@ -304,11 +304,19 @@ class HdfDataFile:
                 det_str = "det_%i" % current_det_num
                 self.point_dict[det_str] = {}
                 for key in DET_KEYS:
-                    key_loc = DET_KEYS[key]
-                    key_loc_path = key_loc[0] % (current_det_num, self.version)
-                    self.point_dict[det_str][key] = self.file[num][key_loc_path][key_loc[1]]
+                    try:
+                        key_loc = DET_KEYS[key]
+                        key_loc_path = key_loc[0] % (current_det_num, self.version)
+                        self.point_dict[det_str][key] = self.file[num][key_loc_path][key_loc[1]]
+                    except (KeyError, OSError, IOError):
+                        # Key doesn't exist in file, skip it
+                        pass
                 for key in DET_ATT_KEYS:
-                    self.point_dict[det_str][key] = self.file[num][det_str].attrs[key]
+                    try:
+                        self.point_dict[det_str][key] = self.file[num][det_str].attrs[key]
+                    except (KeyError, OSError, IOError):
+                        # Key doesn't exist in file, skip it
+                        pass
                 try:
                     point_image = numpy.array(self.file[num][det_str]["image_data"])
                     self.point_dict[det_str]["image_data"] = point_image
