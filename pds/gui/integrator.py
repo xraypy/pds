@@ -1,6 +1,9 @@
 import math
 import os
+import queue
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import matplotlib
@@ -28,6 +31,9 @@ class Integrator(wx.Frame, wx.Notebook):
         self.hdfTreeObject = None
         self.customTreeObject = None
         self.lastDirectory = os.getcwd()  # Track last used directory
+        # Threading support
+        self.hdf_lock = threading.Lock()  # Lock for HDF5 file access
+        self.integrateContinue = False  # Flag for cancellation
 
         wx.Frame.__init__(self, args[0], -1, title="HDF Integrator", size=(1024, 780))
 
@@ -723,7 +729,12 @@ class Integrator(wx.Frame, wx.Notebook):
     def loadFileDialog(self, event: wx.Event) -> None:
         """Open a dialog to choose an HDF file to load."""
         loadDialog = wx.FileDialog(
-            self, message="Load file...", defaultDir=self.lastDirectory, defaultFile="", wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*", style=wx.FD_OPEN
+            self,
+            message="Load file...",
+            defaultDir=self.lastDirectory,
+            defaultFile="",
+            wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*",
+            style=wx.FD_OPEN,
         )
         if loadDialog.ShowModal() == wx.ID_OK:
             if not os.path.isfile(loadDialog.GetPath()):
@@ -731,7 +742,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 return
             # Update last directory
             self.lastDirectory = os.path.dirname(loadDialog.GetPath())
-            
+
             try:
                 self.hdfObject.close()
                 self.lockFile.release()
@@ -1226,7 +1237,7 @@ class Integrator(wx.Frame, wx.Notebook):
                         # Ensure all values are numeric
                         new_value = [int(v) for v in new_value]
                     except (ValueError, TypeError):
-                        print(f"Invalid ROI format: all values must be integers")
+                        print("Invalid ROI format: all values must be integers")
                         # Get the current value and ensure it's properly formatted
                         current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
                         whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
@@ -1483,11 +1494,12 @@ class Integrator(wx.Frame, wx.Notebook):
         self.updateLabels(itemData)
 
     def integrateSelectedScan(self, event: wx.Event) -> None:
-        """Integrate all points in the currently selected scan."""
+        """Integrate all points in the currently selected scan using threading."""
         ofMe = self.hdfTree.GetSelection()
         itemData = self.hdfTree.GetItemData(ofMe)
         updateThese = []
         if itemData is None:
+            myParent = ofMe  # When itemData is None, ofMe is the parent
             firstChild, cookie = self.hdfTree.GetFirstChild(ofMe)
             childData = self.hdfTree.GetItemData(firstChild)
             if childData is None:
@@ -1504,32 +1516,85 @@ class Integrator(wx.Frame, wx.Notebook):
                 updateThese.append(iterData)
                 item, cookie = self.hdfTree.GetNextChild(myParent, cookie)
 
+        if len(updateThese) == 0:
+            return
+
         self.integrateContinue = True
-        integrateProgress = 0
         self.onSize(None)
         self.integrateCancel.Show()
+
+        # Create queues for coordination
+        task_queue = queue.Queue()
+        result_queue = queue.Queue()
+
+        # Add all points to task queue
         for iterData in updateThese:
-            iterItem = self.hdfTreeObject.reverseLookup[iterData]
-            iterString = self.hdfTreeObject.statusString(self.hdfTree, self.hdfObject, iterItem)
-            self.statusBar.SetStatusText("Integrating " + iterString, 2)
+            task_queue.put(iterData)
+
+        total_points = len(updateThese)
+
+        # Progress callback for GUI updates
+        def update_progress(iterData, written, total):
+            """Update GUI progress from writer thread."""
             if not self.integrateContinue:
-                print("Integration aborted on " + iterString.lower())
-                break
+                return
             try:
-                if safe_eval_hdf(self.hdfObject[iterData]["det_0"]["image_changed"]):
-                    self.integratePoint(iterData)
-                if safe_eval_hdf(self.hdfObject[iterData]["det_0"]["F_changed"]):
-                    self.updateF(iterData)
-            except:
-                print("Error reading " + iterString.lower())
-                raise
-            integrateProgress += 1
-            while wx.GetApp().HasPendingEvents():
-                wx.GetApp().Yield(True)
+                iterItem = self.hdfTreeObject.reverseLookup[iterData]
+                iterString = self.hdfTreeObject.statusString(self.hdfTree, self.hdfObject, iterItem)
+                self.statusBar.SetStatusText(f"Integrating {iterString} ({written}/{total})", 2)
+                # Process GUI events periodically
+                if written % max(1, total // 10) == 0:  # Update every 10%
+                    while wx.GetApp().HasPendingEvents():
+                        wx.GetApp().Yield(True)
+            except Exception:
+                pass  # Ignore errors in progress updates
+
+        # Start writer thread
+        writer_thread = threading.Thread(target=self._write_results_worker, args=(result_queue, total_points, update_progress), daemon=True)
+        writer_thread.start()
+
+        # Process points in parallel using thread pool
+        num_workers = min(4, total_points)  # Use up to 4 worker threads
+        try:
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                # Submit all worker tasks
+                futures = []
+                for _ in range(num_workers):
+                    future = executor.submit(self._integrate_point_worker, task_queue, result_queue)
+                    futures.append(future)
+
+                # Wait for all workers to complete
+                for future in as_completed(futures):
+                    try:
+                        future.result()
+                    except Exception as e:
+                        print(f"Worker thread error: {e}")
+                        import traceback
+
+                        traceback.print_exc()
+        except Exception as e:
+            print(f"Error in thread pool: {e}")
+            import traceback
+
+            traceback.print_exc()
+            self.integrateContinue = False
+
+        # Wait for writer thread to finish
+        try:
+            writer_thread.join(timeout=300)  # 5 minute timeout
+            if writer_thread.is_alive():
+                print("Warning: Writer thread did not complete in time")
+        except Exception as e:
+            print(f"Error waiting for writer thread: {e}")
+
         self.integrateContinue = False
         self.hdfTree.SetFocus()
-        if self.hdfTree.GetSelection() == ofMe and itemData is not None:
-            self.updateRodPlot(myParent, itemData)
+        if self.hdfTree.GetSelection() == ofMe:
+            if itemData is not None:
+                self.updateRodPlot(myParent, itemData)
+            elif len(updateThese) > 0:
+                # When itemData is None, use first child's data for rod plot
+                self.updateRodPlot(myParent, updateThese[0])
         self.statusBar.SetStatusText("", 2)
         self.integrateCancel.Hide()
         return
@@ -1712,6 +1777,318 @@ class Integrator(wx.Frame, wx.Notebook):
         ) = imageAna.get_vars()
         self.hdfObject[itemData]["det_0"]["integrated"] = str(integrated)
         self.updateF(itemData)
+
+    def _read_point_data_threadsafe(self, itemData: int) -> dict[str, Any]:
+        """Thread-safe method to read point data from HDF5 file."""
+        with self.hdf_lock:
+            # Read point data into a copy to avoid state conflicts
+            if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["pixel_map_changed"]):
+                self.hdfObject[itemData]["det_0"]["pixel_map_changed"] = "False"
+                self.hdfObject.write_point(self.hdfObject[itemData])
+                self.hdfObject.read_point(str(itemData))
+
+            # Create a deep copy of the point data we need
+            point_data = {
+                "corrected_image": self.hdfObject[itemData]["det_0"]["corrected_image"],
+                "roi": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["roi"]),
+                "rotangle": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rotangle"]),
+                "bgrflag": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bgrflag"]),
+                "cnbgr": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cnbgr"]),
+                "cwidth": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cwidth"]),
+                "cpow": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["cpow"]),
+                "ctan": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["ctan"]),
+                "rnbgr": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rnbgr"]),
+                "rwidth": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rwidth"]),
+                "rpow": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rpow"]),
+                "rtan": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["rtan"]),
+                "nline": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["nline"]),
+                "filter": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["filter"]),
+                "compress": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["compress"]),
+                "image_max": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["image_max"]),
+                "image_changed": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["image_changed"]),
+                "F_changed": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["F_changed"]),
+            }
+            return point_data
+
+    def _process_point_integration(self, itemData: int, point_data: dict[str, Any]) -> dict[str, Any] | None:
+        """Process integration for a single point. Returns results dict or None if skipped."""
+        # Check if we need to integrate
+        if not point_data["image_changed"]:
+            return None
+
+        corrected_image = point_data["corrected_image"]
+
+        # Validate image data
+        if corrected_image is None:
+            return {
+                "I": 0.0,
+                "Ierr": 0.0,
+                "Ibgr": 0.0,
+                "I_c": 0.0,
+                "Ierr_c": 0.0,
+                "Ibgr_c": 0.0,
+                "I_r": 0.0,
+                "Ierr_r": 0.0,
+                "Ibgr_r": 0.0,
+                "integrated": False,
+            }
+
+        # Check if corrected_image is bytes literal like b'[]' which indicates missing data
+        if isinstance(corrected_image, bytes) or (isinstance(corrected_image, str) and corrected_image.startswith("b'")):
+            return {
+                "I": 0.0,
+                "Ierr": 0.0,
+                "Ibgr": 0.0,
+                "I_c": 0.0,
+                "Ierr_c": 0.0,
+                "Ibgr_c": 0.0,
+                "I_r": 0.0,
+                "Ierr_r": 0.0,
+                "Ibgr_r": 0.0,
+                "integrated": False,
+            }
+
+        # Check if corrected_image has the expected shape attribute for numpy arrays
+        if not hasattr(corrected_image, "shape"):
+            return {
+                "I": 0.0,
+                "Ierr": 0.0,
+                "Ibgr": 0.0,
+                "I_c": 0.0,
+                "Ierr_c": 0.0,
+                "Ibgr_c": 0.0,
+                "I_r": 0.0,
+                "Ierr_r": 0.0,
+                "Ibgr_r": 0.0,
+                "integrated": False,
+            }
+
+        # Perform integration
+        imageAna = ImageAna(
+            corrected_image,
+            point_data["roi"],
+            point_data["rotangle"],
+            point_data["bgrflag"],
+            point_data["cnbgr"],
+            point_data["cwidth"],
+            point_data["cpow"],
+            point_data["ctan"],
+            point_data["rnbgr"],
+            point_data["rwidth"],
+            point_data["rpow"],
+            point_data["rtan"],
+            point_data["nline"],
+            point_data["filter"],
+            point_data["compress"],
+            False,  # 'plot'
+            None,  # 'fig'
+            "",  # 'figtitle'
+            im_max=point_data["image_max"],
+        )
+
+        (
+            holding1,  # 'clpimg',
+            holding2,  # 'bgrimg',
+            integrated,
+            I,  # noqa: E741
+            Ibgr,
+            Ierr,
+            I_c,
+            I_r,
+            Ibgr_c,
+            Ibgr_r,
+            Ierr_c,
+            Ierr_r,
+        ) = imageAna.get_vars()
+
+        return {
+            "I": I,
+            "Ibgr": Ibgr,
+            "Ierr": Ierr,
+            "I_c": I_c,
+            "I_r": I_r,
+            "Ibgr_c": Ibgr_c,
+            "Ibgr_r": Ibgr_r,
+            "Ierr_c": Ierr_c,
+            "Ierr_r": Ierr_r,
+            "integrated": integrated,
+        }
+
+    def _process_point_F(self, itemData: int) -> dict[str, Any] | None:
+        """Calculate F value for a point. Must be called with HDF lock held."""
+        with self.hdf_lock:
+            if safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_point"]):
+                return {
+                    "F": 0,
+                    "Ferr": 0,
+                    "ctot": 0.0,
+                    "alpha": 0.0,
+                    "beta": 0.0,
+                }
+
+            sample_params = {
+                "dia": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_diameter"]),
+                "angles": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_angles"]),
+                "polygon": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["sample_polygon"]),
+            }
+            corr_params = {
+                "scale": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["scale"]),
+                "geom": self.hdfObject[itemData]["geom"],
+                "beam_slits": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["beam_slits"]),
+                "det_slits": safe_eval_hdf(self.hdfObject[itemData]["det_0"]["det_slits"]),
+                "sample": sample_params,
+            }
+            if corr_params["det_slits"] == {}:
+                corr_params["det_slits"] = None
+
+            psicG = self.buildPsicG(itemData)
+            scan_dict = {
+                "I": [self.hdfObject[itemData]["det_0"]["I"]],
+                "io": [self.hdfObject[itemData]["io"]],
+                "Ierr": [self.hdfObject[itemData]["det_0"]["Ierr"]],
+                "Ibgr": [self.hdfObject[itemData]["det_0"]["Ibgr"]],
+                "dims": (1, 0),
+                "transm": [self.hdfObject[itemData]["transm"]],
+                "phi": float(self.hdfObject[itemData].get("phi")),
+                "chi": float(self.hdfObject[itemData].get("chi")),
+                "eta": float(self.hdfObject[itemData].get("eta")),
+                "mu": float(self.hdfObject[itemData].get("mu")),
+                "nu": float(self.hdfObject[itemData].get("nu")),
+                "del": float(self.hdfObject[itemData].get("del")),
+                "G": psicG,
+            }
+            fDict = image_point_F(scan=scan_dict, point=0, corr_params=corr_params, preparsed=True)
+            return {
+                "F": fDict["F"],
+                "Ferr": fDict["Ferr"],
+                "ctot": fDict["ctot"],
+                "alpha": fDict["alpha"],
+                "beta": fDict["beta"],
+            }
+
+    def _write_point_results(self, itemData: int, integration_results: dict[str, Any] | None, f_results: dict[str, Any] | None) -> None:
+        """Write integration and F results back to HDF5 file. Must be called with lock."""
+        with self.hdf_lock:
+            if integration_results is not None:
+                self.hdfObject[itemData]["det_0"]["image_changed"] = "False"
+                self.hdfObject[itemData]["det_0"]["F_changed"] = 1.0
+                self.hdfObject[itemData]["det_0"]["I"] = integration_results["I"]
+                self.hdfObject[itemData]["det_0"]["Ibgr"] = integration_results["Ibgr"]
+                self.hdfObject[itemData]["det_0"]["Ierr"] = integration_results["Ierr"]
+                self.hdfObject[itemData]["det_0"]["I_c"] = integration_results["I_c"]
+                self.hdfObject[itemData]["det_0"]["I_r"] = integration_results["I_r"]
+                self.hdfObject[itemData]["det_0"]["Ibgr_c"] = integration_results["Ibgr_c"]
+                self.hdfObject[itemData]["det_0"]["Ibgr_r"] = integration_results["Ibgr_r"]
+                self.hdfObject[itemData]["det_0"]["Ierr_c"] = integration_results["Ierr_c"]
+                self.hdfObject[itemData]["det_0"]["Ierr_r"] = integration_results["Ierr_r"]
+                self.hdfObject[itemData]["det_0"]["integrated"] = str(integration_results["integrated"])
+
+            if f_results is not None:
+                self.hdfObject[itemData]["det_0"]["F"] = f_results["F"]
+                self.hdfObject[itemData]["det_0"]["Ferr"] = f_results["Ferr"]
+                self.hdfObject[itemData]["det_0"]["ctot"] = f_results["ctot"]
+                self.hdfObject[itemData]["det_0"]["alpha"] = f_results["alpha"]
+                self.hdfObject[itemData]["det_0"]["beta"] = f_results["beta"]
+                self.hdfObject[itemData]["det_0"]["F_changed"] = 0.0
+
+            # Write the point data (write_point will use current point from __getitem__)
+            self.hdfObject.write_point(self.hdfObject[itemData])
+
+    def _integrate_point_worker(self, task_queue: queue.Queue, result_queue: queue.Queue) -> None:
+        """Worker thread: reads and processes a single point."""
+        while True:
+            try:
+                # Check for cancellation
+                if not self.integrateContinue:
+                    break
+
+                try:
+                    iterData = task_queue.get(timeout=0.1)
+                except queue.Empty:
+                    break
+
+                try:
+                    # Read point data (thread-safe)
+                    point_data = self._read_point_data_threadsafe(iterData)
+
+                    # Process integration (CPU-bound, NumPy releases GIL)
+                    integration_results = self._process_point_integration(iterData, point_data)
+
+                    # Process F calculation if needed
+                    f_results = None
+                    if point_data["F_changed"] or integration_results is not None:
+                        # For F calculation, we need to read I values after integration
+                        # So we'll do this in the writer thread after results are written
+                        pass
+
+                    # Send results to writer
+                    result_queue.put((iterData, integration_results, f_results, point_data))
+
+                except Exception as e:
+                    print(f"Error processing point {iterData}: {e}")
+                    import traceback
+
+                    traceback.print_exc()
+                    result_queue.put((iterData, None, None, None))
+                finally:
+                    task_queue.task_done()
+
+            except Exception as e:
+                print(f"Error in worker thread: {e}")
+                import traceback
+
+                traceback.print_exc()
+                break
+
+    def _write_results_worker(self, result_queue: queue.Queue, total_points: int, progress_callback) -> None:
+        """Single writer thread: writes results sequentially to HDF5."""
+        written = 0
+        while written < total_points:
+            if not self.integrateContinue:
+                # Drain queue on cancellation
+                try:
+                    while not result_queue.empty():
+                        result_queue.get_nowait()
+                except queue.Empty:
+                    pass
+                break
+
+            try:
+                item = result_queue.get(timeout=1.0)
+                iterData, integration_results, f_results, point_data = item
+
+                try:
+                    # Write integration results first
+                    self._write_point_results(iterData, integration_results, None)
+
+                    # Calculate F if needed (after I values are written)
+                    f_results = None
+                    if point_data and (point_data["F_changed"] or integration_results is not None):
+                        f_results = self._process_point_F(iterData)
+                        if f_results:
+                            # Write F results using the same method for consistency
+                            self._write_point_results(iterData, None, f_results)
+
+                    written += 1
+
+                    # Update progress on main thread
+                    if progress_callback:
+                        wx.CallAfter(progress_callback, iterData, written, total_points)
+
+                except Exception as e:
+                    print(f"Error writing point {iterData}: {e}")
+                    import traceback
+
+                    traceback.print_exc()
+
+            except queue.Empty:
+                continue
+            except Exception as e:
+                print(f"Error in writer thread: {e}")
+                import traceback
+
+                traceback.print_exc()
+                break
 
     def updateRodPlot(self, myParent: Any, itemData: int) -> None:
         """Update the rod plot showing L vs I/F values."""
