@@ -425,7 +425,7 @@ class HdfDataFile:
         """Write dictionary data to file. Uses current point if num not specified."""
         if num is None:
             num = self.point
-        for key in data:
+        for key in list(data.keys()):
             # Handle both string and bytes keys - match original Python 2 behavior
             original_key = key
             str_key = bytes_to_str(key) if isinstance(key, bytes) else key
@@ -438,7 +438,7 @@ class HdfDataFile:
             elif str_key.startswith("det_"):
                 if original_key in data:
                     det_dict = data[original_key]
-                    for det_key in det_dict:
+                    for det_key in list(det_dict.keys()):
                         try:
                             key_loc = DET_KEYS[det_key]
                             key_loc_path = key_loc[0].split("/")[1] % self.version
