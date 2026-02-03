@@ -1,40 +1,40 @@
+#!/usr/bin/python
+# ----------------------------------------------------------------------------------
+# Project: pds
+# File: tests/core/imaging/test_image_data.py
+# ----------------------------------------------------------------------------------
+# Purpose:
+# Tests for pds.core.imaging.image_data (read/correct, ROI, line sums, ImageAna/ImageScan).
+# ----------------------------------------------------------------------------------
+# Author: Christofanis Skordas
+#
+# Copyright (C) 2025-2026 GSECARS, The University of Chicago, USA
+# Copyright (C) 2025-2026 NSF SEES, USA
+# ----------------------------------------------------------------------------------
+
 import sys
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
 
-# Add the pds module to the path
-sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
+# Add the project root to the path
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from pds.utils.image_data import IMG_BGR_PARAMS, ImageAna, ImageScan, _sort_roi, calc_roi, clip_image, image_bgr, line_sum, line_sum_integral, pixel_mask
-
-
-@pytest.fixture
-def test_image_simple():
-    """Simple image for basic functionality."""
-    np.random.seed(42)
-
-    # Create a simple test image with some peaks
-    image = np.zeros((50, 60), dtype=np.int32)
-
-    # Add some background
-    for i in range(50):
-        for j in range(60):
-            image[i, j] = int(10 + 5 * np.sin(i / 10.0) + 3 * np.cos(j / 8.0))
-
-    # Add some peaks
-    image[20:25, 25:30] += 100
-    image[35:38, 45:48] += 50
-
-    # Add some noise
-    noise = np.random.randint(-5, 6, size=(50, 60))
-    image = image + noise
-
-    # Ensure no negative values
-    image = np.maximum(image, 0)
-
-    return image.astype(np.int32)
+from pds.core.imaging.image_data import (
+    IMG_BGR_PARAMS,
+    ImageAna,
+    ImageArray,
+    ImageScan,
+    _sort_roi,
+    calc_roi,
+    clip_image,
+    image_bgr,
+    line_sum,
+    line_sum_integral,
+    pixel_mask,
+)
 
 
 class TestBasicFunctions:
@@ -145,9 +145,10 @@ class TestImageScan:
         """Test basic ImageScan functionality."""
         images = [test_image_simple, test_image_simple * 0.8]
 
-        scan = ImageScan(image=images)
+        scan = ImageScan(image=cast(list[ImageArray], images))
 
         assert len(scan.image) == 2
+        assert scan.rois is not None
         assert len(scan.rois) == 2
 
 
@@ -242,7 +243,7 @@ class TestHDF5Compatibility:
 
     def test_basic_hdf5_write_read_cycle(self):
         """Test basic HDF5 write/read cycle with string handling."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Note: Using ASCII-safe names to avoid PyTables warnings while still testing Unicode in descriptions
         setnames = ["S001", "scan_data", "test_dataset_unicode", "chinese_dataset"]
@@ -250,7 +251,7 @@ class TestHDF5Compatibility:
 
         for setname, description in zip(setnames, descriptions):
             # Create ImageList with HDF5 storage
-            img_list = _ImageList(images=self.test_images, file=self.test_file, path=self.test_dir, setname=setname, descr=description)
+            img_list = _ImageList(images=cast(list[ImageArray], self.test_images), file=self.test_file, path=self.test_dir, setname=setname, descr=description)
 
             # Verify basic properties
             assert len(img_list) == len(self.test_images)
@@ -259,81 +260,77 @@ class TestHDF5Compatibility:
 
             # Test reading back the images
             for i, original_image in enumerate(self.test_images):
-                retrieved_image = img_list[i]
+                retrieved_image = cast(ImageArray, img_list[i])
                 np.testing.assert_array_equal(retrieved_image, original_image)
                 assert retrieved_image.dtype == original_image.dtype
 
     def test_string_encoding_in_descriptions(self):
         """Test that string descriptions are properly encoded in HDF5."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Test with various Unicode strings
-        descriptions = [
-            "Simple ASCII description",
-        ]
+        descriptions = ["Simple ASCII description"]
 
         for i, descr in enumerate(descriptions):
             setname = f"S{i:03d}"
             img_list = _ImageList(
-                images=self.test_images[:1],
-                file=f"test_unicode_{i}.h5",
-                path=self.test_dir,
-                setname=setname,
-                descr=descr,
+                images=cast(list[ImageArray], self.test_images[:1]), file=f"test_unicode_{i}.h5", path=self.test_dir, setname=setname, descr=descr
             )
 
             # Verify we can read back the data
-            retrieved_image = img_list[0]
+            retrieved_image = cast(ImageArray, img_list[0])
             np.testing.assert_array_equal(retrieved_image, self.test_images[0])
 
     def test_hdf5_file_path_handling(self):
         """Test HDF5 file path handling with various formats."""
         import os
 
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Test absolute paths
         abs_path = os.path.abspath(self.test_dir)
-        img_list = _ImageList(images=self.test_images[:1], file="abs_path_test.h5", path=abs_path, setname="abs_test")
+        img_list = _ImageList(images=cast(list[ImageArray], self.test_images[:1]), file="abs_path_test.h5", path=abs_path, setname="abs_test")
         assert os.path.exists(img_list._make_fname())
 
         # Test relative paths
         rel_path = os.path.relpath(self.test_dir)
-        img_list = _ImageList(images=self.test_images[:1], file="rel_path_test.h5", path=rel_path, setname="rel_test")
+        img_list = _ImageList(images=cast(list[ImageArray], self.test_images[:1]), file="rel_path_test.h5", path=rel_path, setname="rel_test")
         assert os.path.exists(img_list._make_fname())
 
         # Test None path (current directory)
         original_cwd = os.getcwd()
         try:
             os.chdir(self.test_dir)
-            img_list = _ImageList(images=self.test_images[:1], file="none_path_test.h5", path=None, setname="none_test")
+            img_list = _ImageList(images=cast(list[ImageArray], self.test_images[:1]), file="none_path_test.h5", path=None, setname="none_test")
             assert os.path.exists(img_list._make_fname())
         finally:
             os.chdir(original_cwd)
 
     def test_large_dataset_handling(self):
         """Test handling of larger datasets to ensure memory efficiency."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Create larger test images
         large_images = [np.random.randint(0, 65535, size=(500, 487), dtype=np.int32) for _ in range(10)]
 
-        img_list = _ImageList(images=large_images, file="large_dataset.h5", path=self.test_dir, setname="large_data", descr="Large dataset test")
+        img_list = _ImageList(
+            images=cast(list[ImageArray], large_images), file="large_dataset.h5", path=self.test_dir, setname="large_data", descr="Large dataset test"
+        )
 
         # Test random access
         indices_to_test = [0, 3, 7, 9]
         for idx in indices_to_test:
-            retrieved_image = img_list[idx]
+            retrieved_image = cast(ImageArray, img_list[idx])
             np.testing.assert_array_equal(retrieved_image, large_images[idx])
 
         # Test slice access
         slice_images = img_list[2:5]
         for i, retrieved_image in enumerate(slice_images):
-            np.testing.assert_array_equal(retrieved_image, large_images[2 + i])
+            np.testing.assert_array_equal(cast(ImageArray, retrieved_image), large_images[2 + i])
 
     def test_edge_cases_and_error_handling(self):
         """Test edge cases and error handling for robustness."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Test with empty image list
         empty_list = _ImageList(images=None, file="empty_test.h5", path=self.test_dir, setname="empty")
@@ -345,7 +342,7 @@ class TestHDF5Compatibility:
         assert result is None
 
         # Test with invalid index access
-        img_list = _ImageList(images=self.test_images, file="error_test.h5", path=self.test_dir, setname="error_test")
+        img_list = _ImageList(images=cast(list[ImageArray], self.test_images), file="error_test.h5", path=self.test_dir, setname="error_test")
 
         with pytest.raises(IndexError):
             _ = img_list[len(self.test_images) + 1]
@@ -355,11 +352,15 @@ class TestHDF5Compatibility:
 
     def test_concurrent_access_safety(self):
         """Test that multiple readers can safely access the same HDF5 file."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Create initial dataset
         img_list1 = _ImageList(
-            images=self.test_images, file="concurrent_test.h5", path=self.test_dir, setname="concurrent_data", descr="Concurrent access test"
+            images=cast(list[ImageArray], self.test_images),
+            file="concurrent_test.h5",
+            path=self.test_dir,
+            setname="concurrent_data",
+            descr="Concurrent access test",
         )
 
         # Create second reader for same file
@@ -374,7 +375,7 @@ class TestHDF5Compatibility:
 
     def test_data_type_preservation(self):
         """Test that data types are preserved correctly in HDF5 storage."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Test with different data types
         test_dtypes = [np.int16, np.int32, np.uint16, np.uint32]
@@ -384,7 +385,7 @@ class TestHDF5Compatibility:
             typed_images = [np.random.randint(0, 1000, size=(50, 75), dtype=dtype) for _ in range(2)]
 
             img_list = _ImageList(
-                images=typed_images,
+                images=cast(list[ImageArray], typed_images),
                 file=f"dtype_test_{dtype.__name__}.h5",
                 path=self.test_dir,
                 setname=f"dtype_{dtype.__name__}",
@@ -393,7 +394,7 @@ class TestHDF5Compatibility:
 
             # Verify data type preservation
             for i, original in enumerate(typed_images):
-                retrieved = img_list[i]
+                retrieved = cast(ImageArray, img_list[i])
                 assert retrieved.dtype == original.dtype
                 np.testing.assert_array_equal(retrieved, original)
 
@@ -401,10 +402,16 @@ class TestHDF5Compatibility:
         """Test that HDF5 metadata is properly encoded/decoded."""
         import tables
 
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Create dataset with metadata
-        img_list = _ImageList(images=self.test_images[:1], file="metadata_test.h5", path=self.test_dir, setname="metadata_test", descr="Metadata encoding test")
+        img_list = _ImageList(
+            images=cast(list[ImageArray], self.test_images[:1]),
+            file="metadata_test.h5",
+            path=self.test_dir,
+            setname="metadata_test",
+            descr="Metadata encoding test",
+        )
 
         # Open file directly with PyTables to inspect metadata
         fname = img_list._make_fname()
@@ -415,38 +422,34 @@ class TestHDF5Compatibility:
 
             # Check that we can read the images array
             images_node = h.get_node("/image_data/metadata_test", "images")
-            data = images_node.read()
+            data = getattr(images_node, "read")()
             np.testing.assert_array_equal(data[0], self.test_images[0])
 
     def test_cleanup_functionality(self):
         """Test that cleanup functionality works properly."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
-        img_list = _ImageList(images=self.test_images, file="cleanup_test.h5", path=self.test_dir, setname="cleanup_test")
+        img_list = _ImageList(images=cast(list[ImageArray], self.test_images), file="cleanup_test.h5", path=self.test_dir, setname="cleanup_test")
 
         # Force cleanup
         img_list._cleanup()
 
         # Should still be able to read data after cleanup
-        retrieved = img_list[0]
+        retrieved = cast(ImageArray, img_list[0])
         np.testing.assert_array_equal(retrieved, self.test_images[0])
 
     def test_existing_dataset_handling(self):
         """Test behavior when dataset already exists."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Create initial dataset
-        img_list1 = _ImageList(images=self.test_images, file="existing_test.h5", path=self.test_dir, setname="existing_data", descr="Original dataset")
+        img_list1 = _ImageList(
+            images=cast(list[ImageArray], self.test_images), file="existing_test.h5", path=self.test_dir, setname="existing_data", descr="Original dataset"
+        )
 
         # Try to create another dataset with same name. This should warn but not overwrite.
         new_images = [np.zeros((10, 10), dtype=np.int32)]
-        _ImageList(
-            images=new_images,
-            file="existing_test.h5",
-            path=self.test_dir,
-            setname="existing_data",
-            descr="Attempted overwrite",
-        )
+        _ImageList(images=cast(list[ImageArray], new_images), file="existing_test.h5", path=self.test_dir, setname="existing_data", descr="Attempted overwrite")
 
         # Original data should still be accessible
         original_data = img_list1[0]
@@ -454,16 +457,15 @@ class TestHDF5Compatibility:
 
     def test_bytes_string_compatibility(self):
         """Test explicit bytes/string compatibility for Python 2/3 migration."""
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Test setnames as both str and bytes-like
-        test_cases = [
-            ("string_setname", "String setname test"),
-            ("byte_setname", b"Byte setname test".decode("utf-8")),
-        ]
+        test_cases = [("string_setname", "String setname test"), ("byte_setname", b"Byte setname test".decode("utf-8"))]
 
         for setname, description in test_cases:
-            img_list = _ImageList(images=self.test_images[:1], file=f"compat_test_{setname}.h5", path=self.test_dir, setname=setname, descr=description)
+            img_list = _ImageList(
+                images=cast(list[ImageArray], self.test_images[:1]), file=f"compat_test_{setname}.h5", path=self.test_dir, setname=setname, descr=description
+            )
 
             # Verify successful storage and retrieval
             assert len(img_list) == 1
@@ -477,7 +479,7 @@ class TestHDF5Compatibility:
         """Test specific PyTables string encoding edge cases from Python 2->3 migration."""
         import os
 
-        from pds.utils.image_data import _ImageList
+        from pds.core.imaging.image_data import _ImageList
 
         # Test scenarios that could cause issues during migration
         edge_cases = [
@@ -493,7 +495,9 @@ class TestHDF5Compatibility:
 
         for setname, description in edge_cases:
             # This should handle any encoding issues gracefully
-            img_list = _ImageList(images=self.test_images[:1], file=f"encoding_edge_{setname}.h5", path=self.test_dir, setname=setname, descr=description)
+            img_list = _ImageList(
+                images=cast(list[ImageArray], self.test_images[:1]), file=f"encoding_edge_{setname}.h5", path=self.test_dir, setname=setname, descr=description
+            )
 
             # Verify successful storage
             assert len(img_list) == 1
@@ -518,7 +522,7 @@ class TestHDF5Compatibility:
         archive_config = {"file": "integration_test.h5", "path": self.test_dir, "setname": "integration_scan", "descr": "Integration test scan data"}
 
         # Create ImageScan with HDF5 archive
-        scan = ImageScan(image=test_images, archive=archive_config)
+        scan = ImageScan(image=cast(list[ImageArray], test_images), archive=archive_config)
 
         # Verify the archive was created and works
         assert hasattr(scan.image, "file")
@@ -535,15 +539,10 @@ class TestHDF5Compatibility:
         test_images = [np.random.randint(0, 500, size=(50, 75), dtype=np.int32) for _ in range(3)]
 
         # Test with Unicode strings in all configuration
-        archive_config = {
-            "file": "unicode_intégration_.h5",
-            "path": self.test_dir,
-            "setname": "scan_data_unicode",
-            "descr": "Integration test",
-        }
+        archive_config = {"file": "unicode_intégration_.h5", "path": self.test_dir, "setname": "scan_data_unicode", "descr": "Integration test"}
 
         # This should not raise any encoding errors
-        scan = ImageScan(image=test_images, archive=archive_config)
+        scan = ImageScan(image=cast(list[ImageArray], test_images), archive=archive_config)
 
         # Verify all operations work with Unicode
         assert len(scan.image) == len(test_images)

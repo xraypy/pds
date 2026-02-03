@@ -1,7 +1,24 @@
+#!/usr/bin/python
+# ----------------------------------------------------------------------------------
+# Project: pds
+# File: pds/core/imaging/background.py
+# ----------------------------------------------------------------------------------
+# Purpose:
+# Kajfosz-Kwiatek polynomial background under curves; linear_background, compress
+# and expand.
+# ----------------------------------------------------------------------------------
+# Author: Christofanis Skordas
+#
+# Copyright (C) 2025-2026 GSECARS, The University of Chicago, USA
+# Copyright (C) 2025-2026 NSF SEES, USA
+# ----------------------------------------------------------------------------------
+
+__all__ = ["background"]
+
 import time
 
+import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import pyplot
 from scipy.stats import linregress
 
 
@@ -20,16 +37,16 @@ def linear_background(data: np.ndarray, nbgr: int = 0) -> np.ndarray:
     return slope * np.arange(ndat) + intercept
 
 
-def background(data: np.ndarray, nbgr: int = 0, width: int = 0, pow: float = 0.5, tangent: bool = False, compress: int = 1) -> np.ndarray:
+def background(data: np.ndarray, nbgr: int = 0, width: int = 0, power: float = 0.5, tangent: bool = False, compress: int = 1) -> np.ndarray:
     """Calculate polynomial background under a curve using Kajfosz-Kwiatek algorithm."""
     # Validate and fix power parameter
-    if pow < 0.0:
+    if power < 0.0:
         print("Warning power is less than 0, changing it to positive")
-        pow = abs(pow)
+        power = abs(power)
 
     # Calculate and subtract linear background
     linbgr = linear_background(data, nbgr=nbgr)
-    if width <= 0.0 or pow == 0.0:
+    if width <= 0 or power == 0.0:
         return linbgr
 
     y = data - linbgr
@@ -51,7 +68,7 @@ def background(data: np.ndarray, nbgr: int = 0, width: int = 0, pow: float = 0.5
 
     pdelx = np.arange(npoly, dtype=float) - (npoly - 1.0) / 2.0
     r = 2 * float(width)
-    poly = -1.0 * (pdelx / r) ** (2.0 * pow)
+    poly = -1.0 * (pdelx / r) ** (2.0 * power)
 
     # Normalize polynomial
     pnorm = (data[:3].sum() + data[-3:].sum()) / 6.0
@@ -100,34 +117,34 @@ def background(data: np.ndarray, nbgr: int = 0, width: int = 0, pow: float = 0.5
     return bgr
 
 
-def show_bgr(data: np.ndarray, nbgr: int = 0, width: int = 0, pow: float = 0.5, tangent: bool = False, compress: int = 1) -> None:
+def show_bgr(data: np.ndarray, nbgr: int = 0, width: int = 0, power: float = 0.5, tangent: bool = False, compress: int = 1) -> None:
     """Display a simple background plot with timing information."""
     t0 = time.time()
-    bgr = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
+    bgr = background(data, nbgr=nbgr, width=width, power=power, tangent=tangent, compress=compress)
     print(f"Background calculation time: {time.time() - t0:.5f} seconds")
 
-    pyplot.plot(data, label="Data")
-    pyplot.plot(data - bgr, "r", label="Data - Background")
-    pyplot.plot(bgr, "k-", label="Background")
-    pyplot.legend()
-    pyplot.show()
+    plt.plot(data, label="Data")
+    plt.plot(data - bgr, "r", label="Data - Background")
+    plt.plot(bgr, "k-", label="Background")
+    plt.legend()
+    plt.show()
 
 
-def plot_bgr(data: np.ndarray, nbgr: int = 0, width: int = 0, pow: float = 0.5, tangent: bool = False, compress: int = 1) -> None:
+def plot_bgr(data: np.ndarray, nbgr: int = 0, width: int = 0, power: float = 0.5, tangent: bool = False, compress: int = 1) -> None:
     """Create detailed background plots."""
-    bgr = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
+    bgr = background(data, nbgr=nbgr, width=width, power=power, tangent=tangent, compress=compress)
 
     # Main plot
-    pyplot.figure(1)
-    pyplot.clf()
-    pyplot.subplot(1, 1, 1)
-    pyplot.plot(data, "k-o", label="Data")
-    pyplot.plot(bgr, "r-*", label="Background")
-    pyplot.plot(data - bgr, "g-", label="Data - Background")
-    pyplot.axhline(0, color="k", linestyle="-", alpha=0.3)
-    pyplot.legend(loc=2)
+    plt.figure(1)
+    plt.clf()
+    plt.subplot(1, 1, 1)
+    plt.plot(data, "k-o", label="Data")
+    plt.plot(bgr, "r-*", label="Background")
+    plt.plot(data - bgr, "g-", label="Data - Background")
+    plt.axhline(0, color="k", linestyle="-", alpha=0.3)
+    plt.legend(loc=2)
 
-    pyplot.show()
+    plt.show()
 
 
 def compress_array(array: np.ndarray, compress: int) -> tuple[np.ndarray, int]:
@@ -137,8 +154,8 @@ def compress_array(array: np.ndarray, compress: int) -> tuple[np.ndarray, int]:
     new_len = array_len // compress
     remainder = array_len % compress
 
-    # Reshape and average
-    reshaped = np.resize(array, (new_len, compress))
+    trimmed = array[: new_len * compress]
+    reshaped = trimmed.reshape(new_len, compress)
     compressed = np.mean(reshaped, axis=1)
 
     return compressed, remainder

@@ -1,15 +1,14 @@
 #!/usr/bin/python
 # ----------------------------------------------------------------------------------
 # Project: pds
-# File: tests/conftest.py
+# File: tests/core/__init__.py
 # ----------------------------------------------------------------------------------
 # Purpose:
-# Load pytest plugins so they are available to test modules.
+# Tests for pds.core subpackages (imaging, spec, etc.). Subpackages expose
+# shared pytest fixtures.
 # ----------------------------------------------------------------------------------
 # Author: Christofanis Skordas
 #
 # Copyright (C) 2025-2026 GSECARS, The University of Chicago, USA
 # Copyright (C) 2025-2026 NSF SEES, USA
 # ----------------------------------------------------------------------------------
-
-pytest_plugins = ["tests.core.spec", "tests.core.imaging"]

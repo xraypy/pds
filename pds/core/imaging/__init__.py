@@ -1,10 +1,10 @@
 #!/usr/bin/python
 # ----------------------------------------------------------------------------------
 # Project: pds
-# File: tests/conftest.py
+# File: pds/core/imaging/__init__.py
 # ----------------------------------------------------------------------------------
 # Purpose:
-# Load pytest plugins so they are available to test modules.
+# This file contains the imaging core package.
 # ----------------------------------------------------------------------------------
 # Author: Christofanis Skordas
 #
@@ -12,4 +12,6 @@
 # Copyright (C) 2025-2026 NSF SEES, USA
 # ----------------------------------------------------------------------------------
 
-pytest_plugins = ["tests.core.spec", "tests.core.imaging"]
+from pds.core.imaging.image_data import ImageAna
+
+__all__ = ["ImageAna"]

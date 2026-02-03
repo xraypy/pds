@@ -1,3 +1,17 @@
+#!/usr/bin/python
+# ----------------------------------------------------------------------------------
+# Project: pds
+# File: tests/core/imaging/test_background.py
+# ----------------------------------------------------------------------------------
+# Purpose:
+# Tests for pds.core.imaging.background (Kajfosz-Kwiatek background, compress/expand).
+# ----------------------------------------------------------------------------------
+# Author: Christofanis Skordas
+#
+# Copyright (C) 2025-2026 GSECARS, The University of Chicago, USA
+# Copyright (C) 2025-2026 NSF SEES, USA
+# ----------------------------------------------------------------------------------
+
 import sys
 import warnings
 from pathlib import Path
@@ -7,45 +21,9 @@ import numpy as np
 import pytest
 
 # Add the pds module to the path
-sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from pds.utils.background import background, compress_array, expand_array, linear_background, plot_bgr, show_bgr
-
-
-@pytest.fixture
-def test_data_simple():
-    """Simple test data for basic functionality."""
-    np.random.seed(42)  # For reproducible results
-
-    def gauss(x, cen, sigma):
-        return np.exp(-((x - cen) ** 2) / (2 * sigma**2))
-
-    npts = 100
-    x = 1.0 * np.arange(npts)
-    g1 = 40 * gauss(x, 0.6 * npts, 8.0)
-    g2 = 20 * gauss(x, 0.5 * npts, 15.0)
-    r = 2 * np.random.normal(size=npts)
-    y = r + x / 25 + g1 + g2
-
-    return x, y
-
-
-@pytest.fixture
-def test_data_complex():
-    """Complex test data similar to original Python 2 example."""
-    np.random.seed(42)
-
-    def gauss(x, cen, sigma):
-        return np.exp(-((x - cen) ** 2) / (2 * sigma**2))
-
-    npts = 2000
-    x = 1.0 * np.arange(npts)
-    g1 = 40 * gauss(x, 0.6 * npts, 8.0)
-    g2 = 20 * gauss(x, 0.5 * npts, 270)
-    r = 2 * np.random.normal(size=npts)
-    y = r + x / 25 + g1 + g2
-
-    return x, y
+from pds.core.imaging.background import background, compress_array, expand_array, linear_background, plot_bgr, show_bgr
 
 
 class TestLinearBackground:
@@ -118,7 +96,7 @@ class TestBackground:
         assert result.dtype == np.float64
 
         # Test with various parameters
-        result = background(y, nbgr=3, width=10, pow=1.0)
+        result = background(y, nbgr=3, width=10, power=1.0)
         assert isinstance(result, np.ndarray)
         assert result.shape == y.shape
         assert result.dtype == np.float64
@@ -128,14 +106,10 @@ class TestBackground:
         x, y = test_data_simple
 
         # Test cases that would differ between Python 2 and 3 division
-        test_cases = [
-            {"nbgr": 3, "width": 5, "pow": 1.0},
-            {"nbgr": 5, "width": 7, "pow": 0.5},
-            {"nbgr": 2, "width": 11, "pow": 2.0},
-        ]
+        test_cases = [{"nbgr": 3, "width": 5, "power": 1.0}, {"nbgr": 5, "width": 7, "power": 0.5}, {"nbgr": 2, "width": 11, "power": 2.0}]
 
         for params in test_cases:
-            result = background(y, **params)
+            result = background(y, nbgr=int(params["nbgr"]), width=int(params["width"]), power=float(params["power"]))
             assert isinstance(result, np.ndarray)
             assert result.shape == y.shape
             assert np.all(np.isfinite(result))
@@ -185,7 +159,7 @@ class TestBackground:
         # Negative power handling
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result = background(small_y, nbgr=2, width=2, pow=-1.0)
+            result = background(small_y, nbgr=2, width=2, power=-1.0)
             assert len(w) == 0
             assert isinstance(result, np.ndarray)
 
@@ -307,7 +281,7 @@ class TestShowBgr:
         x, y = test_data_simple
 
         # Test basic functionality
-        show_bgr(y, nbgr=3, width=10, pow=1.0)
+        show_bgr(y, nbgr=3, width=10, power=1.0)
 
         # Check that plot was called
         assert mock_plot.called
@@ -333,7 +307,7 @@ class TestPlotBgr:
         x, y = test_data_simple
 
         # Test basic functionality
-        plot_bgr(y, nbgr=3, width=10, pow=1.0)
+        plot_bgr(y, nbgr=3, width=10, power=1.0)
 
         # Check that plotting functions were called
         assert mock_figure.called
@@ -352,7 +326,7 @@ class TestPython2Compatibility:
         test_widths = [1, 2, 3, 5, 7, 11, 13]
 
         for width in test_widths:
-            result = background(y, nbgr=3, width=width, pow=1.0)
+            result = background(y, nbgr=3, width=width, power=1.0)
             assert isinstance(result, np.ndarray)
             assert result.shape == y.shape
             assert np.all(np.isfinite(result))
@@ -362,7 +336,7 @@ class TestPython2Compatibility:
         x, y = test_data_simple
 
         # Test with various parameters that use range internally
-        result = background(y, nbgr=5, width=15, pow=2.0)
+        result = background(y, nbgr=5, width=15, power=2.0)
         assert isinstance(result, np.ndarray)
         assert result.shape == y.shape
 
@@ -372,7 +346,7 @@ class TestPython2Compatibility:
 
         # Test with negative power to trigger print statement
         with patch("builtins.print") as mock_print:
-            background(y, nbgr=3, width=10, pow=-1.0)
+            background(y, nbgr=3, width=10, power=-1.0)
             mock_print.assert_called_once_with("Warning power is less than 0, changing it to positive")
 
     def test_numpy_array_operations(self, test_data_simple):
@@ -380,7 +354,7 @@ class TestPython2Compatibility:
         x, y = test_data_simple
 
         # Test various numpy operations used in the code
-        result = background(y, nbgr=3, width=10, pow=1.0)
+        result = background(y, nbgr=3, width=10, power=1.0)
 
         # Check array operations
         assert isinstance(result, np.ndarray)
@@ -397,10 +371,10 @@ class TestPython2Compatibility:
 
         # Test with same random seed for reproducibility
         np.random.seed(42)
-        result1 = background(y, nbgr=3, width=10, pow=1.0)
+        result1 = background(y, nbgr=3, width=10, power=1.0)
 
         np.random.seed(42)
-        result2 = background(y, nbgr=3, width=10, pow=1.0)
+        result2 = background(y, nbgr=3, width=10, power=1.0)
 
         # Results should be identical
         np.testing.assert_array_equal(result1, result2)
@@ -420,7 +394,7 @@ class TestPython2Compatibility:
         y = r + x / 25 + g1 + g2
 
         # This is exactly what the Python 2 code does
-        bgr = background(y, nbgr=3, width=100, pow=1, tangent=False, compress=1)
+        bgr = background(y, nbgr=3, width=100, power=1, tangent=False, compress=1)
 
         # Validate results match Python 2 behavior
         assert isinstance(bgr, np.ndarray)
@@ -435,7 +409,7 @@ class TestPython2Compatibility:
         test_widths = [1, 2, 3, 5, 7, 11, 13, 17, 19]
 
         for width in test_widths:
-            result = background(test_data, nbgr=3, width=width, pow=1.0)
+            result = background(test_data, nbgr=3, width=width, power=1.0)
             assert isinstance(result, np.ndarray)
             assert result.shape == test_data.shape
             assert result.dtype == np.float64
@@ -446,11 +420,7 @@ class TestPython2Compatibility:
         test_data = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
 
         # Test different input types
-        inputs = [
-            ("int32", test_data.astype(np.int32)),
-            ("float32", test_data.astype(np.float32)),
-            ("float64", test_data.astype(np.float64)),
-        ]
+        inputs = [("int32", test_data.astype(np.int32)), ("float32", test_data.astype(np.float32)), ("float64", test_data.astype(np.float64))]
 
         for dtype_name, data in inputs:
             result = background(data, nbgr=2, width=1)
@@ -496,7 +466,7 @@ class TestPython2Compatibility:
         """Test performance and memory usage with large arrays."""
         # Test large array
         large_data = np.random.normal(size=10000)
-        result_large = background(large_data, nbgr=5, width=100, pow=1.0)
+        result_large = background(large_data, nbgr=5, width=100, power=1.0)
 
         assert isinstance(result_large, np.ndarray)
         assert result_large.shape == large_data.shape
@@ -505,7 +475,7 @@ class TestPython2Compatibility:
 
         # Test multiple calls (memory leak check)
         for i in range(5):
-            result = background(large_data[:100], nbgr=3, width=10, pow=1.0)
+            result = background(large_data[:100], nbgr=3, width=10, power=1.0)
             assert isinstance(result, np.ndarray)
             del result  # Explicit cleanup
 
@@ -537,7 +507,7 @@ class TestRegressionPrevention:
         x, y = test_data_complex
 
         # This matches the original Python 2 example
-        result = background(y, nbgr=3, width=100, pow=1, tangent=False, compress=1)
+        result = background(y, nbgr=3, width=100, power=1, tangent=False, compress=1)
 
         assert isinstance(result, np.ndarray)
         assert result.shape == y.shape
@@ -553,15 +523,22 @@ class TestRegressionPrevention:
 
         # Test parameter combinations
         test_cases = [
-            {"nbgr": 0, "width": 0, "pow": 0.5},
-            {"nbgr": 3, "width": 5, "pow": 1.0},
-            {"nbgr": 5, "width": 10, "pow": 2.0},
-            {"nbgr": 2, "width": 7, "pow": 0.5, "tangent": True},
-            {"nbgr": 4, "width": 12, "pow": 1.5, "compress": 2},
+            {"nbgr": 0, "width": 0, "power": 0.5},
+            {"nbgr": 3, "width": 5, "power": 1.0},
+            {"nbgr": 5, "width": 10, "power": 2.0},
+            {"nbgr": 2, "width": 7, "power": 0.5, "tangent": True},
+            {"nbgr": 4, "width": 12, "power": 1.5, "compress": 2},
         ]
 
         for params in test_cases:
-            result = background(y, **params)
+            result = background(
+                y,
+                nbgr=int(params["nbgr"]),
+                width=int(params["width"]),
+                power=float(params["power"]),
+                tangent=bool(params.get("tangent", False)),
+                compress=int(params.get("compress", 1)),
+            )
             assert isinstance(result, np.ndarray)
             assert result.shape == y.shape
             assert np.all(np.isfinite(result))
@@ -571,7 +548,7 @@ class TestRegressionPrevention:
         x, y = test_data_complex
 
         # Test with large array
-        result = background(y, nbgr=5, width=50, pow=1.0)
+        result = background(y, nbgr=5, width=50, power=1.0)
 
         assert isinstance(result, np.ndarray)
         assert result.shape == y.shape
@@ -582,7 +559,7 @@ class TestRegressionPrevention:
 
         # Test multiple calls
         for i in range(5):
-            result = background(y, nbgr=3, width=25, pow=1.0)
+            result = background(y, nbgr=3, width=25, power=1.0)
             assert isinstance(result, np.ndarray)
             del result
 
@@ -639,7 +616,7 @@ class TestBackgroundDemo:
         y = noise + x / 25 + g1 + g2
 
         # Test the background calculation with demo parameters
-        bgr = background(y, nbgr=3, width=100, pow=1, tangent=False, compress=1)
+        bgr = background(y, nbgr=3, width=100, power=1, tangent=False, compress=1)
 
         # Verify the result
         assert isinstance(bgr, np.ndarray)
@@ -647,7 +624,7 @@ class TestBackgroundDemo:
         assert bgr.dtype == np.float64
 
         # Test show_bgr function (which was called in the original demo)
-        show_bgr(y, nbgr=3, width=100, pow=1, tangent=False, compress=1)
+        show_bgr(y, nbgr=3, width=100, power=1, tangent=False, compress=1)
 
         # Verify matplotlib functions were called
         mock_plot.assert_called()

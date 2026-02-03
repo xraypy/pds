@@ -5,7 +5,9 @@ This directory contains pytest-based tests for the PDS codebase and is structure
 ## Structure
 
 - `__init__.py` - Package initialization, shared test utilities, and test runner
+- `conftest.py` - Pytest configuration; loads plugins for shared fixtures
 - `core/` - Tests for `pds.core` subpackages
+  - `imaging/` - Tests for `pds.core.imaging` (background, image_data)
   - `spec/` - Tests for `pds.core.spec` (SPEC parsing, HDF5 conversion, scan attributes, image reader, constants)
 - `test_active_area.py` - Tests for the active area calculation module
 - `test_converters.py` - Tests for the data conversion utility functions
@@ -52,6 +54,7 @@ pytest tests/test_master_to_project.py
 pytest tests/test_mathutil.py
 pytest tests/test_polygon.py
 pytest tests/core/spec/
+pytest tests/core/imaging/
 ```
 
 To run with verbose output:

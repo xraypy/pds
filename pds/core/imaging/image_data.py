@@ -1,14 +1,31 @@
+#!/usr/bin/python
+# ----------------------------------------------------------------------------------
+# Project: pds
+# File: pds/core/imaging/image_data.py
+# ----------------------------------------------------------------------------------
+# Purpose:
+# Image read/correct, ROI, line sums, background subtraction, ImageAna/ImageScan.
+# ----------------------------------------------------------------------------------
+# Author: Christofanis Skordas
+#
+# Copyright (C) 2025-2026 GSECARS, The University of Chicago, USA
+# Copyright (C) 2025-2026 NSF SEES, USA
+# ----------------------------------------------------------------------------------
+
+__all__ = ["ImageAna", "correct_image", "read_pixel_map"]
+
+import ast
 import copy
 import os
-from typing import Any
+from typing import Any, cast
 
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import tables
-from matplotlib import pyplot
 from scipy import ndimage
 
-from pds.utils.background import background
+from pds.core.imaging.background import background
 
 # Type aliases for better code documentation
 ImageArray = npt.NDArray[np.int32]
@@ -86,12 +103,13 @@ def correct_image(image: ImageArray, pixel_map: str | None = None) -> ImageArray
         return image
 
     try:
-        pixel_map_data = eval(pixel_map)
+        pixel_map_data = ast.literal_eval(pixel_map)
         bad_pixels, good_pixels = pixel_map_data
-    except Exception:
+    except (ValueError, SyntaxError, TypeError):
         bad_pixels, good_pixels = [], []
 
-    return pixel_mask(image, bad_pixels, good_pixels)
+    result = pixel_mask(image, bad_pixels, good_pixels)
+    return image if result is None else result
 
 
 def read_files(file_prefix: str, start: int = 0, end: int = 100, nfmt: int = 3, pixel_map: str | None = None) -> list[ImageArray]:
@@ -257,8 +275,8 @@ def image_plot(
         print(f"  Shape: {img.shape}")
 
     if fig is not None:
-        pyplot.figure(fig)
-        pyplot.clf()
+        plt.figure(fig)
+        plt.clf()
 
     # Apply rotation if specified
     display_img = ndimage.rotate(img, rotangle) if rotangle != 0 else img.copy()
@@ -266,7 +284,7 @@ def image_plot(
     # Set up colormap
     if cmap is not None and isinstance(cmap, str):
         try:
-            cmap = getattr(pyplot.cm, cmap)
+            cmap = getattr(plt.cm, cmap)
         except AttributeError:
             print(f"Warning: Colormap '{cmap}' not found, using default")
             cmap = None
@@ -293,11 +311,11 @@ def image_plot(
             im_max = np.max(display_img[r1:r2, c1:c2])
 
     # Display image
-    pyplot.imshow(display_img, cmap=cmap, vmax=im_max)
-    pyplot.colorbar(orientation="horizontal")
+    plt.imshow(display_img, cmap=cmap, vmax=im_max)
+    plt.colorbar(orientation="horizontal")
 
     if figtitle:
-        pyplot.title(figtitle, fontsize=12)
+        plt.title(figtitle, fontsize=12)
 
 
 def sum_plot(
@@ -315,38 +333,32 @@ def sum_plot(
 ) -> None:
     """Plot column and row sums with background subtraction."""
     if fig is not None:
-        pyplot.figure(fig)
-        pyplot.clf()
+        plt.figure(fig)
+        plt.clf()
     else:
-        pyplot.figure()
+        plt.figure()
 
     # Column sum plot
-    pyplot.subplot(2, 1, 1)
-    pyplot.title("Column Sum")
-    data, data_idx, bgr = line_sum(image, sumflag="c", nbgr=cnbgr, width=cwidth, pow=cpow, tangent=ctan)
-    pyplot.plot(data_idx, data, "r", label="Data")
-    pyplot.plot(data_idx, bgr, "b", label="Background")
-    pyplot.legend()
+    plt.subplot(2, 1, 1)
+    plt.title("Column Sum")
+    data, data_idx, bgr = line_sum(image, sumflag="c", nbgr=cnbgr, width=cwidth, power=cpow, tangent=ctan)
+    plt.plot(data_idx, data, "r", label="Data")
+    plt.plot(data_idx, bgr, "b", label="Background")
+    plt.legend()
 
     # Row sum plot
-    pyplot.subplot(2, 1, 2)
-    pyplot.title("Row Sum")
-    data, data_idx, bgr = line_sum(image, sumflag="r", nbgr=rnbgr, width=rwidth, pow=rpow, tangent=rtan)
-    pyplot.plot(data_idx, data, "r", label="Data")
-    pyplot.plot(data_idx, bgr, "b", label="Background")
-    pyplot.legend()
+    plt.subplot(2, 1, 2)
+    plt.title("Row Sum")
+    data, data_idx, bgr = line_sum(image, sumflag="r", nbgr=rnbgr, width=rwidth, power=rpow, tangent=rtan)
+    plt.plot(data_idx, data, "r", label="Data")
+    plt.plot(data_idx, bgr, "b", label="Background")
+    plt.legend()
 
-    pyplot.tight_layout()
+    plt.tight_layout()
 
 
 def line_sum(
-    image: ImageArray,
-    sumflag: str = "c",
-    nbgr: int = 0,
-    width: int = 0,
-    pow: float = 2.0,
-    tangent: bool = False,
-    compress: int = 1,
+    image: ImageArray | FloatArray, sumflag: str = "c", nbgr: int = 0, width: int = 0, power: float = 2.0, tangent: bool = False, compress: int = 1
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """Sum image data along columns ('c') or rows ('r') with background calculation."""
     if sumflag == "c":
@@ -360,23 +372,17 @@ def line_sum(
     data_idx = np.arange(npts, dtype=np.float64)
 
     # Compute background
-    bgr = background(data, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
+    bgr = background(data, nbgr=nbgr, width=width, power=power, tangent=tangent, compress=compress)
 
     return data, data_idx, bgr
 
 
 def line_sum_integral(
-    image: ImageArray,
-    sumflag: str = "c",
-    nbgr: int = 0,
-    width: int = 0,
-    pow: float = 2.0,
-    tangent: bool = False,
-    compress: int = 1,
+    image: ImageArray | FloatArray, sumflag: str = "c", nbgr: int = 0, width: int = 0, power: float = 2.0, tangent: bool = False, compress: int = 1
 ) -> tuple[float, float, float]:
     """Calculate integrated intensity after background subtraction."""
     # Get line sum and background
-    data, _, bgr = line_sum(image, sumflag=sumflag, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
+    data, _, bgr = line_sum(image, sumflag=sumflag, nbgr=nbgr, width=width, power=power, tangent=tangent, compress=compress)
 
     # Calculate integrals
     total_intensity = float(data.sum())
@@ -398,10 +404,10 @@ def image_bgr(
     lineflag: str = "c",
     nbgr: int = 3,
     width: int = 100,
-    pow: float = 2.0,
+    power: float = 2.0,
     tangent: bool = False,
     nline: int = 1,
-    filter: bool = False,
+    spline_filter: bool = False,
     compress: int = 1,
     plot: bool = False,
 ) -> FloatArray:
@@ -410,7 +416,7 @@ def image_bgr(
 
     # Apply spline filtering if requested (can remove intensity - use carefully)
     working_image = image.astype(np.float64)
-    if filter:
+    if spline_filter:
         working_image = ndimage.interpolation.spline_filter(working_image, order=3)
 
     if lineflag == "r":
@@ -428,11 +434,11 @@ def image_bgr(
                 averaged_line = np.mean(working_image[line_indices, :], axis=0)
 
                 # Calculate background for this averaged line
-                bgr_arr[j, :] = background(averaged_line, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
+                bgr_arr[j, :] = background(averaged_line, nbgr=nbgr, width=width, power=power, tangent=tangent, compress=compress)
         else:
             # Process each row individually
             for j in range(image.shape[0]):
-                bgr_arr[j, :] = background(working_image[j, :], nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
+                bgr_arr[j, :] = background(working_image[j, :], nbgr=nbgr, width=width, power=power, tangent=tangent, compress=compress)
 
     elif lineflag == "c":
         # Fit background to each column
@@ -449,35 +455,35 @@ def image_bgr(
                 averaged_line = np.mean(working_image[:, line_indices], axis=1)
 
                 # Calculate background for this averaged line
-                bgr_arr[:, j] = background(averaged_line, nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
+                bgr_arr[:, j] = background(averaged_line, nbgr=nbgr, width=width, power=power, tangent=tangent, compress=compress)
         else:
             # Process each column individually
             for j in range(image.shape[1]):
-                bgr_arr[:, j] = background(working_image[:, j], nbgr=nbgr, width=width, pow=pow, tangent=tangent, compress=compress)
+                bgr_arr[:, j] = background(working_image[:, j], nbgr=nbgr, width=width, power=power, tangent=tangent, compress=compress)
     else:
         raise ValueError(f"lineflag must be 'c' or 'r', got '{lineflag}'")
 
     # Display diagnostic plots if requested
     if plot:
-        pyplot.figure(3)
-        pyplot.clf()
+        plt.figure(3)
+        plt.clf()
 
-        pyplot.subplot(3, 1, 1)
-        pyplot.imshow(working_image, aspect="auto")
-        pyplot.title("Original Image")
-        pyplot.colorbar()
+        plt.subplot(3, 1, 1)
+        plt.imshow(working_image, aspect="auto")
+        plt.title("Original Image")
+        plt.colorbar()
 
-        pyplot.subplot(3, 1, 2)
-        pyplot.imshow(bgr_arr, aspect="auto")
-        pyplot.title("2D Background")
-        pyplot.colorbar()
+        plt.subplot(3, 1, 2)
+        plt.imshow(bgr_arr, aspect="auto")
+        plt.title("2D Background")
+        plt.colorbar()
 
-        pyplot.subplot(3, 1, 3)
-        pyplot.imshow(working_image - bgr_arr, aspect="auto")
-        pyplot.title("Background Subtracted")
-        pyplot.colorbar()
+        plt.subplot(3, 1, 3)
+        plt.imshow(working_image - bgr_arr, aspect="auto")
+        plt.title("Background Subtracted")
+        plt.colorbar()
 
-        pyplot.tight_layout()
+        plt.tight_layout()
 
     return bgr_arr
 
@@ -500,7 +506,7 @@ class ImageAna:
         rpow: float = 2.0,
         rtan: bool = False,
         nline: int = 1,
-        filter: bool = False,
+        spline_filter: bool = False,
         compress: int = 1,
         plot: bool = True,
         fig: int | None = None,
@@ -565,12 +571,12 @@ class ImageAna:
 
         # Background parameters
         self.bgrflag = int(bgrflag)
-        self.cbgr = {"nbgr": int(cnbgr), "width": int(cwidth), "pow": float(cpow), "tan": bool(ctan)}
-        self.rbgr = {"nbgr": int(rnbgr), "width": int(rwidth), "pow": float(rpow), "tan": bool(rtan)}
+        self.cbgr = {"nbgr": int(cnbgr), "width": int(cwidth), "power": float(cpow), "tan": bool(ctan)}
+        self.rbgr = {"nbgr": int(rnbgr), "width": int(rwidth), "power": float(rpow), "tan": bool(rtan)}
 
         # Processing parameters
         self.nline = int(nline)
-        self.filter = bool(filter)
+        self.spline_filter = bool(spline_filter)
         self.compress = int(compress)
         self.plotflag = bool(plot)
         self.im_max = float(im_max)
@@ -593,6 +599,8 @@ class ImageAna:
         try:
             # Clip image to ROI with optional rotation
             self.clpimg = clip_image(self.image, list(self.roi), rotangle=self.rotangle)
+            if self.clpimg is None:
+                raise RuntimeError("clpimg is None; clip_image returns image when roi is valid")
 
             # Calculate total intensity in ROI
             self.I = float(np.sum(self.clpimg))
@@ -608,12 +616,12 @@ class ImageAna:
                     self.bgrimg = image_bgr(
                         self.clpimg,
                         lineflag="c",
-                        nbgr=self.cbgr["nbgr"],
-                        width=self.cbgr["width"],
-                        pow=self.cbgr["pow"],
-                        tangent=self.cbgr["tan"],
+                        nbgr=int(self.cbgr["nbgr"]),
+                        width=int(self.cbgr["width"]),
+                        power=float(self.cbgr["power"]),
+                        tangent=bool(self.cbgr["tan"]),
                         nline=self.nline,
-                        filter=self.filter,
+                        spline_filter=self.spline_filter,
                         compress=self.compress,
                         plot=False,
                     )
@@ -622,12 +630,12 @@ class ImageAna:
                     self.bgrimg = image_bgr(
                         self.clpimg,
                         lineflag="r",
-                        nbgr=self.rbgr["nbgr"],
-                        width=self.rbgr["width"],
-                        pow=self.rbgr["pow"],
-                        tangent=self.rbgr["tan"],
+                        nbgr=int(self.rbgr["nbgr"]),
+                        width=int(self.rbgr["width"]),
+                        power=float(self.rbgr["power"]),
+                        tangent=bool(self.rbgr["tan"]),
                         nline=self.nline,
-                        filter=self.filter,
+                        spline_filter=self.spline_filter,
                         compress=self.compress,
                         plot=False,
                     )
@@ -636,24 +644,24 @@ class ImageAna:
                     bgr_c = image_bgr(
                         self.clpimg,
                         lineflag="c",
-                        nbgr=self.cbgr["nbgr"],
-                        width=self.cbgr["width"],
-                        pow=self.cbgr["pow"],
-                        tangent=self.cbgr["tan"],
+                        nbgr=int(self.cbgr["nbgr"]),
+                        width=int(self.cbgr["width"]),
+                        power=float(self.cbgr["power"]),
+                        tangent=bool(self.cbgr["tan"]),
                         nline=self.nline,
-                        filter=self.filter,
+                        spline_filter=self.spline_filter,
                         compress=self.compress,
                         plot=False,
                     )
                     bgr_r = image_bgr(
                         self.clpimg,
                         lineflag="r",
-                        nbgr=self.rbgr["nbgr"],
-                        width=self.rbgr["width"],
-                        pow=self.rbgr["pow"],
-                        tangent=self.rbgr["tan"],
+                        nbgr=int(self.rbgr["nbgr"]),
+                        width=int(self.rbgr["width"]),
+                        power=float(self.rbgr["power"]),
+                        tangent=bool(self.rbgr["tan"]),
                         nline=self.nline,
-                        filter=self.filter,
+                        spline_filter=self.spline_filter,
                         compress=self.compress,
                         plot=False,
                     )
@@ -678,10 +686,10 @@ class ImageAna:
                 self.I_c, self.Ierr_c, self.Ibgr_c = line_sum_integral(
                     self.clpimg,
                     sumflag="c",
-                    nbgr=self.rbgr["nbgr"],
-                    width=self.rbgr["width"],
-                    pow=self.rbgr["pow"],
-                    tangent=self.rbgr["tan"],
+                    nbgr=int(self.rbgr["nbgr"]),
+                    width=int(self.rbgr["width"]),
+                    power=float(self.rbgr["power"]),
+                    tangent=bool(self.rbgr["tan"]),
                     compress=self.compress,
                 )
 
@@ -694,10 +702,10 @@ class ImageAna:
                 self.I_r, self.Ierr_r, self.Ibgr_r = line_sum_integral(
                     self.clpimg,
                     sumflag="r",
-                    nbgr=self.cbgr["nbgr"],
-                    width=self.cbgr["width"],
-                    pow=self.cbgr["pow"],
-                    tangent=self.cbgr["tan"],
+                    nbgr=int(self.cbgr["nbgr"]),
+                    width=int(self.cbgr["width"]),
+                    power=float(self.cbgr["power"]),
+                    tangent=bool(self.cbgr["tan"]),
                     compress=self.compress,
                 )
 
@@ -716,14 +724,16 @@ class ImageAna:
         """Generate comprehensive 4-panel analysis plot."""
         if not self.integrated:
             self.integrate()
+        if self.clpimg is None:
+            raise RuntimeError("clpimg is None; integrate() must run first")
 
         # Set up figure
         if fig is not None:
-            pyplot.figure(fig)
-            pyplot.clf()
-            pyplot.figure(fig, figsize=[12, 8])
+            plt.figure(fig)
+            plt.clf()
+            plt.figure(fig, figsize=[12, 8])
         else:
-            pyplot.figure(figsize=[12, 8])
+            plt.figure(figsize=[12, 8])
 
         # Prepare titles with results
         title_c = f"Col sum\nI_c = {self.I_c:.3g}, Ierr_c = {self.Ierr_c:.3g}, Ibgr_c = {self.Ibgr_c:.3g}"
@@ -747,13 +757,13 @@ class ImageAna:
         display_image[r1:r2, c2 : c2 + 1] = max_intensity
 
         # Panel 1: Column sum analysis
-        pyplot.subplot(221)
-        pyplot.title(title_c, fontsize=12)
+        plt.subplot(221)
+        plt.title(title_c, fontsize=12)
 
         # Plot raw column sum
         data, data_idx, _ = line_sum(self.clpimg, sumflag="c", nbgr=0)
         rawmax = data.max()
-        pyplot.plot(data_idx, data, "k", label="raw sum")
+        plt.plot(data_idx, data, "k", label="raw sum")
 
         # Plot background and corrected data
         if self.bgrimg is not None:
@@ -762,34 +772,41 @@ class ImageAna:
             bgr = self.bgrimg.sum(axis=0)
         else:
             # Calculate background on-the-fly
-            _, _, bgr = line_sum(self.clpimg, sumflag="c", nbgr=self.rbgr["nbgr"], width=self.rbgr["width"], pow=self.rbgr["pow"], tangent=self.rbgr["tan"])
+            _, _, bgr = line_sum(
+                self.clpimg,
+                sumflag="c",
+                nbgr=int(self.rbgr["nbgr"]),
+                width=int(self.rbgr["width"]),
+                power=float(self.rbgr["power"]),
+                tangent=bool(self.rbgr["tan"]),
+            )
             data_corr = data - bgr
 
-        pyplot.plot(data_idx, bgr, "r", label="bgr")
-        pyplot.plot(data_idx, data_corr, "b", label="data-bgr")
-        pyplot.axis([0, data_idx.max(), 0, rawmax * 1.25])
-        pyplot.legend(loc=0)
+        plt.plot(data_idx, bgr, "r", label="bgr")
+        plt.plot(data_idx, data_corr, "b", label="data-bgr")
+        plt.axis([0, data_idx.max(), 0, rawmax * 1.25])
+        plt.legend(loc=0)
 
         # Panel 2: Full image with ROI
-        pyplot.subplot(222)
-        pyplot.title(self.title, fontsize=12)
-        pyplot.imshow(display_image, cmap=pyplot.cm.hot, vmax=im_max)
-        pyplot.colorbar(orientation="horizontal")
+        plt.subplot(222)
+        plt.title(self.title, fontsize=12)
+        plt.imshow(display_image, cmap=getattr(plt.cm, "hot"), vmax=im_max)
+        plt.colorbar(orientation="horizontal")
 
         # Panel 3: ROI zoom
-        pyplot.subplot(223)
-        pyplot.title(title_roi, fontsize=12)
+        plt.subplot(223)
+        plt.title(title_roi, fontsize=12)
         roi_image = (self.clpimg - self.bgrimg) if self.bgrimg is not None else self.clpimg
-        pyplot.imshow(roi_image, cmap=pyplot.cm.hot, aspect="auto")
+        plt.imshow(roi_image, cmap=getattr(plt.cm, "hot"), aspect="auto")
 
         # Panel 4: Row sum analysis
-        pyplot.subplot(224)
-        pyplot.title(title_r, fontsize=12)
+        plt.subplot(224)
+        plt.title(title_r, fontsize=12)
 
         # Plot raw row sum
         data, data_idx, _ = line_sum(self.clpimg, sumflag="r", nbgr=0)
         rawmax = data.max()
-        pyplot.plot(data, data_idx, "k", label="raw sum")
+        plt.plot(data, data_idx, "k", label="raw sum")
 
         # Plot background and corrected data
         if self.bgrimg is not None:
@@ -798,19 +815,28 @@ class ImageAna:
             bgr = self.bgrimg.sum(axis=1)
         else:
             # Calculate background on-the-fly
-            _, _, bgr = line_sum(self.clpimg, sumflag="r", nbgr=self.cbgr["nbgr"], width=self.cbgr["width"], pow=self.cbgr["pow"], tangent=self.cbgr["tan"])
+            _, _, bgr = line_sum(
+                self.clpimg,
+                sumflag="r",
+                nbgr=int(self.cbgr["nbgr"]),
+                width=int(self.cbgr["width"]),
+                power=float(self.cbgr["power"]),
+                tangent=bool(self.cbgr["tan"]),
+            )
             data_corr = data - bgr
 
-        pyplot.plot(bgr, data_idx, "r", label="bgr")
-        pyplot.plot(data_corr, data_idx, "b", label="data-bgr")
-        pyplot.axis([0, rawmax * 1.25, data_idx.max(), 0])
-        pyplot.xticks(rotation=-45)
-        pyplot.legend(loc=0)
+        plt.plot(bgr, data_idx, "r", label="bgr")
+        plt.plot(data_corr, data_idx, "b", label="data-bgr")
+        plt.axis([0, rawmax * 1.25, data_idx.max(), 0])
+        plt.xticks(rotation=-45)
+        plt.legend(loc=0)
 
-    def embed_plot(self, fig) -> None:
+    def embed_plot(self, fig: Any) -> tuple[float, Any, Any]:
         """Create fancy 4-panel plot to embed in wxPython."""
         if not self.integrated:
             self.integrate()
+        if self.clpimg is None:
+            raise RuntimeError("clpimg is None; integrate() must run first")
 
         fig.clear()
         colormap = None
@@ -853,7 +879,12 @@ class ImageAna:
         else:
             # here data is data and bgr is correct, therefore data = data-bgr
             (data, data_idx, bgr) = line_sum(
-                self.clpimg, sumflag="c", nbgr=self.rbgr["nbgr"], width=self.rbgr["width"], pow=self.rbgr["pow"], tangent=self.rbgr["tan"]
+                self.clpimg,
+                sumflag="c",
+                nbgr=int(self.rbgr["nbgr"]),
+                width=int(self.rbgr["width"]),
+                power=float(self.rbgr["power"]),
+                tangent=bool(self.rbgr["tan"]),
             )
             data = data - bgr
         # plot bgr and bgr subtracted data
@@ -891,7 +922,12 @@ class ImageAna:
         else:
             # here data is data and bgr is correct, therefore data = data-bgr
             (data, data_idx, bgr) = line_sum(
-                self.clpimg, sumflag="r", nbgr=self.cbgr["nbgr"], width=self.cbgr["width"], pow=self.cbgr["pow"], tangent=self.cbgr["tan"]
+                self.clpimg,
+                sumflag="r",
+                nbgr=int(self.cbgr["nbgr"]),
+                width=int(self.cbgr["width"]),
+                power=float(self.cbgr["power"]),
+                tangent=bool(self.cbgr["tan"]),
             )
             data = data - bgr
         # plot bgr and bgr subtracted data
@@ -932,7 +968,7 @@ class ImageScan:
             path = archive.get("path")
             setname = archive.get("setname", "S1")
             descr = archive.get("descr", "Scan Data Archive")
-            self.image = _ImageList(image, file=file, path=path, setname=setname, descr=descr)
+            self.image = _ImageList(cast(list[ImageArray], image), file=file, path=path, setname=setname, descr=descr)
         else:
             self.image = image
 
@@ -955,17 +991,17 @@ class ImageScan:
 
     def _update_rois(self, rois: list[ROI] | ROI | None, npts: int) -> None:
         """Update ROI parameters for all images."""
-        if rois is not None:
+        if rois is not None and self.rois is not None:
             if isinstance(rois, list) and len(rois) == 4 and not isinstance(rois[0], list):
                 # Single ROI applied to all images
+                roi_val: ROI = cast(ROI, copy.copy(rois))
                 for j in range(npts):
-                    if self.rois is not None:
-                        self.rois[j] = copy.copy(rois)
+                    self.rois[j] = roi_val
             elif isinstance(rois, list) and len(rois) == npts:
                 # Individual ROI per image
+                rois_list: list[ROI] = cast(list[ROI], rois)
                 for j in range(npts):
-                    if self.rois is not None:
-                        self.rois[j] = rois[j]
+                    self.rois[j] = rois_list[j]
 
     def _update_rotangles(self, rotangle: list[float] | float | None, npts: int) -> None:
         """Update rotation angles for all images."""
@@ -1023,7 +1059,7 @@ class ImageScan:
         if len(self.rois) != npts:
             self.rois = []
             for j in range(npts):
-                img_shape = self.image[j].shape
+                img_shape = cast(ImageArray, self.image[j]).shape
                 self.rois.append([0, 0, img_shape[1], img_shape[0]])
 
         # Initialize rotation angles
@@ -1065,7 +1101,7 @@ class ImageScan:
             raise IndexError(f"Image index {idx} out of range [0, {len(self.image)})")
 
         image_plot(
-            self.image[idx],
+            cast(ImageArray, self.image[idx]),
             fig=fig,
             figtitle=figtitle,
             cmap=cmap,
@@ -1089,11 +1125,13 @@ class ImageScan:
         # make sure arrays exist:
         if not self._is_init():
             self._init_image()
+        if self.rois is None or self.rotangle is None or self.bgrpar is None:
+            return
         # idx of images to integrate
         if idx is None:
             idx = []
         if len(idx) == 0:
-            idx = np.arange(len(self.image))
+            idx = list(np.arange(len(self.image)))
         # Bad points handling
         if bad_points is None:
             bad_points = []
@@ -1101,30 +1139,33 @@ class ImageScan:
         if roi is not None:
             if len(roi) == 4:
                 if type(roi[0]) is list:
+                    rois_list: list[ROI] = cast(list[ROI], roi)
                     for j in idx:
-                        self.rois[j] = roi[j]
+                        self.rois[j] = rois_list[j]
                 else:
+                    roi_single: ROI = cast(ROI, copy.copy(roi))
                     for j in idx:
-                        self.rois[j] = roi
+                        self.rois[j] = roi_single
             elif len(roi) == len(idx):
-                for j in idx:
-                    self.rois[j] = roi[j]
+                rois_list = cast(list[ROI], roi)
+                for i, j in enumerate(idx):
+                    self.rois[j] = rois_list[i]
         # update rot angles
         if rotangle is not None:
             if type(rotangle) is float:
                 for j in idx:
-                    self.rotangle[j] = rotangle
-            elif len(rotangle) == len(idx):
-                for j in idx:
-                    self.rotangle[j] = rotangle[j]
+                    self.rotangle[j] = float(rotangle)
+            elif isinstance(rotangle, list) and len(rotangle) == len(idx):
+                for i, j in enumerate(idx):
+                    self.rotangle[j] = rotangle[i]
         # update bgr
         if bgr_params is not None:
             if type(bgr_params) is dict:
                 for j in idx:
                     self.bgrpar[j] = copy.copy(bgr_params)
-            elif len(bgr_params) == len(idx):
-                for j in idx:
-                    self.bgrpar[j] = copy.copy(bgr_params[j])
+            elif isinstance(bgr_params, list) and len(bgr_params) == len(idx):
+                for i, j in enumerate(idx):
+                    self.bgrpar[j] = copy.copy(bgr_params[i])
         # do integrations
         for j in idx:
             if j not in bad_points:
@@ -1147,14 +1188,18 @@ class ImageScan:
     def _integrate(self, idx: int = 0, plot: bool = True, fig=None) -> None:
         """Integrate an image at specified index."""
         if idx < 0 or idx > len(self.image):
-            return None
-        #
+            return
+        if self.rois is None or self.rotangle is None or self.bgrpar is None:
+            return
         figtitle = "Scan Point = %i" % (idx)
         roi = self.rois[idx]
         rotangle = self.rotangle[idx]
         bgr_params = self.bgrpar[idx]
+        # Map dict key "filter" to parameter spline_filter (avoid shadowing builtin)
+        kwargs = dict(bgr_params)
+        kwargs["spline_filter"] = kwargs.pop("filter", False)
 
-        img_ana = ImageAna(self.image[idx], roi=roi, rotangle=rotangle, plot=plot, fig=fig, figtitle=figtitle, **bgr_params)
+        img_ana = ImageAna(cast(ImageArray, self.image[idx]), roi=roi, rotangle=rotangle, plot=plot, fig=fig, figtitle=figtitle, **kwargs)
 
         # results into image_peaks dictionary
         self.peaks["I"][idx] = img_ana.I
@@ -1195,7 +1240,7 @@ class _ImageList:
     def _cleanup(self) -> None:
         """Clean up any open HDF5 file handles."""
         try:
-            tables.file.close_open_files()
+            tables.file.close_open_files()  # type: ignore[attr-defined]
         except Exception:
             pass
 
@@ -1264,7 +1309,7 @@ class _ImageList:
         try:
             with tables.open_file(fname, mode="r") as h:
                 node = h.get_node(grp, "images")
-                return node.read()
+                return node.read()  # type: ignore[union-attr]
         except Exception as e:
             self._cleanup()
             print(f"Error reading image tables from {grp}: {e}")
