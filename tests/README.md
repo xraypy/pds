@@ -5,8 +5,9 @@ This directory contains pytest-based tests for the PDS codebase and is structure
 ## Structure
 
 - `__init__.py` - Package initialization, shared test utilities, and test runner
+- `core/` - Tests for `pds.core` subpackages
+  - `spec/` - Tests for `pds.core.spec` (SPEC parsing, HDF5 conversion, scan attributes, image reader, constants)
 - `test_active_area.py` - Tests for the active area calculation module
-- `test_background.py` - Tests for the background determination module
 - `test_converters.py` - Tests for the data conversion utility functions
 - `test_ctr_data.py` - Tests for the CTR data processing module
 - `test_file_locker.py` - Tests for the cross-platform file locking module  
@@ -14,7 +15,6 @@ This directory contains pytest-based tests for the PDS codebase and is structure
 - `test_gonio_psic.py` - Tests for the PSIC 6-circle diffractometer geometry calculations
 - `test_hdf_data.py` - Tests for the HDF5 data file container and Python 2/3 compatibility
 - `test_hdf_to_tree.py` - Tests for the HDF5 to tree GUI conversion module and Python 2/3 compatibility
-- `test_image_data.py` - Tests for the image data handling module
 - `test_lattice.py` - Tests for the crystallographic lattice calculations module
 - `test_master_to_project.py` - Tests for the master-to-project HDF5 file conversion module
 - `test_mathutil.py` - Tests for mathematical utility functions and numpy/scipy wrappers
@@ -37,10 +37,9 @@ To run all tests using pytest directly:
 pytest tests/
 ```
 
-To run specific test files:
+To run specific test files or directories:
 ```bash
 pytest tests/test_active_area.py
-pytest tests/test_background.py
 pytest tests/test_converters.py
 pytest tests/test_ctr_data.py
 pytest tests/test_file_locker.py
@@ -48,11 +47,11 @@ pytest tests/test_filtertools.py
 pytest tests/test_gonio_psic.py
 pytest tests/test_hdf_data.py
 pytest tests/test_hdf_to_tree.py
-pytest tests/test_image_data.py
 pytest tests/test_lattice.py
 pytest tests/test_master_to_project.py
 pytest tests/test_mathutil.py
 pytest tests/test_polygon.py
+pytest tests/core/spec/
 ```
 
 To run with verbose output:

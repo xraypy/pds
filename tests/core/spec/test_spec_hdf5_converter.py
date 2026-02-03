@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # ----------------------------------------------------------------------------------
 # Project: pds
-# File: tests/spec/test_spec_hdf5_converter.py
+# File: tests/core/spec/test_spec_hdf5_converter.py
 # ----------------------------------------------------------------------------------
 # Purpose:
 # Tests for pds.core.spec.hdf5_converter (SPEC to HDF5 conversion).
@@ -23,17 +23,16 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from pds.core.spec.hdf5_converter import Hdf5Converter
-from tests.spec import minimal_spec_content
 
 
 class TestHdf5Converter:
     """Test SPEC to HDF5 converter."""
 
-    def test_run_writes_hdf5_structure(self):
+    def test_run_writes_hdf5_structure(self, minimal_spec_content):
         """Conversion creates spec group, scan group, point_data/point_labs/param_*."""
         with tempfile.TemporaryDirectory() as tmpdir:
             spec_path = Path(tmpdir) / "sample.spec"
-            spec_path.write_text(minimal_spec_content(), encoding="utf-8")
+            spec_path.write_text(minimal_spec_content, encoding="utf-8")
             out_path = Path(tmpdir) / "out.h5"
 
             converter = Hdf5Converter(spec_path, out_path, verbose=False)
@@ -66,11 +65,11 @@ class TestHdf5Converter:
             assert result is False
             assert not out_path.exists()
 
-    def test_run_idempotent_skips_complete_scan(self, capsys):
+    def test_run_idempotent_skips_complete_scan(self, minimal_spec_content, capsys):
         """Second run with same data skips scan (already complete)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             spec_path = Path(tmpdir) / "sample.spec"
-            spec_path.write_text(minimal_spec_content(), encoding="utf-8")
+            spec_path.write_text(minimal_spec_content, encoding="utf-8")
             out_path = Path(tmpdir) / "out.h5"
 
             converter = Hdf5Converter(spec_path, out_path, verbose=True)

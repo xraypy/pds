@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # ----------------------------------------------------------------------------------
 # Project: pds
-# File: tests/spec/test_spec_image_reader.py
+# File: tests/core/spec/test_spec_image_reader.py
 # ----------------------------------------------------------------------------------
 # Purpose:
 # Tests for pds.core.spec.image_reader (SPEC scan image reader).

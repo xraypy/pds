@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # ----------------------------------------------------------------------------------
 # Project: pds
-# File: tests/spec/test_spec_model.py
+# File: tests/core/spec/test_spec_model.py
 # ----------------------------------------------------------------------------------
 # Purpose:
 # Tests for pds.model.spec_model and MainModel.spec (SPEC model facade).
@@ -23,27 +23,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from pds.model.main_model import MainModel
 from pds.model.spec_model import SpecModel
-from tests.spec import minimal_spec_content, minimal_spec_lines
 
 
 class TestSpecModel:
     """Test SPEC model (parser + converter facade)."""
 
-    def test_summarize_returns_scan_list(self):
+    def test_summarize_returns_scan_list(self, minimal_spec_lines):
         """SpecModel.summarize(lines) returns list of scan dicts."""
         model = SpecModel()
-        summary = model.summarize(minimal_spec_lines())
+        summary = model.summarize(minimal_spec_lines)
         assert len(summary) == 1
         assert summary[0]["index"] == 1
         assert summary[0]["labels"] == ["mu", "counts"]
         assert summary[0]["nl_dat"] == 2
         assert len(summary[0]["point_data"]) == 2
 
-    def test_spec_to_hdf5_success(self):
+    def test_spec_to_hdf5_success(self, minimal_spec_content):
         """SpecModel.spec_to_hdf5 writes HDF5 and returns True."""
         with tempfile.TemporaryDirectory() as tmpdir:
             spec_path = Path(tmpdir) / "sample.spec"
-            spec_path.write_text(minimal_spec_content(), encoding="utf-8")
+            spec_path.write_text(minimal_spec_content, encoding="utf-8")
             out_path = Path(tmpdir) / "out.h5"
 
             model = SpecModel()
@@ -77,10 +76,10 @@ class TestMainModelSpec:
         assert hasattr(main.spec, "spec_to_hdf5")
         assert hasattr(main.spec, "parser")
 
-    def test_main_model_spec_summarize(self):
+    def test_main_model_spec_summarize(self, minimal_spec_lines):
         """MainModel().spec.summarize(lines) matches SpecModel.summarize."""
         main = MainModel()
-        summary = main.spec.summarize(minimal_spec_lines())
+        summary = main.spec.summarize(minimal_spec_lines)
         assert len(summary) == 1
         assert summary[0]["index"] == 1
 

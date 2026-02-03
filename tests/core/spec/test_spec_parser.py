@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # ----------------------------------------------------------------------------------
 # Project: pds
-# File: tests/spec/test_spec_parser.py
+# File: tests/core/spec/test_spec_parser.py
 # ----------------------------------------------------------------------------------
 # Purpose:
 # Tests for pds.core.spec.spec_parser (SPEC file parser).
@@ -20,16 +20,15 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from pds.core.spec.spec_parser import SpecParser
-from tests.spec import minimal_spec_lines_one_scan
 
 
 class TestSpecParser:
     """Test SPEC file parser."""
 
-    def test_parse_minimal_one_scan(self):
+    def test_parse_minimal_one_scan(self, minimal_spec_lines_one_scan):
         """One scan with #F, #E, #S, #D, #L and two data rows."""
         parser = SpecParser()
-        lines = minimal_spec_lines_one_scan()
+        lines = minimal_spec_lines_one_scan
         summary = parser.parse(lines)
         assert len(summary) == 1
         scan = summary[0]
@@ -43,10 +42,10 @@ class TestSpecParser:
         assert scan["point_data"][0] == [1.0, 0.0, 0.0, 100.0]
         assert "_next_index" not in scan
 
-    def test_parse_two_scans(self):
+    def test_parse_two_scans(self, minimal_spec_lines_one_scan):
         """Two scans: correct indices and row counts."""
         parser = SpecParser()
-        lines = minimal_spec_lines_one_scan() + ["#S 2 ascan mu 0 20 3 0.5\n", "#L mu  counts\n", "0.0 10\n", "10.0 20\n", "20.0 30\n"]
+        lines = minimal_spec_lines_one_scan + ["#S 2 ascan mu 0 20 3 0.5\n", "#L mu  counts\n", "0.0 10\n", "10.0 20\n", "20.0 30\n"]
         summary = parser.parse(lines)
         assert len(summary) == 2
         assert summary[0]["index"] == 1 and summary[0]["nl_dat"] == 2

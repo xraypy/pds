@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # ----------------------------------------------------------------------------------
 # Project: pds
-# File: tests/spec/test_spec_constants.py
+# File: tests/core/spec/test_spec_constants.py
 # ----------------------------------------------------------------------------------
 # Purpose:
 # Tests for pds.core.spec.constants (G_LABS for SPEC 6.03.03+).

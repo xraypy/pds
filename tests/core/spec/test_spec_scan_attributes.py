@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # ----------------------------------------------------------------------------------
 # Project: pds
-# File: tests/spec/test_spec_scan_attributes.py
+# File: tests/core/spec/test_spec_scan_attributes.py
 # ----------------------------------------------------------------------------------
 # Purpose:
 # Tests for pds.core.spec.scan_attributes (scan-type-specific HDF5 attribute handlers).
