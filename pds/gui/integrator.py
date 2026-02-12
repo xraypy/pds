@@ -721,7 +721,12 @@ class Integrator(wx.Frame, wx.Notebook):
     def loadFileDialog(self, event: wx.Event) -> None:
         """Open a dialog to choose an HDF file to load."""
         loadDialog = wx.FileDialog(
-            self, message="Load file...", defaultDir=self.lastDirectory, defaultFile="", wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*", style=wx.FD_OPEN
+            self,
+            message="Load file...",
+            defaultDir=self.lastDirectory,
+            defaultFile="",
+            wildcard="HDF files (*.ph5)|*.ph5|" + "All file(*.*)|*",
+            style=wx.FD_OPEN,
         )
         if loadDialog.ShowModal() == wx.ID_OK:
             if not os.path.isfile(loadDialog.GetPath()):
@@ -729,7 +734,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 return
             # Update last directory
             self.lastDirectory = os.path.dirname(loadDialog.GetPath())
-            
+
             try:
                 self.hdfObject.close()
                 self.lockFile.release()
@@ -1120,6 +1125,7 @@ class Integrator(wx.Frame, wx.Notebook):
         itemData = self.hdfTree.GetItemData(ofMe)
         if itemData is None:
             self.imageMaxField.Clear()
+            event.Skip()
             return
         newValue = bytes_to_str(self.imageMaxField.GetValue())
         currentValue = bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"])
@@ -1130,11 +1136,14 @@ class Integrator(wx.Frame, wx.Notebook):
             try:
                 if newValue.strip() == "":
                     self.imageMaxField.SetValue(str(currentValue))
+                    event.Skip()
                     return
                 if str(int(newValue)) == currentValue:
+                    event.Skip()
                     return
                 elif int(newValue) <= 0 and int(newValue) != -1:
                     self.imageMaxField.SetValue(currentValue)
+                    event.Skip()
                     return
                 else:
                     self.hdfObject[itemData]["det_0"]["image_max"] = str(int(newValue))
@@ -1142,10 +1151,12 @@ class Integrator(wx.Frame, wx.Notebook):
                     self.imageMaxValue.SetLabel("ROI Max: " + str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
             except Exception:
                 self.imageMaxField.SetValue(str(currentValue))
+            event.Skip()
             return
         # Handle Enter key press
         try:
             if str(int(newValue)) == currentValue:
+                event.Skip()
                 return
             elif int(newValue) <= 0 and int(newValue) != -1:
                 self.imageMaxField.SetValue(currentValue)
@@ -1155,6 +1166,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.imageMaxValue.SetLabel("ROI Max: " + str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
         except Exception:
             self.imageMaxField.SetValue(str(currentValue))
+        event.Skip()
 
     def updateItem(self, event: wx.Event) -> None:
         """Update data when text field loses focus after validating changes."""
@@ -1215,7 +1227,7 @@ class Integrator(wx.Frame, wx.Notebook):
                         # Ensure all values are numeric
                         new_value = [int(v) for v in new_value]
                     except (ValueError, TypeError):
-                        print(f"Invalid ROI format: all values must be integers")
+                        print("Invalid ROI format: all values must be integers")
                         # Get the current value and ensure it's properly formatted
                         current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
                         whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
@@ -1526,6 +1538,10 @@ class Integrator(wx.Frame, wx.Notebook):
     def updateFields(self, itemData: int) -> None:
         """Load parameter values from HDF object to GUI fields."""
         self.badPointToggle.SetValue(safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_point"]))
+        # On Windows, SetValue on a focused TextCtrl may not update the display or
+        # leave the control unresponsive; move focus away first so the new value is shown.
+        if self.FindFocus() == self.imageMaxField:
+            self.hdfTree.SetFocus()
         self.imageMaxField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"]))
         self.imageMaxValue.SetLabel("ROI Max: " + bytes_to_str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
         self.colNbgrField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["cnbgr"]))
