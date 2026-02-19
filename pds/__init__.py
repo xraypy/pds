@@ -2,7 +2,6 @@ import argparse
 
 from pds.cli import create_shortcuts, print_help, run_converter
 from pds.gui import run_filter, run_integrator
-from tests import run_all_tests
 
 __all__ = ["run_integrator", "run_filter", "main"]
 
@@ -45,7 +44,12 @@ def main() -> None:
     elif args.filter:
         run_filter()
     elif args.test:
-        run_all_tests()
+        try:
+            from tests import run_all_tests
+
+            run_all_tests()
+        except ModuleNotFoundError:
+            print("Tests are only available in the development source tree, not in the installed package.")
     elif args.make_icon:
         create_shortcuts()
     else:
