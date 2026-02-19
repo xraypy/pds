@@ -1,0 +1,43 @@
+name: pds
+version: "0.1.0"
+
+# conda-forge first so h5py and all packages install from conda-forge
+channels:
+  - conda-forge
+  - defaults
+
+license_file: ../LICENSE
+ignore_duplicate_files: true
+
+installer_type: exe  # [win]
+installer_type: pkg  # [osx]
+
+# macOS: enable_anywhere=true lets the user choose install destination in the installer.
+default_prefix: "%USERPROFILE%/pds"   # [win]
+default_prefix: "${HOME}/pds"        # [linux]
+pkg_domains:                          # [osx]
+  enable_anywhere: true
+  enable_currentUserHome: true
+  enable_localSystem: false
+
+register_python: false  # [win]
+register_envs: false    # [win]
+
+post_install: post_install_windows.bat  # [win]
+post_install: post_install_posix.sh     # [linux or osx]
+
+# Bundle local PDS source (zip created by build.sh; constructor only copies files, not dirs)
+extra_files:
+  - "pds-src.zip": "share/pds-src.zip"
+
+# Exact versions from pdsENV (pip list). pyshortcuts installed via post_install (pip install pds).
+specs:
+  - python=3.13.2
+  - pip=25.1
+  - h5py=3.14.0
+  - matplotlib=3.10.5
+  - numpy=2.3.2
+  - pillow=11.3.0
+  - scipy=1.16.0
+  - pytables=3.10.2
+  - wxpython=4.2.3
