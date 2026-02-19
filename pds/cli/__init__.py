@@ -204,10 +204,18 @@ def create_shortcuts() -> None:
     """Create desktop shortcuts for PDS applications."""
     print("Creating PDS desktop shortcuts...")
 
-    # Find the pds executable
+    # Find the pds executable: first in PATH, then next to this Python (e.g. post-install)
     pds_exe = shutil.which("pds")
     if not pds_exe:
-        raise FileNotFoundError("Could not find pds executable in PATH")
+        prefix = Path(sys.executable).resolve().parent
+        if sys.platform == "win32":
+            candidate = prefix / "Scripts" / "pds.exe"
+        else:
+            candidate = prefix / "pds"
+        if candidate.exists():
+            pds_exe = str(candidate)
+        else:
+            raise FileNotFoundError("Could not find pds executable in PATH or next to Python")
 
     # Get the package directory to find the icons
     package_dir = Path(__file__).parent.parent  # Go up from cli/ to pds/
