@@ -4,7 +4,6 @@ version: "0.1.0"
 # conda-forge first so h5py and all packages install from conda-forge
 channels:
   - conda-forge
-  - defaults
 
 license_file: ../LICENSE
 ignore_duplicate_files: true
@@ -16,9 +15,9 @@ installer_type: pkg  # [osx]
 default_prefix: "%USERPROFILE%/pds"   # [win]
 default_prefix: "${HOME}/pds"        # [linux]
 pkg_domains:                          # [osx]
-  enable_anywhere: true
-  enable_currentUserHome: true
-  enable_localSystem: false
+  enable_anywhere: true                # [osx]
+  enable_currentUserHome: true         # [osx]
+  enable_localSystem: false            # [osx]
 
 register_python: false  # [win]
 register_envs: false    # [win]

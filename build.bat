@@ -19,9 +19,11 @@ if exist constructor\pds-src.zip del /q constructor\pds-src.zip
 
 mkdir constructor\pds-src-bundle\pds-src
 xcopy /e /i /q pds constructor\pds-src-bundle\pds-src\pds\
-copy /y pyproject.toml README.md LICENSE constructor\pds-src-bundle\pds-src\
+copy /y pyproject.toml constructor\pds-src-bundle\pds-src\
+copy /y README.md constructor\pds-src-bundle\pds-src\
+copy /y LICENSE constructor\pds-src-bundle\pds-src\
 
-python -c "import zipfile; from pathlib import Path; src = Path('constructor/pds-src-bundle/pds-src'); zf = zipfile.ZipFile('constructor/pds-src.zip', 'w', zipfile.ZIP_DEFLATED); [zf.write(f, f.relative_to(src.parent).as_posix()) for f in src.rglob('*') if f.is_file()]; zf.close()"
+python -c "import zipfile; from pathlib import Path; src = Path('constructor/pds-src-bundle/pds-src'); zf = zipfile.ZipFile('constructor/pds-src.zip', 'w', zipfile.ZIP_DEFLATED); [zf.write(f, f.relative_to(src.parent).as_posix()) for f in src.rglob('*') if f.is_file() and '__pycache__' not in f.parts]; zf.close()"
 
 rmdir /s /q constructor\pds-src-bundle
 

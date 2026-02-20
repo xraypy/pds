@@ -31,6 +31,18 @@ if not exist "%PYTHON%" (
 
 echo PDS post-install: prefix=%INSTALL_DIR%
 
+REM Create sitecustomize.py so conda-forge DLLs in Library\bin are found without conda activation.
+echo Creating sitecustomize.py...
+echo Creating sitecustomize.py... >> "%LOG%"
+(
+  echo import os, sys
+  echo if sys.platform == 'win32':
+  echo     lib_bin = os.path.join^(sys.prefix, 'Library', 'bin'^)
+  echo     if os.path.isdir^(lib_bin^):
+  echo         os.add_dll_directory^(lib_bin^)
+  echo         os.environ['PATH'] = lib_bin + os.pathsep + os.environ.get^('PATH', ''^)
+) > "%INSTALL_DIR%\Lib\site-packages\sitecustomize.py"
+
 REM Unzip bundled source if we have the zip (constructor copies files only, so we ship a zip)
 if exist "%INSTALL_DIR%\share\pds-src.zip" (
   echo Extracting bundled PDS source...
@@ -47,7 +59,7 @@ if not exist "%PDS_SRC%\pyproject.toml" (
 
 echo Installing PDS from bundled source...
 echo Installing PDS from bundled source (%PDS_SRC%)... >> "%LOG%"
-"%PYTHON%" -m pip install --force-reinstall "%PDS_SRC%" >> "%LOG%" 2>&1
+"%PYTHON%" -m pip install "%PDS_SRC%" >> "%LOG%" 2>&1
 if errorlevel 1 (
   echo ERROR: pip install failed. >> "%LOG%"
   echo ERROR: pip install failed. Log: %LOG%
