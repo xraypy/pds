@@ -3,7 +3,7 @@ import numpy
 
 from pds.utils.converters import bytes_to_str
 from pds.utils.file_locker import FileLock
-from pds.utils.image_data import correct_image, read_pixel_map
+from pds.core.imaging.image_data import correct_image, read_pixel_map
 
 # General keys mapping - excludes position/scaler values that vary by scan type
 GEN_KEYS = {
