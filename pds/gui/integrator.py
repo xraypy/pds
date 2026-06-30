@@ -2198,17 +2198,18 @@ class Integrator(wx.Frame, wx.Notebook):
             pass
         doneLList.extend(pendingLList)
         doneFList.extend(pendingFList)
-        minL = math.floor(min(doneLList))
-        maxL = math.ceil(max(doneLList))
-        try:
-            minF = min([f for f in doneFList if f > 0]) / 10.0**0.1
-        except Exception:
-            minF = 0
-        maxF = max(doneFList) * (10**0.1)
-        if minF == 0 and maxF == 0:
-            minF = 0.1
-            maxF = 1
-        rodPlot.axis([minL, maxL, minF, maxF])
+        if doneLList:
+            minL = math.floor(min(doneLList))
+            maxL = math.ceil(max(doneLList))
+            try:
+                minF = min([f for f in doneFList if f > 0]) / 10.0**0.1
+            except Exception:
+                minF = 0
+            maxF = max(doneFList) * (10**0.1)
+            if minF == 0 and maxF == 0:
+                minF = 0.1
+                maxF = 1
+            rodPlot.axis([minL, maxL, minF, maxF])
         self.rodCanvas.draw()
 
     def updateFourPlot(self, myParent: Any, itemData: int) -> None:
