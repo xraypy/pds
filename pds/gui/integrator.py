@@ -2196,6 +2196,8 @@ class Integrator(wx.Frame, wx.Notebook):
                 rodPlot.semilogy()
         except Exception:
             pass
+        if bytes_to_str(self.hdfObject[itemData]["type"]).startswith("Escan"):
+            rodPlot.set_xlabel("Energy (keV)")
         doneLList.extend(pendingLList)
         doneFList.extend(pendingFList)
         if doneLList:
