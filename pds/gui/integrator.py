@@ -2150,7 +2150,7 @@ class Integrator(wx.Frame, wx.Notebook):
         iterImageChanged = self.hdfObject.get_all(("det_0", "image_changed"), iterList)
         iterFChanged = self.hdfObject.get_all(("det_0", "F_changed"), iterList)
         if bytes_to_str(self.hdfObject[itemData]["type"]).startswith("Escan"):
-            iterLList = self.hdfObject.get_all("energy", iterList)
+            iterLList = {k: v / 1000.0 for k, v in self.hdfObject.get_all("Energy", iterList).items()}
         elif bytes_to_str(self.hdfObject[itemData]["type"]).startswith("ascan"):
             get_this = self.hdfObject[itemData]["info"].split()[1]
             iterLList = self.hdfObject.get_all(get_this, iterList)
@@ -2184,7 +2184,7 @@ class Integrator(wx.Frame, wx.Notebook):
         except Exception:
             pass
         if bytes_to_str(self.hdfObject[itemData]["type"]).startswith("Escan"):
-            rodPlot.plot(self.hdfObject[itemData]["Energy"], self.hdfObject[itemData]["det_0"]["F"], "ro")
+            rodPlot.plot([e / 1000.0 for e in self.hdfObject[itemData]["Energy"]], self.hdfObject[itemData]["det_0"]["F"], "ro")
         elif bytes_to_str(self.hdfObject[itemData]["type"]).startswith("ascan"):
             rodPlot.plot(self.hdfObject[itemData][get_this], self.hdfObject[itemData]["det_0"]["F"], "ro")
         else:
