@@ -1544,7 +1544,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 return
             try:
                 iterItem = self.hdfTreeObject.reverseLookup[iterData]
-                iterString = self.hdfTreeObject.statusString(self.hdfTree, self.hdfObject, iterItem)
+                iterString = self.hdfTree.GetItemText(iterItem)
                 self.statusBar.SetStatusText(f"Integrating {iterString} ({written}/{total})", 2)
                 # Process GUI events periodically
                 if written % max(1, total // 10) == 0:  # Update every 10%
@@ -2112,17 +2112,18 @@ class Integrator(wx.Frame, wx.Notebook):
                             # Write F results using the same method for consistency
                             self._write_point_results(iterData, None, f_results)
 
+                except Exception as e:
+                    import traceback
+                    print(f"Error writing point {iterData}: {e}", flush=True)
+                    traceback.print_exc()
+
+                finally:
+                    # Always increment so the writer doesn't hang if a point fails
                     written += 1
 
                     # Update progress on main thread
                     if progress_callback:
                         wx.CallAfter(progress_callback, iterData, written, total_points)
-
-                except Exception as e:
-                    print(f"Error writing point {iterData}: {e}")
-                    import traceback
-
-                    traceback.print_exc()
 
             except queue.Empty:
                 continue
