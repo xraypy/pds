@@ -1,4 +1,3 @@
-import math
 import os
 import sys
 from typing import Any
@@ -1781,8 +1780,10 @@ class Integrator(wx.Frame, wx.Notebook):
         doneLList.extend(pendingLList)
         doneFList.extend(pendingFList)
         if doneLList:
-            minL = math.floor(min(doneLList))
-            maxL = math.ceil(max(doneLList))
+            l_min = min(doneLList)
+            l_max = max(doneLList)
+            l_range = l_max - l_min if l_max != l_min else abs(l_min) * 0.1 or 0.1
+            l_pad = l_range * 0.05
             try:
                 minF = min([f for f in doneFList if f > 0]) / 10.0**0.1
             except Exception:
@@ -1791,7 +1792,7 @@ class Integrator(wx.Frame, wx.Notebook):
             if minF == 0 and maxF == 0:
                 minF = 0.1
                 maxF = 1
-            rodPlot.axis([minL, maxL, minF, maxF])
+            rodPlot.axis([l_min - l_pad, l_max + l_pad, minF, maxF])
         self.rodCanvas.draw()
 
     def updateFourPlot(self, myParent: Any, itemData: int) -> None:
