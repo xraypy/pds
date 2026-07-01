@@ -300,29 +300,34 @@ class HdfDataFile:
             self.point_dict[key] = self.file[num][key]
         current_det_num = 0
         while True:
-            try:
-                det_str = "det_%i" % current_det_num
-                self.point_dict[det_str] = {}
-                for key in DET_KEYS:
+            det_str = "det_%i" % current_det_num
+            if det_str not in self.file[num]:
+                break
+            self.point_dict[det_str] = {}
+            for key in DET_KEYS:
+                try:
                     key_loc = DET_KEYS[key]
                     key_loc_path = key_loc[0] % (current_det_num, self.version)
                     self.point_dict[det_str][key] = self.file[num][key_loc_path][key_loc[1]]
-                for key in DET_ATT_KEYS:
-                    self.point_dict[det_str][key] = self.file[num][det_str].attrs[key]
-                try:
-                    point_image = numpy.array(self.file[num][det_str]["image_data"])
-                    self.point_dict[det_str]["image_data"] = point_image
-                    point_mask = bytes_to_str(self.point_dict[det_str]["bad_pixel_map"])
-                    if not point_mask.startswith("(") and not point_mask.startswith("["):
-                        point_mask = str(read_pixel_map(point_mask))
-                        self.point_dict[det_str]["bad_pixel_map"] = point_mask
-                    corrected_image = correct_image(point_image, point_mask)
-                    self.point_dict[det_str]["corrected_image"] = corrected_image
-                except Exception:
+                except (KeyError, OSError, IOError):
                     pass
-                current_det_num += 1
+            for key in DET_ATT_KEYS:
+                try:
+                    self.point_dict[det_str][key] = self.file[num][det_str].attrs[key]
+                except (KeyError, OSError, IOError):
+                    pass
+            try:
+                point_image = numpy.array(self.file[num][det_str]["image_data"])
+                self.point_dict[det_str]["image_data"] = point_image
+                point_mask = bytes_to_str(self.point_dict[det_str]["bad_pixel_map"])
+                if not point_mask.startswith("(") and not point_mask.startswith("["):
+                    point_mask = str(read_pixel_map(point_mask))
+                    self.point_dict[det_str]["bad_pixel_map"] = point_mask
+                corrected_image = correct_image(point_image, point_mask)
+                self.point_dict[det_str]["corrected_image"] = corrected_image
             except Exception:
-                break
+                pass
+            current_det_num += 1
 
     def set_all(self, key: str or tuple, value: any, points: list = None) -> None:
         """Set key value for all points. Use tuple for nested keys like ('det_0', 'bad_pixel_map')."""
