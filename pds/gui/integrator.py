@@ -648,14 +648,6 @@ class Integrator(wx.Frame, wx.Notebook):
 
         self.histBox.Bind(wx.EVT_KILL_FOCUS, self.updateItem)
 
-        self.scaleField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
-        self.beamSlitField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
-        self.detSlitField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
-        self.sampleAngleField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
-        self.sampleDiameterField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
-        self.samplePolygonField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
-        self.badMapField.Bind(wx.EVT_KILL_FOCUS, self.applyToScan)
-
         # Bind pressing enter in a field to updating that field (focus remains)
         self.colNbgrField.Bind(wx.EVT_TEXT_ENTER, self.updateItem)
         self.colPowerField.Bind(wx.EVT_TEXT_ENTER, self.updateItem)
@@ -1134,14 +1126,14 @@ class Integrator(wx.Frame, wx.Notebook):
             # Only update if the value actually changed
             try:
                 if newValue.strip() == "":
-                    self.imageMaxField.SetValue(str(currentValue))
+                    wx.CallAfter(self.imageMaxField.SetValue, str(currentValue))
                     event.Skip()
                     return
                 if str(int(newValue)) == currentValue:
                     event.Skip()
                     return
                 elif int(newValue) <= 0 and int(newValue) != -1:
-                    self.imageMaxField.SetValue(currentValue)
+                    wx.CallAfter(self.imageMaxField.SetValue, currentValue)
                     event.Skip()
                     return
                 else:
@@ -1149,10 +1141,10 @@ class Integrator(wx.Frame, wx.Notebook):
                     self.updateFourPlot(myParent, itemData)
                     self.imageMaxValue.SetLabel("ROI Max: " + str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
             except Exception:
-                self.imageMaxField.SetValue(str(currentValue))
+                wx.CallAfter(self.imageMaxField.SetValue, str(currentValue))
             event.Skip()
             return
-        # Handle Enter key press
+        # Handle Enter key press (not KILL_FOCUS, so SetValue is safe to call directly)
         try:
             if str(int(newValue)) == currentValue:
                 event.Skip()
@@ -1213,13 +1205,13 @@ class Integrator(wx.Frame, wx.Notebook):
                     print(f"Invalid ROI format: must be a list, got {type(new_value).__name__}")
                     # Get the current value and ensure it's properly formatted
                     current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
-                    whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                    wx.CallAfter(whatField.SetValue, str(current_roi) if current_roi is not None else "[]")
                     return
                 if len(new_value) != 4 and len(new_value) != 0:
                     print(f"Invalid ROI format: must have 4 values [x1, y1, x2, y2] or be empty, got {len(new_value)} values")
                     # Get the current value and ensure it's properly formatted
                     current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
-                    whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                    wx.CallAfter(whatField.SetValue, str(current_roi) if current_roi is not None else "[]")
                     return
                 if len(new_value) == 4:
                     try:
@@ -1229,7 +1221,7 @@ class Integrator(wx.Frame, wx.Notebook):
                         print("Invalid ROI format: all values must be integers")
                         # Get the current value and ensure it's properly formatted
                         current_roi = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
-                        whatField.SetValue(str(current_roi) if current_roi is not None else "[]")
+                        wx.CallAfter(whatField.SetValue, str(current_roi) if current_roi is not None else "[]")
                         return
 
             current_value = safe_eval_hdf(self.hdfObject[itemData]["det_0"][updateThis])
@@ -1238,7 +1230,7 @@ class Integrator(wx.Frame, wx.Notebook):
             else:
                 # Always store as string in HDF5, but preserve the actual data type for comparison
                 self.hdfObject[itemData]["det_0"][updateThis] = str(new_value) if new_value is not None else ""
-                whatField.SetValue(str(new_value) if new_value is not None else "")
+                wx.CallAfter(whatField.SetValue, str(new_value) if new_value is not None else "")
                 self.hdfObject[itemData]["det_0"]["image_changed"] = "True"
                 self.hdfObject[itemData]["det_0"]["F_changed"] = 1.0
                 self.updateFourPlot(myParent, itemData)
@@ -1246,7 +1238,7 @@ class Integrator(wx.Frame, wx.Notebook):
                 self.updateLabels(itemData)
         except Exception as e:
             print(f"Error updating {updateThis}: {e}")
-            whatField.SetValue(str(self.hdfObject[itemData]["det_0"][updateThis]))
+            wx.CallAfter(whatField.SetValue, str(self.hdfObject[itemData]["det_0"][updateThis]))
 
     def applyToScan(self, event: wx.Event) -> None:
         """Apply parameter values to every point in the current scan."""
@@ -1279,7 +1271,7 @@ class Integrator(wx.Frame, wx.Notebook):
             toChange = list(possibilities.values())
         elif whatButton == self.badMapField:
             if whatButton.GetValue() == "":
-                whatButton.SetValue(str(self.hdfObject[itemData]["det_0"]["bad_pixel_map"]))
+                wx.CallAfter(whatButton.SetValue, str(self.hdfObject[itemData]["det_0"]["bad_pixel_map"]))
                 return
             elif whatButton.GetValue() == str(self.hdfObject[itemData]["det_0"]["bad_pixel_map"]):
                 return
@@ -1337,7 +1329,7 @@ class Integrator(wx.Frame, wx.Notebook):
                     self.hdfObject.set_all(("det_0", "image_changed"), "True", justThese)
                 self.hdfObject.set_all(("det_0", "F_changed"), 1.0, justThese)
             except Exception:
-                whatField.SetValue(str(self.hdfObject[itemData]["det_0"][updateThis]))
+                wx.CallAfter(whatField.SetValue, str(self.hdfObject[itemData]["det_0"][updateThis]))
         if fOnly:
             self.updateF(itemData)
         self.updateRodPlot(myParent, itemData)
@@ -1537,10 +1529,6 @@ class Integrator(wx.Frame, wx.Notebook):
     def updateFields(self, itemData: int) -> None:
         """Load parameter values from HDF object to GUI fields."""
         self.badPointToggle.SetValue(safe_eval_hdf(self.hdfObject[itemData]["det_0"]["bad_point"]))
-        # On Windows, SetValue on a focused TextCtrl may not update the display or
-        # leave the control unresponsive; move focus away first so the new value is shown.
-        if self.FindFocus() == self.imageMaxField:
-            self.hdfTree.SetFocus()
         self.imageMaxField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["image_max"]))
         self.imageMaxValue.SetLabel("ROI Max: " + bytes_to_str(self.hdfObject[itemData]["det_0"]["real_image_max"]))
         self.colNbgrField.SetValue(bytes_to_str(self.hdfObject[itemData]["det_0"]["cnbgr"]))
@@ -2038,7 +2026,7 @@ class Integrator(wx.Frame, wx.Notebook):
                         pass
                     else:
                         self.hdfObject[itemData]["det_0"][updateThis] = str(new_value) if new_value is not None else ""
-                        whatField.SetValue(str(new_value) if new_value is not None else "")
+                        wx.CallAfter(whatField.SetValue, str(new_value) if new_value is not None else "")
                         self.hdfObject[itemData]["det_0"]["image_changed"] = "True"
                         self.hdfObject[itemData]["det_0"]["F_changed"] = 1.0
             self.updateFourPlot(myParent, itemData)
